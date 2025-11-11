@@ -1,0 +1,13 @@
+version: 2.1.1
+last_compiled: 2025-11-11 11:10:54
+
+# ================================================
+# Compiled with the following settings:
+#
+# To change these settings, run ~/boundless-os/scripts/project-update.sh to re-compile your project with the new settings.
+# ================================================
+profile: ryan
+claude_code_commands: true
+use_claude_code_subagents: true
+boundless_os_commands: false
+standards_as_claude_code_skills: false
