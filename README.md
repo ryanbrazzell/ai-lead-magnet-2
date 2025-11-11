@@ -32,39 +32,52 @@ Boundless OS provides:
 
 ---
 
-## 🚀 Quick Start (2 Minutes)
+## 🚀 Quick Start (30 Seconds)
 
-### 1. Install Boundless OS Base
-
-```bash
-git clone https://github.com/buildermethods/boundless-os ~/boundless-os
-```
-
-### 2. Run Interactive Wizard
+### 1. Clone the Repository
 
 ```bash
-cd ~/my-project  # or create a new project folder
-~/boundless-os/scripts/wizard-install.sh
+git clone https://github.com/ryanbrazzell/boundless-os my-project
+cd my-project
 ```
 
-The wizard will:
-- Ask about your technical level and project type
-- Configure the right profile for you
-- Install Boundless OS into your project
-- Tell you exactly what to do next
+### 2. Open Claude Code
+
+```bash
+claude-code
+```
 
 ### 3. Start Building
 
-```bash
-claude-code  # or open your AI coding tool
-```
+Type `/` and you'll see all available commands:
+- `/plan-product` - Define your product mission and roadmap
+- `/shape-spec` - Plan a new feature
+- `/write-spec` - Write detailed specifications
+- `/create-tasks` - Break down work into tasks
+- `/implement-tasks` - Build the feature
+- `/orchestrate-tasks` - Coordinate complex work
 
 Run your first command:
 ```
 /plan-product
 ```
 
-**That's it!** Boundless OS will guide you through planning your product and building features.
+**That's it!** The repository is ready to use immediately. No installation, no configuration, just start building.
+
+---
+
+## 📦 Adding to Existing Projects
+
+Already have a project? Install Boundless OS into it:
+
+```bash
+# Clone the base (one time)
+git clone https://github.com/ryanbrazzell/boundless-os ~/boundless-os
+
+# Install into your project
+cd ~/your-existing-project
+~/boundless-os/scripts/project-install.sh --profile ryan
+```
 
 ---
 
