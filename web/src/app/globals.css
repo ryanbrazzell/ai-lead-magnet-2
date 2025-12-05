@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+/*
+ * EA Time Freedom Report Design System
+ * Design tokens for the acquisition.com/roadmap-style form experience
+ * Color Psychology: Purple (brand entry/exit) -> Yellow (progress) -> Purple (brand)
+ */
+
+:root {
+  /* Background and foreground base colors */
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Brand Colors - Color Psychology Journey */
+  --primary: #6F00FF;           /* Purple - CTAs, header, footer, brand elements */
+  --progress: #FFFC8C;          /* Yellow - mid-journey continue buttons */
+  --progress-disabled: #F9E57F; /* Muted yellow - validation/disabled states */
+
+  /* Input Colors */
+  --input-bg: #F5F8FA;          /* Default input background */
+  --input-focus: #ECF0F3;       /* Focused input background */
+
+  /* Header/Navigation */
+  --navy: #1A1A2E;              /* Navy header color */
+  --accent-orange: #F26133;     /* Orange accent - assistantlaunch.com CTA color */
+
+  /* Responsive Breakpoints */
+  --breakpoint-mobile: 375px;     /* Mobile base */
+  --breakpoint-transition: 428px; /* Button width transition */
+  --breakpoint-tablet: 768px;     /* Tablet/side-by-side layouts */
+}
+
+@theme inline {
+  /* Base colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Brand color tokens */
+  --color-primary: var(--primary);
+  --color-progress: var(--progress);
+  --color-progress-disabled: var(--progress-disabled);
+  --color-input-bg: var(--input-bg);
+  --color-input-focus: var(--input-focus);
+  --color-navy: var(--navy);
+  --color-accent-orange: var(--accent-orange);
+
+  /* Font family tokens */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-nav: var(--font-nav);
+
+  /* Custom border-radius tokens */
+  --radius-pill: 50px;  /* Large CTA pill buttons */
+  --radius-input: 5px;  /* Form field corners */
+
+  /* Custom font size tokens with appropriate line-heights */
+  --text-question: 32px;
+  --text-question--line-height: 1.3;
+  --text-question--font-weight: 400;
+  
+  /* Hero headline - bold, impactful - matches Acquisition.com (48-52px) */
+  --text-hero: 48px;
+  --text-hero--line-height: 1.2;
+  --text-hero--font-weight: 900;
+
+  --text-button: 24px;
+  --text-button--line-height: 1;
+  --text-button--font-weight: 700;
+
+  --text-input: 20px;
+  --text-input--line-height: 1.5;
+
+  --text-previous: 18px;
+  --text-previous--line-height: 1.5;
+
+  --text-body: 16px;
+  --text-body--line-height: 1.5;
+
+  /* Custom spacing tokens for component dimensions */
+  --spacing-button-height: 84px;
+  --spacing-button-width: 408px;
+  --spacing-form-max: 650px;
+
+  /* Animation/transition tokens */
+  --transition-button: 200ms;
+  --transition-input: 150ms;
+  --transition-step: 300ms;
+
+  /* Easing tokens */
+  --ease-button: ease-out;
+  --ease-input: ease-in-out;
+
+  /*
+   * Custom Responsive Breakpoints
+   * Task Group 8: Responsive Behavior Implementation
+   *
+   * - mobile: 375px - Base mobile viewport
+   * - transition: 428px - Button width switches from full to fixed 408px
+   * - tablet: 768px - Side-by-side and grid layouts enabled
+   */
+  --breakpoint-mobile: 375px;
+  --breakpoint-transition: 428px;
+  --breakpoint-tablet: 768px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Utility classes for design tokens */
+@layer utilities {
+  /* Color utilities */
+  .bg-primary {
+    background-color: var(--primary);
+  }
+
+  .text-primary {
+    color: var(--primary);
+  }
+
+  .bg-progress {
+    background-color: var(--progress);
+  }
+
+  .text-progress {
+    color: var(--progress);
+  }
+
+  .bg-progress-disabled {
+    background-color: var(--progress-disabled);
+  }
+
+  .bg-input-bg {
+    background-color: var(--input-bg);
+  }
+
+  .bg-input-focus {
+    background-color: var(--input-focus);
+  }
+
+  .bg-navy {
+    background-color: var(--navy);
+  }
+
+  .text-navy {
+    color: var(--navy);
+  }
+
+  /* Border-radius utilities */
+  .rounded-pill {
+    border-radius: var(--radius-pill);
+  }
+
+  .rounded-input {
+    border-radius: var(--radius-input);
+  }
+
+  /* Font size utilities */
+  .text-question {
+    font-size: var(--text-question);
+    line-height: var(--text-question--line-height);
+    font-weight: var(--text-question--font-weight);
+  }
+  
+  .text-hero {
+    font-size: var(--text-hero);
+    line-height: var(--text-hero--line-height);
+    font-weight: var(--text-hero--font-weight);
+  }
+  
+  @media (min-width: 768px) {
+    .text-hero {
+      font-size: 52px;
+    }
+  }
+
+  .text-button-size {
+    font-size: var(--text-button);
+    line-height: var(--text-button--line-height);
+    font-weight: var(--text-button--font-weight);
+  }
+
+  .text-input-size {
+    font-size: var(--text-input);
+    line-height: var(--text-input--line-height);
+  }
+
+  .text-previous {
+    font-size: var(--text-previous);
+    line-height: var(--text-previous--line-height);
+  }
+
+  .text-body-size {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* Spacing utilities */
+  .h-button {
+    height: var(--spacing-button-height);
+  }
+
+  .w-button {
+    width: var(--spacing-button-width);
+  }
+
+  .max-w-form {
+    max-width: var(--spacing-form-max);
+  }
+
+  /* Transition utilities */
+  .transition-button {
+    transition-duration: var(--transition-button);
+    transition-timing-function: var(--ease-button);
+  }
+
+  .transition-input {
+    transition-duration: var(--transition-input);
+    transition-timing-function: var(--ease-input);
+  }
+
+  .transition-step {
+    transition-duration: var(--transition-step);
+    transition-timing-function: ease-in-out;
+  }
+}
+
+/*
+ * Custom responsive breakpoint classes
+ * Task Group 8: Responsive Behavior Implementation
+ *
+ * These provide semantic breakpoint classes using CSS @media queries
+ * to complement Tailwind's arbitrary value syntax (min-[428px]:)
+ */
+@layer utilities {
+  /* Mobile breakpoint (375px+) */
+  @media (min-width: 375px) {
+    .mobile\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    .mobile\:w-full {
+      width: 100%;
+    }
+  }
+
+  /* Transition breakpoint (428px+) - button width transition */
+  @media (min-width: 428px) {
+    .transition\:w-button {
+      width: var(--spacing-button-width);
+    }
+    .transition\:w-\[408px\] {
+      width: 408px;
+    }
+  }
+
+  /* Tablet breakpoint (768px+) - side-by-side layouts */
+  @media (min-width: 768px) {
+    .tablet\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .tablet\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    .tablet\:flex-row {
+      flex-direction: row;
+    }
+    .tablet\:gap-4 {
+      gap: 1rem;
+    }
+  }
+}
