@@ -15,9 +15,10 @@ export default function Home() {
       <HeroSection
         headline={
           <>
-            Get Your Free Personalized <strong>EA Time Freedom Report</strong>...in under 30 seconds.
+            If you don&apos;t have an executive assistant, <strong>you ARE the executive assistant.</strong>
           </>
         }
+        subheadline="Get your free personalized EA Time Freedom Report in under 30 seconds."
         imageSrc="/product-mockup.webp"
         imageAlt="EA Time Freedom Report product mockup showing three screens: EA Workflow & Efficiency Hub dashboard, Executive Assistant Roadmap & Task List, and Client Onboarding Automation"
       />

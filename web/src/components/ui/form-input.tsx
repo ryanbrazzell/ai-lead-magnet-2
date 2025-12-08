@@ -88,8 +88,8 @@ const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
       "placeholder:text-gray-400 placeholder:font-normal",
       // Visible border (matching Acquisition.com)
       "border-2 border-gray-200",
-      // Focus state with teal accent (matching Acquisition.com)
-      "focus:outline-none focus:ring-0 focus:border-teal-500",
+      // Focus state with blue accent
+      "focus:outline-none focus:ring-0 focus:border-blue-500",
       // Full width
       "w-full",
       // Error state

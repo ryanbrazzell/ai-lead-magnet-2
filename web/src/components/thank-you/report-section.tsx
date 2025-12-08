@@ -1,6 +1,6 @@
 /**
- * ReportSection Component
- * Displays the AI-generated EA task report
+ * ReportSection Component - shadcn-admin style
+ * Displays the AI-generated EA task report with clean card styling
  */
 
 "use client";
@@ -8,6 +8,8 @@
 import * as React from 'react';
 import type { TaskGenerationResult, Task } from '@/types';
 import { CheckCircle, Clock, AlertTriangle, Download, Mail } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { getCeoHourlyRate, formatCurrency, type TaskHours } from '@/lib/roi-calculator';
 
 interface ReportSectionProps {
   data: TaskGenerationResult | null;
@@ -16,6 +18,8 @@ interface ReportSectionProps {
   firstName: string;
   stage: number;
   stageName: string;
+  taskHours?: TaskHours;
+  revenueRange?: string;
 }
 
 export function ReportSection({
@@ -25,184 +29,180 @@ export function ReportSection({
   firstName,
   stage,
   stageName,
+  taskHours,
+  revenueRange = '$500k to $1M',
 }: ReportSectionProps) {
+  const ceoHourlyRate = getCeoHourlyRate(revenueRange);
+
   if (isLoading) {
     return (
-      <section className="py-12 border-t-2 border-gray-300 bg-white relative z-10">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4" />
-            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-8" />
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-20 bg-gray-100 rounded-lg" />
-              ))}
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center">
+            <div className="animate-pulse space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto" />
+              <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto" />
+              <div className="space-y-3 mt-8">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-16 bg-gray-100 rounded-lg" />
+                ))}
+              </div>
             </div>
+            <p className="text-sm text-gray-500 mt-6">
+              Generating your personalized EA Roadmap...
+            </p>
           </div>
-          <p className="text-gray-600 mt-8">
-            Generating your personalized EA Roadmap...
-          </p>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <section className="py-12 border-t-2 border-gray-300 bg-white relative z-10">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            We hit a snag generating your report
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </section>
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center">
+            <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              We hit a snag generating your report
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!data) {
     return (
-      <section className="py-12 border-t-2 border-gray-300 bg-white relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">
+      <Card>
+        <CardContent className="py-12">
+          <p className="text-center text-sm text-gray-500">
             No report data available. Please complete the form to generate your EA Roadmap.
           </p>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     );
   }
 
   const { tasks, total_task_count, ea_task_percent, summary } = data;
 
   return (
-    <section className="py-12 border-t-2 border-gray-300 bg-white relative z-10">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Report Header */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            {firstName}&apos;s EA Time Freedom Roadmap
-          </h2>
-          <p className="text-xl text-gray-600 mb-4">
-            Stage {stage}: {stageName}
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-            <CheckCircle className="w-4 h-4" />
-            {ea_task_percent}% of tasks can be delegated to an EA
-          </div>
+    <section className="space-y-4">
+      {/* Section Header */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+          {firstName}&apos;s Task Roadmap
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Stage {stage}: {stageName} - {total_task_count} tasks analyzed
+        </p>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-2">
+        <Card className="p-3">
+          <p className="text-2xl font-bold text-gray-900">{total_task_count}</p>
+          <p className="text-xs text-gray-500">Total Tasks</p>
+        </Card>
+        <Card className="p-3">
+          <p className="text-2xl font-bold text-blue-600">{ea_task_percent}%</p>
+          <p className="text-xs text-gray-500">EA Delegatable</p>
+        </Card>
+        <Card className="p-3">
+          <p className="text-2xl font-bold text-gray-900">{stage}</p>
+          <p className="text-xs text-gray-500">Business Stage</p>
+        </Card>
+      </div>
+
+      {/* Summary */}
+      {summary && (
+        <Card className="bg-gray-50 border-gray-100">
+          <CardContent className="py-4">
+            <p className="text-sm text-gray-600">{summary}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tasks by Frequency */}
+      {tasks && (
+        <div className="space-y-4">
+          <TaskFrequencySection
+            title="Daily Tasks"
+            tasks={tasks.daily || []}
+            color="blue"
+            ceoHourlyRate={ceoHourlyRate}
+            frequency="daily"
+          />
+          <TaskFrequencySection
+            title="Weekly Tasks"
+            tasks={tasks.weekly || []}
+            color="violet"
+            ceoHourlyRate={ceoHourlyRate}
+            frequency="weekly"
+          />
+          <TaskFrequencySection
+            title="Monthly Tasks"
+            tasks={tasks.monthly || []}
+            color="amber"
+            ceoHourlyRate={ceoHourlyRate}
+            frequency="monthly"
+          />
         </div>
+      )}
 
-        {/* Summary */}
-        {summary && (
-          <div className="bg-gradient-to-br from-primary/5 to-violet-50 rounded-xl p-6 mb-8">
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Executive Summary</h3>
-            <p className="text-gray-700">{summary}</p>
-          </div>
-        )}
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4">
+        <button
+          onClick={async () => {
+            try {
+              const response = await fetch('/api/generate-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tasks: data?.tasks || { daily: [], weekly: [], monthly: [] },
+                  eaPercentage: data?.ea_task_percent || 0,
+                  userData: { firstName, stage, stageName },
+                  taskHours: taskHours,
+                  revenueRange: revenueRange,
+                }),
+              });
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-            <div className="text-3xl font-bold text-primary">{total_task_count}</div>
-            <div className="text-sm text-gray-600">Total Tasks</div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-            <div className="text-3xl font-bold text-green-600">{ea_task_percent}%</div>
-            <div className="text-sm text-gray-600">EA Delegatable</div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-            <div className="text-3xl font-bold text-violet-600">{stage}</div>
-            <div className="text-sm text-gray-600">Business Stage</div>
-          </div>
-        </div>
+              const result = await response.json();
 
-        {/* Tasks by Frequency */}
-        {tasks && (
-          <div className="space-y-8">
-            <TaskFrequencySection 
-              title="Daily Tasks" 
-              tasks={tasks.daily || []}
-              icon={<Clock className="w-5 h-5" />}
-              color="text-blue-600"
-              bgColor="bg-blue-50"
-            />
-            <TaskFrequencySection 
-              title="Weekly Tasks" 
-              tasks={tasks.weekly || []}
-              icon={<Clock className="w-5 h-5" />}
-              color="text-violet-600"
-              bgColor="bg-violet-50"
-            />
-            <TaskFrequencySection 
-              title="Monthly Tasks" 
-              tasks={tasks.monthly || []}
-              icon={<Clock className="w-5 h-5" />}
-              color="text-amber-600"
-              bgColor="bg-amber-50"
-            />
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 pt-8 border-t border-gray-200">
-          <button
-            onClick={async () => {
-              // Generate and download PDF
-              try {
-                const response = await fetch('/api/generate-pdf', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    tasks: data?.tasks || { daily: [], weekly: [], monthly: [] },
-                    eaPercentage: data?.ea_task_percent || 0,
-                    userData: {
-                      firstName,
-                      stage,
-                      stageName,
-                    },
-                  }),
-                });
-                
-                const result = await response.json();
-                
-                if (result.success && result.pdf) {
-                  // Create download link from base64
-                  const link = document.createElement('a');
-                  link.href = `data:application/pdf;base64,${result.pdf}`;
-                  link.download = `EA-Time-Freedom-Report-${firstName || 'Report'}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                } else {
-                  alert('Failed to generate PDF. Please try again.');
-                }
-              } catch (error) {
-                console.error('PDF download error:', error);
+              if (result.success && result.pdf) {
+                const link = document.createElement('a');
+                link.href = `data:application/pdf;base64,${result.pdf}`;
+                link.download = `EA-Time-Freedom-Report-${firstName || 'Report'}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } else {
                 alert('Failed to generate PDF. Please try again.');
               }
-            }}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Download className="w-5 h-5" />
-            Download PDF
-          </button>
-          <button
-            onClick={() => {
-              // Send email reminder
-              alert('Your report has been sent to your email!');
-            }}
-            className="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-full font-medium hover:bg-primary/5 transition-colors"
-          >
-            <Mail className="w-5 h-5" />
-            Email Me This Report
-          </button>
-        </div>
+            } catch (error) {
+              console.error('PDF download error:', error);
+              alert('Failed to generate PDF. Please try again.');
+            }
+          }}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download PDF
+        </button>
+        <button
+          onClick={() => alert('Your report has been sent to your email!')}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          <Mail className="w-4 h-4" />
+          Email Report
+        </button>
       </div>
     </section>
   );
@@ -211,95 +211,131 @@ export function ReportSection({
 interface TaskFrequencySectionProps {
   title: string;
   tasks: Task[];
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
+  color: 'blue' | 'violet' | 'amber';
+  ceoHourlyRate: number;
+  frequency: 'daily' | 'weekly' | 'monthly';
 }
 
-function TaskFrequencySection({ title, tasks, icon, color, bgColor }: TaskFrequencySectionProps) {
+function TaskFrequencySection({ title, tasks, color, ceoHourlyRate, frequency }: TaskFrequencySectionProps) {
   if (!tasks || tasks.length === 0) return null;
 
+  const colorStyles = {
+    blue: { badge: 'bg-blue-50 text-blue-700', icon: 'text-blue-600' },
+    violet: { badge: 'bg-violet-50 text-violet-700', icon: 'text-violet-600' },
+    amber: { badge: 'bg-amber-50 text-amber-700', icon: 'text-amber-600' },
+  };
+
+  const styles = colorStyles[color];
+
   return (
-    <div>
-      <div className={`flex items-center gap-2 mb-4 ${color}`}>
-        {icon}
-        <h3 className="font-bold text-lg">{title}</h3>
-        <span className={`ml-auto px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${color}`}>
-          {tasks.length} tasks
-        </span>
-      </div>
-      <div className="space-y-3">
-        {tasks.map((task, index) => (
-          <TaskCard key={index} task={task} />
-        ))}
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className={`w-4 h-4 ${styles.icon}`} />
+            <CardTitle className="text-base">{title}</CardTitle>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles.badge}`}>
+            {tasks.length} tasks
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {tasks.map((task, index) => (
+            <TaskCard
+              key={index}
+              task={task}
+              ceoHourlyRate={ceoHourlyRate}
+              frequency={frequency}
+              taskIndex={index}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 interface TaskCardProps {
   task: Task;
+  ceoHourlyRate: number;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  taskIndex: number;
 }
 
-function TaskCard({ task }: TaskCardProps) {
-  const ownerColors: Record<string, { bg: string; text: string }> = {
-    ea: { bg: 'bg-green-100', text: 'text-green-700' },
-    you: { bg: 'bg-purple-100', text: 'text-purple-700' },
-    ceo: { bg: 'bg-purple-100', text: 'text-purple-700' },
-    team: { bg: 'bg-blue-100', text: 'text-blue-700' },
-    both: { bg: 'bg-amber-100', text: 'text-amber-700' },
+function estimateTaskTime(
+  task: Task,
+  frequency: 'daily' | 'weekly' | 'monthly',
+  taskIndex: number
+): number {
+  const baseTimes = {
+    daily: [0.25, 0.33, 0.5, 0.75],
+    weekly: [0.5, 0.75, 1, 1.5],
+    monthly: [1, 1.5, 2, 3],
   };
 
-  const priorityColors: Record<string, { bg: string; text: string }> = {
-    high: { bg: 'bg-red-100', text: 'text-red-700' },
-    medium: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-    low: { bg: 'bg-gray-100', text: 'text-gray-700' },
-  };
+  const timeOptions = baseTimes[frequency];
+  const baseTime = timeOptions[taskIndex % timeOptions.length];
 
+  const title = (task.title || '').toLowerCase();
+  let multiplier = 1;
+
+  if (title.includes('strategy') || title.includes('planning') || title.includes('analysis')) {
+    multiplier = 1.5;
+  } else if (title.includes('report') || title.includes('review') || title.includes('compile')) {
+    multiplier = 1.3;
+  } else if (title.includes('quick') || title.includes('simple') || title.includes('check')) {
+    multiplier = 0.7;
+  }
+
+  const isEA = task.isEA || (task.owner?.toLowerCase() === 'ea');
+  if (isEA && frequency !== 'daily') {
+    multiplier *= 1.2;
+  }
+
+  return baseTime * multiplier;
+}
+
+function calculateAnnualCost(
+  hoursPerOccurrence: number,
+  frequency: 'daily' | 'weekly' | 'monthly',
+  hourlyRate: number
+): number {
+  const occurrencesPerYear = { daily: 260, weekly: 52, monthly: 12 };
+  return hoursPerOccurrence * occurrencesPerYear[frequency] * hourlyRate;
+}
+
+function TaskCard({ task, ceoHourlyRate, frequency, taskIndex }: TaskCardProps) {
   const owner = task.owner?.toLowerCase() || 'ea';
-  const priority = task.priority?.toLowerCase() || 'medium';
-  const ownerStyle = ownerColors[owner] || ownerColors.ea;
-  const priorityStyle = priorityColors[priority] || priorityColors.medium;
-
-  // Determine if this is an EA task for styling
   const isEATask = task.isEA || owner === 'ea';
 
+  const hoursPerOccurrence = estimateTaskTime(task, frequency, taskIndex);
+  const annualCost = calculateAnnualCost(hoursPerOccurrence, frequency, ceoHourlyRate);
+
   return (
-    <div className={`bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-shadow ${isEATask ? 'border-green-200' : 'border-gray-100'}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-medium text-gray-900">{task.title}</h4>
+    <div className={`rounded-lg border p-3 ${isEATask ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-white'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-sm font-medium text-gray-900 truncate">{task.title}</h4>
             {isEATask && (
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                EA Task
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-medium">
+                <CheckCircle className="w-3 h-3" />
+                EA
               </span>
             )}
           </div>
           {task.description && (
-            <p className="text-sm text-gray-600">{task.description}</p>
-          )}
-          {task.category && (
-            <p className="text-xs text-gray-400 mt-1">Category: {task.category}</p>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</p>
           )}
         </div>
-        <div className="flex flex-col gap-2 items-end">
-          <span className={`px-2 py-1 rounded text-xs font-medium ${ownerStyle.bg} ${ownerStyle.text}`}>
-            {owner === 'ea' ? 'EA' : owner === 'you' ? 'YOU' : owner.toUpperCase()}
+        <div className="text-right shrink-0">
+          <span className="inline-block px-2 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded">
+            {formatCurrency(annualCost)}/yr
           </span>
-          {task.priority && (
-            <span className={`px-2 py-1 rounded text-xs font-medium ${priorityStyle.bg} ${priorityStyle.text}`}>
-              {priority}
-            </span>
-          )}
-          {task.timeEstimate && (
-            <span className="text-xs text-gray-500">
-              {task.timeEstimate}
-            </span>
-          )}
         </div>
       </div>
     </div>
   );
 }
-

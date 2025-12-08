@@ -31,6 +31,16 @@ import { uploadToS3, generateSafeFilename } from '@/lib/pdf/s3Service';
 import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '@/types';
 
 /**
+ * Task hours structure from ROI calculator
+ */
+interface TaskHours {
+  email: number;
+  personalLife: number;
+  calendar: number;
+  businessProcesses: number;
+}
+
+/**
  * Request body structure for PDF generation
  */
 interface GeneratePDFRequestBody {
@@ -44,8 +54,14 @@ interface GeneratePDFRequestBody {
     businessType?: string;
     website?: string;
     company?: string;
+    stage?: number;
+    stageName?: string;
     [key: string]: unknown;
   };
+  /** Task hours from ROI calculator for enhanced PDF */
+  taskHours?: TaskHours;
+  /** Revenue range for ROI calculations */
+  revenueRange?: string;
 }
 
 /**
@@ -58,10 +74,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Parse request body
     const body: GeneratePDFRequestBody = await request.json();
-    const { tasks, eaPercentage, userData } = body;
+    const { tasks, eaPercentage, userData, taskHours, revenueRange } = body;
 
     // Construct TaskGenerationResult from request data
-    // Reference: source route.ts lines 5-146
     const allTasks = [
       ...(tasks.daily || []),
       ...(tasks.weekly || []),
@@ -93,9 +108,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       website: userData.website || '',
     };
 
-    // Generate PDF
-    // Reference: source route.ts lines 5-146 (PDF generation section)
-    const pdfResult = await generatePDF(report, leadData);
+    // Enhanced PDF options with ROI data
+    const pdfOptions = {
+      includeMetadata: true,
+      taskHours: taskHours,
+      revenueRange: revenueRange,
+      stage: userData.stage,
+      stageName: userData.stageName,
+    };
+
+    // Generate PDF with enhanced options
+    const pdfResult = await generatePDF(report, leadData, pdfOptions);
 
     // Check for PDF generation failure
     if (!pdfResult.success || !pdfResult.base64) {

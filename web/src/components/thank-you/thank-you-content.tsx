@@ -1,11 +1,15 @@
 /**
  * ThankYouContent Component
- * Main content for the thank-you page including:
- * - Confirmation banner
- * - Video player with stage result
- * - Timer countdown CTA
- * - Calendar scheduling section
- * - Report display section
+ * Hybrid approach: Show compelling hook on screen, full report via email
+ *
+ * Flow:
+ * 1. Analyzing animation (builds anticipation)
+ * 2. Hero earnings (the big money number)
+ * 3. ROI Dashboard (condensed stats + chart)
+ * 4. Video Section
+ * 5. CTA to book call
+ * 6. Calendar scheduling
+ * 7. Email teaser (full report in inbox)
  */
 
 "use client";
@@ -13,11 +17,13 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ConfirmationBanner } from './confirmation-banner';
+import { HeroEarnings } from './hero-earnings';
+import { AnalyzingAnimation } from './analyzing-animation';
 import { VideoSection } from './video-section';
-import { TimerCTA } from './timer-cta';
 import { CalendarSection } from './calendar-section';
-import { ReportSection } from './report-section';
+import { ROIDashboard } from './roi-dashboard';
 import { VideoTestimonials } from '@/components/social-proof/video-testimonials';
+import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
 import type { TaskGenerationResult } from '@/types';
 
 interface FormDataFromURL {
@@ -25,37 +31,33 @@ interface FormDataFromURL {
   lastName: string;
   email: string;
   phone: string;
-  employees: string;
   revenue: string;
   painPoints: string;
   leadId: string;
+  taskHours?: TaskHours;
 }
 
 export function ThankYouContent() {
   const searchParams = useSearchParams();
-  
-  const [reportData, setReportData] = React.useState<TaskGenerationResult | null>(null);
-  const [isGenerating, setIsGenerating] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [stage, setStage] = React.useState<number>(4); // Default stage
-  const [stageName, setStageName] = React.useState<string>('Prioritize');
+
+  const [showAnalyzing, setShowAnalyzing] = React.useState(true);
+  const [emailSent, setEmailSent] = React.useState(false);
+  const [emailError, setEmailError] = React.useState<string | null>(null);
 
   // Parse form data from URL params (base64 encoded)
   const formData = React.useMemo<FormDataFromURL | null>(() => {
     const encodedData = searchParams.get('data');
     if (!encodedData) {
-      // Check for individual params as fallback
       const firstName = searchParams.get('firstName') || '';
       const lastName = searchParams.get('lastName') || '';
       const email = searchParams.get('email') || '';
-      
+
       if (email) {
         return {
           firstName,
           lastName,
           email,
           phone: searchParams.get('phone') || '',
-          employees: searchParams.get('employees') || '',
           revenue: searchParams.get('revenue') || '',
           painPoints: searchParams.get('painPoints') || '',
           leadId: searchParams.get('leadId') || '',
@@ -63,7 +65,7 @@ export function ThankYouContent() {
       }
       return null;
     }
-    
+
     try {
       const decoded = atob(encodedData);
       return JSON.parse(decoded) as FormDataFromURL;
@@ -73,136 +75,191 @@ export function ThankYouContent() {
     }
   }, [searchParams]);
 
-  // Determine business stage based on revenue
-  React.useEffect(() => {
-    if (!formData?.revenue) return;
-    
-    const revenueStageMap: Record<string, { stage: number; name: string }> = {
-      'Under $100k': { stage: 1, name: 'Start' },
-      '$100k to $250k': { stage: 2, name: 'Build' },
-      '$250K to $500k': { stage: 2, name: 'Build' },
-      '$500k to $1M': { stage: 3, name: 'Scale' },
-      '$1M to $3M': { stage: 4, name: 'Prioritize' },
-      '$3M to $10M': { stage: 5, name: 'Optimize' },
-      '$10M to $30M': { stage: 6, name: 'Maximize' },
-      '$30 Million+': { stage: 7, name: 'Exit' },
-    };
-    
-    const stageInfo = revenueStageMap[formData.revenue];
-    if (stageInfo) {
-      setStage(stageInfo.stage);
-      setStageName(stageInfo.name);
-    }
-  }, [formData?.revenue]);
+  // Default task hours if not provided
+  const taskHours: TaskHours = formData?.taskHours ?? {
+    email: 3,
+    personalLife: 2,
+    calendar: 2,
+    businessProcesses: 3,
+  };
 
-  // Generate the AI report
-  React.useEffect(() => {
-    const generateReport = async () => {
-      if (!formData?.email) {
-        setIsGenerating(false);
+  // Calculate ROI for email
+  const roi = React.useMemo(
+    () => calculateROI(taskHours, formData?.revenue || '$500k to $1M'),
+    [taskHours, formData?.revenue]
+  );
+
+  // Check if we have task hours data (ROI calculator was used)
+  const hasROIData = !!formData?.taskHours;
+  const totalHours = Object.values(taskHours).reduce((sum, h) => sum + h, 0);
+
+  // Generate PDF and send email when analysis completes
+  const generateAndSendReport = React.useCallback(async () => {
+    if (!formData?.email) return;
+
+    try {
+      // First, generate the tasks via AI
+      const tasksResponse = await fetch('/api/generate-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          revenue: formData.revenue,
+          painPoints: formData.painPoints,
+          leadType: 'main',
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      const tasksResult = await tasksResponse.json();
+
+      if (!tasksResult.success) {
+        console.error('Failed to generate tasks:', tasksResult.error);
+        setEmailError('Failed to generate report');
         return;
       }
 
-      try {
-        setIsGenerating(true);
-        setError(null);
-
-        const response = await fetch('/api/generate-tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
+      // Generate PDF
+      const pdfResponse = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: tasksResult.data?.tasks || { daily: [], weekly: [], monthly: [] },
+          eaPercentage: tasksResult.data?.ea_task_percent || 0,
+          userData: {
             firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            employees: formData.employees,
-            revenue: formData.revenue,
-            painPoints: formData.painPoints,
-            leadType: 'main',
-            timestamp: new Date().toISOString(),
-          }),
-        });
+            stage: 4,
+            stageName: 'Prioritize',
+          },
+          taskHours: taskHours,
+          revenueRange: formData.revenue || '$500k to $1M',
+        }),
+      });
 
-        const result = await response.json();
+      const pdfResult = await pdfResponse.json();
 
-        if (result.success && result.data) {
-          setReportData(result.data);
-          
-          // Update Close CRM with report URL if we have a lead ID
-          if (formData.leadId) {
-            try {
-              await fetch('/api/close/update-lead', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  leadId: formData.leadId,
-                  reportUrl: window.location.href,
-                }),
-              });
-            } catch (updateError) {
-              console.error('Failed to update lead with report URL:', updateError);
-            }
-          }
-        } else {
-          setError(result.error || 'Failed to generate report');
-        }
-      } catch (err) {
-        console.error('Error generating report:', err);
-        setError('An error occurred while generating your report. Please try again.');
-      } finally {
-        setIsGenerating(false);
+      if (!pdfResult.success || !pdfResult.pdf) {
+        console.error('Failed to generate PDF');
+        setEmailError('Failed to generate PDF');
+        return;
       }
-    };
 
-    generateReport();
-  }, [formData]);
+      // Send email with PDF
+      const emailResponse = await fetch('/api/send-report-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          pdfBase64: pdfResult.pdf,
+          revenueUnlocked: roi.annualRevenueUnlocked,
+          weeklyHoursSaved: roi.weeklyHoursDelegated,
+          roiMultiplier: roi.roiMultiplier,
+        }),
+      });
+
+      const emailResult = await emailResponse.json();
+
+      if (emailResult.success) {
+        setEmailSent(true);
+      } else {
+        console.error('Failed to send email:', emailResult.error);
+        setEmailError(emailResult.error || 'Failed to send email');
+      }
+
+      // TEMPORARILY DISABLED FOR TESTING - Close CRM update (report URL)
+      console.log('[TEST MODE] Close CRM report URL update disabled');
+      // if (formData.leadId) {
+      //   try {
+      //     await fetch('/api/close/update-lead', {
+      //       method: 'PUT',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       body: JSON.stringify({
+      //         leadId: formData.leadId,
+      //         reportUrl: window.location.href,
+      //       }),
+      //     });
+      //   } catch (updateError) {
+      //     console.error('Failed to update lead:', updateError);
+      //   }
+      // }
+    } catch (err) {
+      console.error('Error generating/sending report:', err);
+      setEmailError('Failed to generate report');
+    }
+  }, [formData, taskHours, roi]);
+
+  // Handle analysis complete
+  const handleAnalysisComplete = React.useCallback(() => {
+    setShowAnalyzing(false);
+    // Start generating and sending the report in background
+    generateAndSendReport();
+  }, [generateAndSendReport]);
+
+  const scrollToCalendar = () => {
+    document.getElementById('calendar-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Show analyzing animation first
+  if (showAnalyzing) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AnalyzingAnimation
+          firstName={formData?.firstName || 'there'}
+          onComplete={handleAnalysisComplete}
+          duration={3500}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Confirmation Banner */}
-      <ConfirmationBanner 
-        message="Your EA Time Freedom Report is being sent to your inbox"
+      <ConfirmationBanner
+        message="Your full Time Freedom Report is on its way to your inbox"
       />
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Important Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            IMPORTANT - Before You Check Your Email, Watch This Video
-          </h1>
-          <p className="text-gray-600 text-lg">
-            We&apos;re selecting only 100 businesses for an exclusive EA implementation workshop.
-          </p>
-        </div>
+      {/* Main Content - Full width with padding */}
+      <div className="w-full px-3 py-6 space-y-6">
 
-        {/* Stage Result */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-            Congratulations, You&apos;re Stage {stage}: {stageName}
-          </h2>
-        </div>
+        {/* 1. Hero Earnings - The big money number + CTA */}
+        {hasROIData && totalHours > 0 && (
+          <HeroEarnings
+            taskHours={taskHours}
+            revenueRange={formData?.revenue || '$500k to $1M'}
+            firstName={formData?.firstName || 'there'}
+            onBookCall={scrollToCalendar}
+          />
+        )}
 
-        {/* Video Section */}
-        <VideoSection />
+        {/* 2. ROI Dashboard - Condensed stats + chart */}
+        {hasROIData && totalHours > 0 && (
+          <ROIDashboard
+            taskHours={taskHours}
+            revenueRange={formData?.revenue || '$500k to $1M'}
+            firstName={formData?.firstName || 'there'}
+          />
+        )}
 
-        {/* Timer CTA */}
-        <TimerCTA 
-          initialSeconds={60}
-          primaryText="See If I'm a Fit for an EA Workshop"
-          primaryHref="#calendar-section"
-          secondaryText="No thanks, just take me to my report"
-          onSecondaryClick={() => {
-            // Scroll to report section
-            document.getElementById('report-section')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          onPrimaryClick={() => {
-            // Scroll to calendar section
-            document.getElementById('calendar-section')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-        />
+        {/* 3. Video Section */}
+        <section className="space-y-3">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Watch This Important Video
+            </h2>
+            <p className="text-sm text-gray-500">
+              See how busy founders like you reclaimed 10+ hours per week
+            </p>
+          </div>
+          <VideoSection />
+        </section>
 
-        {/* Calendar Scheduling Section (iClosed) */}
+        {/* 4. Calendar Scheduling Section */}
         <div id="calendar-section">
           <CalendarSection
             firstName={formData?.firstName || ''}
@@ -212,17 +269,6 @@ export function ThankYouContent() {
           />
         </div>
 
-        {/* Report Section */}
-        <div id="report-section">
-          <ReportSection
-            data={reportData}
-            isLoading={isGenerating}
-            error={error}
-            firstName={formData?.firstName || 'there'}
-            stage={stage}
-            stageName={stageName}
-          />
-        </div>
       </div>
 
       {/* Video Testimonials Section */}
@@ -230,4 +276,3 @@ export function ThankYouContent() {
     </div>
   );
 }
-

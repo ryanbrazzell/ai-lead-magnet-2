@@ -24,7 +24,26 @@ import {
   addNextStepsSection,
   addCTABox,
   addFooterToAllPages,
+  addROIHeroSection,
+  addROIAnalysisSection,
+  addChallengeQuestion,
+  addEnhancedTaskSection,
 } from './layout';
+import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
+
+/**
+ * Extended options for enhanced PDF generation
+ */
+interface EnhancedPDFOptions extends PDFGenerationOptions {
+  /** Task hours from ROI calculator (optional for enhanced PDF) */
+  taskHours?: TaskHours;
+  /** Revenue range for ROI calculations */
+  revenueRange?: string;
+  /** Business stage number (1-7) */
+  stage?: number;
+  /** Business stage name */
+  stageName?: string;
+}
 
 /**
  * Generate PDF from task generation report and lead data
@@ -32,15 +51,21 @@ import {
  * Creates a professional "EA Time Freedom Report" PDF document
  * with all tasks, metrics, and CTA sections.
  *
+ * Enhanced version includes:
+ * - ROI Hero section with revenue unlocked
+ * - ROI Analysis with cost/benefit breakdown
+ * - Challenge question
+ * - Enhanced task sections with annual cost per task
+ *
  * @param report - TaskGenerationResult with 30 tasks and EA metrics
  * @param leadData - UnifiedLeadData for personalization
- * @param options - Optional PDFGenerationOptions for customization
+ * @param options - Optional EnhancedPDFOptions for customization
  * @returns PDFGenerationResult with success, buffer, base64, filename, size
  */
 export async function generatePDF(
   report: TaskGenerationResult,
   leadData: UnifiedLeadData,
-  options: PDFGenerationOptions = {}
+  options: EnhancedPDFOptions = {}
 ): Promise<PDFGenerationResult> {
   const startTime = Date.now();
 
@@ -77,7 +102,7 @@ export async function generatePDF(
     };
 
     // Orchestrate PDF content generation
-    await addPDFContent(doc, report, leadData, colors);
+    await addPDFContent(doc, report, leadData, colors, options);
 
     // Add metadata if requested
     if (options.includeMetadata) {
@@ -135,27 +160,52 @@ export async function generatePDF(
  * Add main content to PDF document
  *
  * Orchestrates the layout utilities to build the complete report.
- * Reference: generatePDF.ts lines 112-301
+ * Enhanced version includes ROI sections when task hours are provided.
  *
  * @param doc - jsPDF document instance
  * @param report - TaskGenerationResult with tasks and metrics
  * @param leadData - UnifiedLeadData for personalization
  * @param colors - PDFColorScheme for styling
+ * @param options - Enhanced PDF options including ROI data
  */
 async function addPDFContent(
   doc: jsPDF,
   report: TaskGenerationResult,
   leadData: UnifiedLeadData,
-  colors: PDFColorScheme
+  colors: PDFColorScheme,
+  options: EnhancedPDFOptions
 ): Promise<void> {
   // Track y position throughout document
   let yPosition: number;
 
+  // Calculate ROI if task hours provided
+  const hasROIData = options.taskHours && options.revenueRange;
+  const roi = hasROIData
+    ? calculateROI(options.taskHours!, options.revenueRange!)
+    : null;
+
   // 1. Add header section (title, lead info, date, separator)
   yPosition = addPDFHeader(doc, leadData, colors);
 
-  // 2. Add executive summary with EA percentage
-  yPosition = addExecutiveSummary(doc, report.ea_task_percent, yPosition, colors);
+  // 2. If we have ROI data, add the enhanced ROI sections
+  if (roi) {
+    // Add ROI Hero (Revenue Unlocked)
+    yPosition = addROIHeroSection(
+      doc,
+      roi,
+      leadData.firstName || 'there',
+      yPosition
+    );
+
+    // Add ROI Analysis (cost/benefit breakdown)
+    yPosition = addROIAnalysisSection(doc, roi, yPosition);
+
+    // Add Challenge Question
+    yPosition = addChallengeQuestion(doc, roi.roiMultiplier, yPosition);
+  } else {
+    // Fallback to original executive summary
+    yPosition = addExecutiveSummary(doc, report.ea_task_percent, yPosition, colors);
+  }
 
   // 3. Collect all tasks for key insights box
   const allTasks: Task[] = [
@@ -174,21 +224,44 @@ async function addPDFContent(
   );
 
   // 5. Add task sections (daily, weekly, monthly)
-  const sections = [
-    { title: 'Daily Tasks & Responsibilities', tasks: report.tasks.daily },
-    { title: 'Weekly Tasks & Responsibilities', tasks: report.tasks.weekly },
-    { title: 'Monthly Tasks & Responsibilities', tasks: report.tasks.monthly },
-  ];
+  // Use enhanced sections with annual cost if ROI data available
+  if (roi) {
+    const sections = [
+      { title: 'Daily Tasks', tasks: report.tasks.daily, frequency: 'daily' as const },
+      { title: 'Weekly Tasks', tasks: report.tasks.weekly, frequency: 'weekly' as const },
+      { title: 'Monthly Tasks', tasks: report.tasks.monthly, frequency: 'monthly' as const },
+    ];
 
-  for (const section of sections) {
-    const result = addTaskSection(
-      doc,
-      section.title,
-      section.tasks,
-      yPosition,
-      colors
-    );
-    yPosition = result.yPosition;
+    for (const section of sections) {
+      const result = addEnhancedTaskSection(
+        doc,
+        section.title,
+        section.tasks,
+        roi.ceoHourlyRate,
+        section.frequency,
+        yPosition,
+        colors
+      );
+      yPosition = result.yPosition;
+    }
+  } else {
+    // Fallback to original task sections
+    const sections = [
+      { title: 'Daily Tasks & Responsibilities', tasks: report.tasks.daily },
+      { title: 'Weekly Tasks & Responsibilities', tasks: report.tasks.weekly },
+      { title: 'Monthly Tasks & Responsibilities', tasks: report.tasks.monthly },
+    ];
+
+    for (const section of sections) {
+      const result = addTaskSection(
+        doc,
+        section.title,
+        section.tasks,
+        yPosition,
+        colors
+      );
+      yPosition = result.yPosition;
+    }
   }
 
   // 6. Calculate EA task count for next steps section
@@ -203,6 +276,11 @@ async function addPDFContent(
   // 9. Add footer to all pages (must be last)
   addFooterToAllPages(doc, colors);
 }
+
+/**
+ * Re-export EnhancedPDFOptions for external use
+ */
+export type { EnhancedPDFOptions };
 
 /**
  * Add PDF document metadata

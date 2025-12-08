@@ -44,7 +44,7 @@ export function Footer({
   disclaimer = DEFAULT_DISCLAIMER,
 }: FooterProps) {
   return (
-    <footer className="bg-primary text-white w-full py-8 md:py-12">
+    <footer className="bg-blue-900 text-white w-full py-8 md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Navigation links */}
         <nav
@@ -53,13 +53,13 @@ export function Footer({
         >
           <a
             href={privacyHref}
-            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary rounded-md px-2 transition-colors"
+            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 rounded-md px-2 transition-colors"
           >
             Privacy Policy
           </a>
           <a
             href={termsHref}
-            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary rounded-md px-2 transition-colors"
+            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 rounded-md px-2 transition-colors"
           >
             Terms of Service
           </a>

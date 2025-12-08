@@ -13,7 +13,7 @@
  */
 
 import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
-import { generateWithClaude } from './claude-client';
+import { generateWithGemini } from './gemini-client';
 import {
   buildUnifiedPromptJSON,
   buildStreamlinedPrompt,
@@ -107,7 +107,7 @@ async function attemptGeneration(
   const startTime = Date.now();
 
   try {
-    const result = await generateWithClaude(prompt);
+    const result = await generateWithGemini(prompt);
 
     log.info('Response parsing successful', {
       attemptName,

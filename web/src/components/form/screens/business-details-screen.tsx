@@ -1,7 +1,6 @@
 /**
- * BusinessDetailsScreen - Screen 4 (Combined)
- * Collects employee count, revenue, and pain points all on one screen
- * Updated to match Acquisition.com styling with labels above dropdowns
+ * BusinessDetailsScreen - Screen 4
+ * Collects revenue and pain points (employees removed per ROI calculator spec)
  */
 
 "use client";
@@ -15,19 +14,17 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BusinessDetailsScreenProps {
-  employees: string;
   revenue: string;
   painPoints: string;
   errors?: {
-    employees?: string;
     revenue?: string;
   };
   isLoading: boolean;
-  onEmployeesChange: (value: string) => void;
   onRevenueChange: (value: string) => void;
   onPainPointsChange: (value: string) => void;
   onPrevious: () => void;
-  onSubmit: (employees: string, revenue: string, painPoints: string) => Promise<void>;
+  onSubmit: (revenue: string, painPoints: string) => Promise<void>;
+  isFinalStep?: boolean;
 }
 
 const revenueOptions = [
@@ -40,20 +37,6 @@ const revenueOptions = [
   { value: '$3M to $10M', label: '$3M to $10M' },
   { value: '$10M to $30M', label: '$10M to $30M' },
   { value: '$30 Million+', label: '$30 Million+' },
-];
-
-const employeeOptions = [
-  { value: '', label: 'Select...' },
-  { value: 'Just me, no revenue', label: 'Just me, no revenue' },
-  { value: 'Just me, some revenue', label: 'Just me, some revenue' },
-  { value: 'Me and vendors', label: 'Me and vendors' },
-  { value: '2 to 4', label: '2 to 4' },
-  { value: '5 to 9', label: '5 to 9' },
-  { value: '10 to 19', label: '10 to 19' },
-  { value: '20 to 49', label: '20 to 49' },
-  { value: '50 to 99', label: '50 to 99' },
-  { value: '100 to 249', label: '100 to 249' },
-  { value: '250 to 500', label: '250 to 500' },
 ];
 
 interface CustomSelectProps {
@@ -99,7 +82,7 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
 
   return (
     <div className="w-full" ref={selectRef}>
-      <label 
+      <label
         htmlFor={id}
         className="block text-base text-gray-700 mb-2"
       >
@@ -119,7 +102,7 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
             "flex items-center justify-between",
             "min-h-[60px]",
             "focus:outline-none",
-            isOpen ? "border-teal-500 ring-2 ring-teal-200" : "border-gray-300",
+            isOpen ? "border-blue-500 ring-2 ring-blue-200" : "border-gray-300",
             error ? "border-red-500" : "",
             !value ? "text-gray-400" : "text-gray-900"
           )}
@@ -128,16 +111,16 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
           aria-invalid={error ? "true" : "false"}
         >
           <span className="font-normal">{selectedLabel}</span>
-          <ChevronDown 
+          <ChevronDown
             className={cn(
               "w-6 h-6 text-gray-400 transition-transform duration-200",
               isOpen && "rotate-180"
-            )} 
+            )}
           />
         </button>
-        
+
         {isOpen && (
-          <div 
+          <div
             className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-72 overflow-y-auto"
             role="listbox"
           >
@@ -149,7 +132,7 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
                 className={cn(
                   "w-full px-5 py-3.5 text-left text-lg",
                   "hover:bg-gray-50 transition-colors",
-                  value === option.value && "bg-teal-50 text-teal-700 font-medium"
+                  value === option.value && "bg-blue-50 text-blue-700 font-medium"
                 )}
                 role="option"
                 aria-selected={value === option.value}
@@ -170,43 +153,38 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
 };
 
 export function BusinessDetailsScreen({
-  employees,
   revenue,
   painPoints,
   errors = {},
   isLoading,
-  onEmployeesChange,
   onRevenueChange,
   onPainPointsChange,
   onPrevious,
   onSubmit,
+  isFinalStep = false,
 }: BusinessDetailsScreenProps) {
   const [localErrors, setLocalErrors] = React.useState<{
-    employees?: string;
     revenue?: string;
   }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all fields
-    const employeeError = validateSelection(employees, '# of full time employees');
+    // Validate revenue
     const revenueError = validateSelection(revenue, 'your revenue range');
 
-    if (employeeError || revenueError) {
+    if (revenueError) {
       setLocalErrors({
-        employees: employeeError || undefined,
         revenue: revenueError || undefined,
       });
       return;
     }
 
     setLocalErrors({});
-    await onSubmit(employees, revenue, painPoints);
+    await onSubmit(revenue, painPoints);
   };
 
   const displayErrors = {
-    employees: localErrors.employees || errors.employees,
     revenue: localErrors.revenue || errors.revenue,
   };
 
@@ -215,16 +193,6 @@ export function BusinessDetailsScreen({
       <h2 className="text-2xl md:text-3xl font-normal text-center text-gray-900">
         Where are you in your <strong className="font-bold">business journey</strong>?
       </h2>
-
-      {/* Employee Count */}
-      <CustomSelect
-        label="# of full time employees"
-        value={employees}
-        options={employeeOptions}
-        onChange={onEmployeesChange}
-        error={displayErrors.employees}
-        id="employees"
-      />
 
       {/* Annual Revenue */}
       <CustomSelect
@@ -251,18 +219,15 @@ export function BusinessDetailsScreen({
       </div>
 
       <div className="flex justify-center pt-4">
-        <PillButton type="submit" variant="primary" loading={isLoading}>
-          {isLoading ? 'GENERATING YOUR REPORT...' : 'GET MY EA ROADMAP'}
+        <PillButton type="submit" variant={isFinalStep ? "primary" : "progress"} loading={isLoading}>
+          {isFinalStep ? "SEE MY REPORT" : "CONTINUE"}
         </PillButton>
       </div>
 
       {/* Social Proof */}
       <div className="text-center space-y-1 pt-4">
         <p className="text-sm text-gray-600">
-          ⭐ Get Your Roadmap in Less than 30 Seconds
-        </p>
-        <p className="text-sm text-gray-600">
-          ⭐ Requested by over 250,000 Business Owners
+          {isFinalStep ? "Your personalized report is ready" : "Next: See how much time you could save"}
         </p>
       </div>
 

@@ -1,15 +1,12 @@
 /**
  * MultiStepForm Component
- * Task Group 2: Multi-Step Form Components
- *
- * A 4-screen progressive disclosure form that captures leads incrementally
- * through Close CRM integration.
+ * ROI Calculator Lead Magnet
  *
  * Flow:
  * 1. Screen 1: Name (First + Last) → No API call → Purple "Let's Start"
  * 2. Screen 2: Email → Create Close lead with name + email → Yellow "Continue"
  * 3. Screen 3: Phone → Update Close lead → Yellow "Continue"
- * 4. Screen 4: Employee Count + Revenue + Pain Points → Update lead → Purple "Get My EA Roadmap"
+ * 4. Screen 4: Business Details (Revenue + Pain Points) → Purple "See My Report" → Navigate to /report
  */
 
 "use client";
@@ -26,7 +23,6 @@ export interface FormData {
   lastName: string;
   email: string;
   phone: string;
-  employees: string;
   revenue: string;
   painPoints: string;
 }
@@ -36,9 +32,18 @@ export interface FormErrors {
   lastName?: string;
   email?: string;
   phone?: string;
-  employees?: string;
   revenue?: string;
 }
+
+const TOTAL_SCREENS = 4;
+
+// Default task hours used for ROI calculation
+const DEFAULT_TASK_HOURS = {
+  email: 3,
+  personalLife: 2,
+  calendar: 2,
+  businessProcesses: 3,
+};
 
 export function MultiStepForm() {
   const [currentScreen, setCurrentScreen] = React.useState(1);
@@ -54,30 +59,28 @@ export function MultiStepForm() {
     lastName: '',
     email: '',
     phone: '',
-    employees: '',
     revenue: '',
     painPoints: '',
   });
 
   const [errors, setErrors] = React.useState<FormErrors>({});
 
-  const updateField = (field: keyof FormData, value: string) => {
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user types
-    if (errors[field as keyof FormErrors]) {
+    if (field in errors) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
   const goToNextScreen = () => {
-    setCurrentScreen(prev => Math.min(prev + 1, 4));
+    setCurrentScreen(prev => Math.min(prev + 1, TOTAL_SCREENS));
   };
 
   const goToPreviousScreen = () => {
     setCurrentScreen(prev => Math.max(prev - 1, 1));
   };
 
-  // Instant transition - no animation delay (matches acquisition.com/roadmap)
   return (
     <div className="w-full">
       {currentScreen === 1 && (
@@ -88,8 +91,7 @@ export function MultiStepForm() {
           isLoading={isLoading}
           onFirstNameChange={(value) => updateField('firstName', value)}
           onLastNameChange={(value) => updateField('lastName', value)}
-          onSubmit={async (firstName, lastName) => {
-            // Screen 1: No API call, just proceed to next screen
+          onSubmit={async () => {
             setErrors({});
             goToNextScreen();
           }}
@@ -104,40 +106,40 @@ export function MultiStepForm() {
           onEmailChange={(value) => updateField('email', value)}
           onPrevious={goToPreviousScreen}
           onSubmit={async (email) => {
-            // Transition immediately - don't wait for API call
             goToNextScreen();
-            
-            // Fire API call in background (non-blocking)
-            const leadPromise = (async () => {
-              try {
-                const response = await fetch('/api/close/create-lead', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    email,
-                    meta_fbc: fbc,
-                    meta_fbp: fbp,
-                  }),
-                });
 
-                const data = await response.json();
+            // TEMPORARILY DISABLED FOR TESTING - Close CRM lead creation
+            // const leadPromise = (async () => {
+            //   try {
+            //     const response = await fetch('/api/close/create-lead', {
+            //       method: 'POST',
+            //       headers: { 'Content-Type': 'application/json' },
+            //       body: JSON.stringify({
+            //         firstName: formData.firstName,
+            //         lastName: formData.lastName,
+            //         email,
+            //         meta_fbc: fbc,
+            //         meta_fbp: fbp,
+            //       }),
+            //     });
 
-                if (data.success && data.leadId) {
-                  setLeadId(data.leadId);
-                  return data.leadId;
-                } else {
-                  console.error('Failed to create lead:', data.error);
-                  return null;
-                }
-              } catch (error) {
-                console.error('Error creating lead:', error);
-                return null;
-              }
-            })();
-            
-            pendingLeadIdRef.current = leadPromise;
+            //     const data = await response.json();
+
+            //     if (data.success && data.leadId) {
+            //       setLeadId(data.leadId);
+            //       return data.leadId;
+            //     } else {
+            //       console.error('Failed to create lead:', data.error);
+            //       return null;
+            //     }
+            //   } catch (error) {
+            //     console.error('Error creating lead:', error);
+            //     return null;
+            //   }
+            // })();
+
+            // pendingLeadIdRef.current = leadPromise;
+            console.log('[TEST MODE] Close CRM lead creation disabled');
           }}
         />
       )}
@@ -150,94 +152,69 @@ export function MultiStepForm() {
           onPhoneChange={(value) => updateField('phone', value)}
           onPrevious={goToPreviousScreen}
           onSubmit={async (phone) => {
-            // Transition immediately - don't wait for API call
             goToNextScreen();
-            
-            // Fire API call in background (non-blocking)
-            // Wait for leadId if it's still being created from previous screen
-            (async () => {
-              let currentLeadId = leadId;
-              if (!currentLeadId && pendingLeadIdRef.current) {
-                currentLeadId = await pendingLeadIdRef.current || '';
-                if (currentLeadId) {
-                  setLeadId(currentLeadId);
-                }
-              }
-              
-              if (currentLeadId) {
-                try {
-                  await fetch('/api/close/update-lead', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ leadId: currentLeadId, phone }),
-                  });
-                } catch (error) {
-                  console.error('Error updating lead with phone:', error);
-                }
-              }
-            })();
+
+            // TEMPORARILY DISABLED FOR TESTING - Close CRM update (phone)
+            console.log('[TEST MODE] Close CRM phone update disabled');
+            // (async () => {
+            //   let currentLeadId = leadId;
+            //   if (!currentLeadId && pendingLeadIdRef.current) {
+            //     currentLeadId = await pendingLeadIdRef.current || '';
+            //     if (currentLeadId) {
+            //       setLeadId(currentLeadId);
+            //     }
+            //   }
+
+            //   if (currentLeadId) {
+            //     try {
+            //       await fetch('/api/close/update-lead', {
+            //         method: 'PUT',
+            //         headers: { 'Content-Type': 'application/json' },
+            //         body: JSON.stringify({ leadId: currentLeadId, phone }),
+            //       });
+            //     } catch (error) {
+            //       console.error('Error updating lead with phone:', error);
+            //     }
+            //   }
+            // })();
           }}
         />
       )}
 
       {currentScreen === 4 && (
         <BusinessDetailsScreen
-          employees={formData.employees}
           revenue={formData.revenue}
           painPoints={formData.painPoints}
           errors={errors}
           isLoading={isLoading}
-          onEmployeesChange={(value) => updateField('employees', value)}
           onRevenueChange={(value) => updateField('revenue', value)}
           onPainPointsChange={(value) => updateField('painPoints', value)}
           onPrevious={goToPreviousScreen}
-          onSubmit={async (employees, revenue, painPoints) => {
-            // Use current leadId immediately (don't wait)
+          isFinalStep={true}
+          onSubmit={async (revenue, painPoints) => {
+            // Use current leadId immediately
             const currentLeadId = leadId;
-            
-            // Encode form data for thank-you page
-            const thankYouData = {
+
+            // Encode form data for report page with default task hours
+            const reportData = {
               firstName: formData.firstName,
               lastName: formData.lastName,
               email: formData.email,
               phone: formData.phone,
-              employees,
-              revenue,
-              painPoints,
+              revenue: revenue,
+              painPoints: painPoints,
+              taskHours: DEFAULT_TASK_HOURS,
               leadId: currentLeadId,
               meta_fbc: fbc,
               meta_fbp: fbp,
             };
-            
-            // Navigate immediately - don't wait for API call
-            const encodedData = btoa(JSON.stringify(thankYouData));
+
+            // Navigate immediately
+            const encodedData = btoa(JSON.stringify(reportData));
             window.location.href = `/report?data=${encodeURIComponent(encodedData)}`;
-            
-            // Fire API call in background (non-blocking)
-            // Handle leadId resolution asynchronously
-            (async () => {
-              let finalLeadId = currentLeadId;
-              if (!finalLeadId && pendingLeadIdRef.current) {
-                finalLeadId = await pendingLeadIdRef.current || '';
-              }
-              
-              if (finalLeadId) {
-                try {
-                  await fetch('/api/close/update-lead', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      leadId: finalLeadId,
-                      employees,
-                      revenue,
-                      painPoints,
-                    }),
-                  });
-                } catch (error) {
-                  console.error('Error updating lead with business details:', error);
-                }
-              }
-            })();
+
+            // TEMPORARILY DISABLED FOR TESTING - Close CRM update (business details)
+            console.log('[TEST MODE] Close CRM business details update disabled');
           }}
         />
       )}
