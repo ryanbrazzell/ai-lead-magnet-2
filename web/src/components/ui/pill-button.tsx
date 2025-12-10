@@ -164,23 +164,36 @@ const PillButton = React.forwardRef<HTMLButtonElement, PillButtonProps>(
     // Determine if button should be disabled
     const isDisabled = disabled || loading || variant === 'disabled';
 
-    // Handle touch events for better mobile compatibility
+    // Track if click was already handled to prevent double submission
+    const clickHandledRef = React.useRef(false);
+
+    // Handle touch events for mobile compatibility
     const handleTouchEnd = (e: React.TouchEvent<HTMLButtonElement>) => {
-      // Prevent double-tap zoom on iOS
-      e.preventDefault();
-
-      // If there's an onClick handler and not disabled, trigger it
-      if (onClick && !isDisabled) {
-        onClick(e as unknown as React.MouseEvent<HTMLButtonElement>);
-      }
-
-      // For submit buttons, programmatically submit the form
-      if (props.type === 'submit' && !isDisabled) {
-        const form = (e.target as HTMLElement).closest('form');
+      if (isDisabled) return;
+      
+      // For submit buttons, ensure form submission works on mobile
+      if (props.type === 'submit' && !clickHandledRef.current) {
+        const form = (e.currentTarget as HTMLElement).closest('form');
         if (form) {
+          clickHandledRef.current = true;
+          // Use requestSubmit to trigger form validation and submission
           form.requestSubmit();
+          // Reset after a short delay
+          setTimeout(() => {
+            clickHandledRef.current = false;
+          }, 100);
         }
       }
+    };
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      clickHandledRef.current = true;
+      if (onClick) {
+        onClick(e);
+      }
+      setTimeout(() => {
+        clickHandledRef.current = false;
+      }, 100);
     };
 
     return (
@@ -189,14 +202,14 @@ const PillButton = React.forwardRef<HTMLButtonElement, PillButtonProps>(
           pillButtonVariants({ variant }),
           // Add pointer-events-none when loading
           loading && 'pointer-events-none',
-          // Ensure touch-action is enabled for mobile
+          // Ensure touch-action is enabled for mobile (prevents double-tap zoom)
           'touch-action-manipulation',
           className
         )}
         ref={ref}
         disabled={isDisabled}
         aria-disabled={isDisabled}
-        onClick={onClick}
+        onClick={handleClick}
         onTouchEnd={handleTouchEnd}
         {...props}
       >
