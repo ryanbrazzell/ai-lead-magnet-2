@@ -46,7 +46,7 @@ const pillButtonVariants = cva(
     // Shape and dimensions
     'inline-flex items-center justify-center',
     'rounded-pill', // 50px border-radius from design tokens
-    'h-[84px]', // 84px height per spec (exceeds 44px touch target minimum)
+    'h-[64px]', // 64px height (exceeds 44px touch target minimum)
     'w-full min-[428px]:w-[408px]', // Responsive: full width mobile, fixed desktop
 
     // Typography - 24px bold uppercase per spec
@@ -154,6 +154,7 @@ const PillButton = React.forwardRef<HTMLButtonElement, PillButtonProps>(
       loading = false,
       disabled,
       children,
+      onClick,
       ...props
     },
     ref
@@ -163,17 +164,40 @@ const PillButton = React.forwardRef<HTMLButtonElement, PillButtonProps>(
     // Determine if button should be disabled
     const isDisabled = disabled || loading || variant === 'disabled';
 
+    // Handle touch events for better mobile compatibility
+    const handleTouchEnd = (e: React.TouchEvent<HTMLButtonElement>) => {
+      // Prevent double-tap zoom on iOS
+      e.preventDefault();
+
+      // If there's an onClick handler and not disabled, trigger it
+      if (onClick && !isDisabled) {
+        onClick(e as unknown as React.MouseEvent<HTMLButtonElement>);
+      }
+
+      // For submit buttons, programmatically submit the form
+      if (props.type === 'submit' && !isDisabled) {
+        const form = (e.target as HTMLElement).closest('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      }
+    };
+
     return (
       <Comp
         className={cn(
           pillButtonVariants({ variant }),
           // Add pointer-events-none when loading
           loading && 'pointer-events-none',
+          // Ensure touch-action is enabled for mobile
+          'touch-action-manipulation',
           className
         )}
         ref={ref}
         disabled={isDisabled}
         aria-disabled={isDisabled}
+        onClick={onClick}
+        onTouchEnd={handleTouchEnd}
         {...props}
       >
         {loading ? (

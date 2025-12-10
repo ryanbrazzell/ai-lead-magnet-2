@@ -18,6 +18,7 @@ interface BusinessDetailsScreenProps {
   painPoints: string;
   errors?: {
     revenue?: string;
+    painPoints?: string;
   };
   isLoading: boolean;
   onRevenueChange: (value: string) => void;
@@ -77,6 +78,15 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
       setIsOpen(!isOpen);
     } else if (e.key === 'Escape') {
       setIsOpen(false);
+    }
+  };
+
+  // Handle touch on the main button - ensure it works on mobile
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Only toggle if touch ends on the button itself
+    const target = e.target as HTMLElement;
+    if (target.closest('button[aria-haspopup]')) {
+      setIsOpen(!isOpen);
     }
   };
 
@@ -172,6 +182,7 @@ export function BusinessDetailsScreen({
 }: BusinessDetailsScreenProps) {
   const [localErrors, setLocalErrors] = React.useState<{
     revenue?: string;
+    painPoints?: string;
   }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,10 +193,14 @@ export function BusinessDetailsScreen({
     // Validate revenue
     const revenueError = validateSelection(revenue, 'your revenue range');
 
-    if (revenueError) {
-      console.log('[BusinessDetailsScreen] Validation failed:', revenueError);
+    // Validate pain points (required)
+    const painPointsError = !painPoints.trim() ? 'Please tell us where you\'re stuck in the weeds' : null;
+
+    if (revenueError || painPointsError) {
+      console.log('[BusinessDetailsScreen] Validation failed:', { revenueError, painPointsError });
       setLocalErrors({
         revenue: revenueError || undefined,
+        painPoints: painPointsError || undefined,
       });
       return;
     }
@@ -197,6 +212,7 @@ export function BusinessDetailsScreen({
 
   const displayErrors = {
     revenue: localErrors.revenue || errors.revenue,
+    painPoints: localErrors.painPoints || errors.painPoints,
   };
 
   return (
@@ -218,14 +234,15 @@ export function BusinessDetailsScreen({
       {/* Pain Points */}
       <div className="pt-4">
         <h3 className="text-xl font-normal text-center mb-4 text-gray-900">
-          Where are you and your team <strong className="font-bold">stuck in the weeds</strong> the most?
+          Where are you and your team <strong className="font-bold">stuck in the weeds</strong> the most?<span className="text-red-500">*</span>
         </h3>
         <FormTextarea
-          placeholder="Describe your pain points (optional)..."
+          placeholder="e.g., Email inbox chaos, calendar scheduling, client follow-ups..."
           value={painPoints}
           onChange={(e) => onPainPointsChange(e.target.value)}
           id="painPoints"
           rows={4}
+          error={displayErrors.painPoints}
         />
       </div>
 
