@@ -1,26 +1,39 @@
 /**
  * ConfirmationBanner Component
- * Simple border banner showing confirmation message at top of thank-you page
+ * Green gradient banner at top of page
+ * Shows email address instead of "your inbox"
  */
 
 "use client";
 
-import { CheckCircle } from 'lucide-react';
-
 interface ConfirmationBannerProps {
-  message: string;
+  email?: string;
 }
 
-export function ConfirmationBanner({ message }: ConfirmationBannerProps) {
+export function ConfirmationBanner({ email }: ConfirmationBannerProps) {
   return (
-    <div className="border-b border-gray-200 bg-gray-50 py-3 px-4">
-      <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
-        <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
-        <span className="text-sm md:text-base font-medium text-gray-700">
-          {message}
-        </span>
-      </div>
+    <div
+      className="text-center text-white"
+      style={{
+        fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+        background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+        padding: '16px',
+        fontWeight: 500,
+      }}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 20 20"
+        fill="none"
+        style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }}
+      >
+        <path
+          d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm-2 15l-5-5 1.41-1.41L8 12.17l7.59-7.59L17 6l-9 9z"
+          fill="currentColor"
+        />
+      </svg>
+      Your personalized Time Freedom Report is on its way to {email ? email : 'your inbox'}
     </div>
   );
 }
-

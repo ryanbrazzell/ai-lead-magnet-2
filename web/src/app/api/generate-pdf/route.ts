@@ -26,7 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePDF } from '@/lib/pdf/generator';
+import { generatePDFV2 } from '@/lib/pdf/generator-v2';
 import { uploadToS3, generateSafeFilename } from '@/lib/pdf/s3Service';
 import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '@/types';
 
@@ -108,17 +108,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       website: userData.website || '',
     };
 
-    // Enhanced PDF options with ROI data
+    // PDF options with ROI data for V2 generator
     const pdfOptions = {
       includeMetadata: true,
       taskHours: taskHours,
       revenueRange: revenueRange,
-      stage: userData.stage,
-      stageName: userData.stageName,
     };
 
-    // Generate PDF with enhanced options
-    const pdfResult = await generatePDF(report, leadData, pdfOptions);
+    // Generate PDF with V2 clean design
+    const pdfResult = await generatePDFV2(report, leadData, pdfOptions);
 
     // Check for PDF generation failure
     if (!pdfResult.success || !pdfResult.base64) {

@@ -22,11 +22,17 @@ const stages = [
   { icon: CheckCircle, text: "Your results are ready!", color: "text-green-500" },
 ];
 
+function capitalizeFirst(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 export function AnalyzingAnimation({
   firstName = "there",
   onComplete,
   duration = 3000,
 }: AnalyzingAnimationProps) {
+  const displayName = capitalizeFirst(firstName);
   const [currentStage, setCurrentStage] = React.useState(0);
   const [progress, setProgress] = React.useState(0);
 
@@ -62,26 +68,77 @@ export function AnalyzingAnimation({
   const CurrentIcon = stages[currentStage].icon;
 
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 20px',
+        background: '#f1f5f9',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '600px',
+          width: '100%',
+          textAlign: 'center',
+        }}
+      >
         {/* Animated icon */}
-        <div className="relative mb-8">
-          <div className="w-24 h-24 mx-auto rounded-full bg-blue-100 flex items-center justify-center">
+        <div
+          style={{
+            position: 'relative',
+            marginBottom: '32px',
+          }}
+        >
+          <div
+            style={{
+              width: '96px',
+              height: '96px',
+              margin: '0 auto',
+              borderRadius: '50%',
+              background: '#0f172a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <CurrentIcon
-              className={`w-12 h-12 ${stages[currentStage].color} animate-pulse`}
+              style={{
+                width: '48px',
+                height: '48px',
+                color: '#f59e0b',
+                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              }}
             />
           </div>
           {/* Spinning ring */}
-          <div className="absolute inset-0 w-24 h-24 mx-auto">
-            <svg className="w-full h-full animate-spin" style={{ animationDuration: "3s" }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '96px',
+              height: '96px',
+            }}
+          >
+            <svg
+              style={{
+                width: '100%',
+                height: '100%',
+                animation: 'spin 3s linear infinite',
+              }}
+            >
               <circle
                 cx="48"
                 cy="48"
                 r="46"
-                stroke="currentColor"
+                stroke="#1e293b"
                 strokeWidth="2"
                 fill="none"
-                className="text-blue-200"
                 strokeDasharray="289"
                 strokeDashoffset="72"
               />
@@ -90,38 +147,103 @@ export function AnalyzingAnimation({
         </div>
 
         {/* Status text */}
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          {firstName}, hold tight...
+        <h2
+          style={{
+            fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+            fontSize: '28px',
+            fontWeight: 400,
+            color: '#0f172a',
+            marginBottom: '8px',
+          }}
+        >
+          {displayName}, hold tight...
         </h2>
-        <p className={`text-lg ${stages[currentStage].color} font-medium mb-6 transition-colors duration-300`}>
+        <p
+          style={{
+            fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+            fontSize: '18px',
+            color: '#475569',
+            fontWeight: 500,
+            marginBottom: '24px',
+            transition: 'color 0.3s',
+          }}
+        >
           {stages[currentStage].text}
         </p>
 
         {/* Progress bar */}
-        <div className="w-full max-w-xs mx-auto">
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '320px',
+            margin: '0 auto',
+          }}
+        >
+          <div
+            style={{
+              height: '8px',
+              background: '#e2e8f0',
+              borderRadius: '4px',
+              overflow: 'hidden',
+            }}
+          >
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-100 ease-out rounded-full"
-              style={{ width: `${progress}%` }}
+              style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 100%)',
+                transition: 'width 0.1s ease-out',
+                borderRadius: '4px',
+                width: `${progress}%`,
+              }}
             />
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '14px',
+              color: '#475569',
+              marginTop: '8px',
+            }}
+          >
             {Math.round(progress)}% complete
           </p>
         </div>
 
         {/* Stage indicators */}
-        <div className="flex justify-center gap-2 mt-6">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '24px',
+          }}
+        >
           {stages.map((_, index) => (
             <div
               key={index}
-              className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                index <= currentStage ? "bg-blue-500" : "bg-gray-300"
-              }`}
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                transition: 'background-color 0.3s',
+                backgroundColor: index <= currentStage ? '#0f172a' : '#cbd5e1',
+              }}
             />
           ))}
         </div>
       </div>
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }

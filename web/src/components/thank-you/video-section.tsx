@@ -1,79 +1,146 @@
 /**
  * VideoSection Component
- * Embedded video player for the thank-you page
- * Can be configured with a YouTube or Vimeo URL
+ * Single placeholder video with play button
+ * Matches lead-magnet-reference.html exactly
  */
 
 "use client";
 
 import * as React from 'react';
-import { Play } from 'lucide-react';
 
 interface VideoSectionProps {
   videoUrl?: string;
-  thumbnailUrl?: string;
 }
 
-export function VideoSection({ 
+export function VideoSection({
   videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ", // Placeholder
-  thumbnailUrl 
 }: VideoSectionProps) {
   const [isPlaying, setIsPlaying] = React.useState(false);
 
-  const handlePlay = () => {
-    setIsPlaying(true);
-  };
-
   return (
-    <div className="relative w-full max-w-3xl mx-auto mb-8">
-      {/* Video Container with 16:9 aspect ratio */}
-      <div className="relative pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden shadow-xl">
-        {isPlaying ? (
-          <iframe
-            className="absolute inset-0 w-full h-full"
-            src={`${videoUrl}?autoplay=1&rel=0`}
-            title="EA Workshop Video"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <button
-            onClick={handlePlay}
-            className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer group"
-            aria-label="Play video"
+    <section
+      style={{
+        background: 'white',
+        padding: '60px 0',
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '0 20px',
+        }}
+      >
+        {/* Header */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2
+            style={{
+              fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+              fontSize: '28px',
+              marginBottom: '12px',
+              color: '#0f172a',
+            }}
           >
-            {/* Thumbnail or placeholder */}
-            {thumbnailUrl ? (
-              <img 
-                src={thumbnailUrl} 
-                alt="Video thumbnail" 
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
-            )}
-            
-            {/* Play button overlay */}
-            <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 bg-white/90 rounded-full flex items-center justify-center group-hover:bg-white group-hover:scale-110 transition-all duration-300 shadow-lg">
-              <Play className="w-8 h-8 md:w-10 md:h-10 text-primary ml-1" fill="currentColor" />
-            </div>
+            How 1,300+ founders escaped the admin trap
+          </h2>
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              color: '#475569',
+              marginBottom: '32px',
+            }}
+          >
+            3 minutes that could save you 500+ hours this year
+          </p>
+        </div>
 
-            {/* Logo overlay in corner */}
-            <div className="absolute top-4 right-4 opacity-70">
-              <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold">BBYT</span>
+        {/* Video Container */}
+        <div
+          className="video-wrapper"
+          style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+            aspectRatio: '16/9',
+            background: '#0f172a',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          {isPlaying ? (
+            <iframe
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+              }}
+              src={`${videoUrl}${videoUrl.includes('?') ? '&' : '?'}autoplay=1&rel=0&modestbranding=1&showinfo=0`}
+              title="EA Workshop Video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <button
+              onClick={() => setIsPlaying(true)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                background: 'transparent',
+                border: 'none',
+              }}
+              aria-label="Play video"
+            >
+              {/* Play button */}
+              <div
+                className="play-button"
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="#0f172a"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    marginLeft: '4px',
+                  }}
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
               </div>
-            </div>
-          </button>
-        )}
+            </button>
+          )}
+        </div>
       </div>
-
-      {/* Video caption */}
-      <p className="text-center text-gray-500 text-sm mt-3">
-        Click to play • 3 min watch
-      </p>
-    </div>
+    </section>
   );
 }
-

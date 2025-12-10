@@ -189,6 +189,8 @@ async function addPDFContent(
 
   // 2. If we have ROI data, add the enhanced ROI sections
   if (roi) {
+    // PAGE 1: HERO & INTRO
+    
     // Add ROI Hero (Revenue Unlocked)
     yPosition = addROIHeroSection(
       doc,
@@ -197,13 +199,20 @@ async function addPDFContent(
       yPosition
     );
 
+    // Add Executive Summary below Hero on Page 1
+    yPosition = addExecutiveSummary(doc, report.ea_task_percent, yPosition, colors);
+
+    // PAGE 2: DETAILED ANALYSIS
+    doc.addPage();
+    yPosition = 25; // Start fresh on new page
+
     // Add ROI Analysis (cost/benefit breakdown)
     yPosition = addROIAnalysisSection(doc, roi, yPosition);
 
     // Add Challenge Question
     yPosition = addChallengeQuestion(doc, roi.roiMultiplier, yPosition);
   } else {
-    // Fallback to original executive summary
+    // Fallback if no ROI data: Keep Executive Summary on Page 1
     yPosition = addExecutiveSummary(doc, report.ea_task_percent, yPosition, colors);
   }
 
@@ -215,6 +224,7 @@ async function addPDFContent(
   ];
 
   // 4. Add key insights box with task metrics
+  // (Keep on Page 2 if ROI exists, otherwise Page 1)
   yPosition = addKeyInsightsBox(
     doc,
     allTasks,
@@ -222,6 +232,14 @@ async function addPDFContent(
     yPosition,
     colors
   );
+
+  // PAGE 3: TASK BREAKDOWN (if ROI exists)
+  if (roi) {
+    doc.addPage();
+    yPosition = 25;
+  } else {
+    yPosition += 10; // Just add spacing if single page flow
+  }
 
   // 5. Add task sections (daily, weekly, monthly)
   // Use enhanced sections with annual cost if ROI data available

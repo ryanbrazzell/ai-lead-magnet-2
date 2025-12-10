@@ -1,7 +1,7 @@
 /**
  * Task Generator Service
  *
- * Main service for generating personalized task reports using Gemini AI.
+ * Main service for generating personalized task reports using Claude AI.
  * Handles lead type routing, prompt selection, and fallback escalation.
  *
  * Lead Type Routing:
@@ -13,7 +13,7 @@
  */
 
 import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
-import { generateWithGemini } from './gemini-client';
+import { generateWithClaude } from './claude-client';
 import {
   buildUnifiedPromptJSON,
   buildStreamlinedPrompt,
@@ -107,7 +107,7 @@ async function attemptGeneration(
   const startTime = Date.now();
 
   try {
-    const result = await generateWithGemini(prompt);
+    const result = await generateWithClaude(prompt);
 
     log.info('Response parsing successful', {
       attemptName,

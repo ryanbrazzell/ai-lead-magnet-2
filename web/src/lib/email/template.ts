@@ -34,78 +34,150 @@ export function generateEmailHtml(firstName?: string): string {
     <meta charset="utf-8">
     <title>Your Time Freedom Report</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+      
       body {
-        font-family: Arial, sans-serif;
+        font-family: 'DM Sans', Arial, sans-serif;
         line-height: 1.6;
-        color: #333;
+        color: #334155;
         max-width: 600px;
         margin: 0 auto;
+        padding: 0;
+        background-color: #f1f5f9;
+      }
+      .wrapper {
+        background-color: #f1f5f9;
         padding: 20px;
       }
       .header {
-        background-color: #141414;
+        background-color: #0f172a;
         color: white;
-        padding: 30px;
+        padding: 40px 30px;
         text-align: center;
-        border-radius: 10px;
+        border-radius: 12px 12px 0 0;
+      }
+      .header h1 {
+        font-family: 'DM Serif Display', Georgia, serif;
+        font-size: 28px;
+        margin: 0 0 8px 0;
+        color: #ffffff;
+      }
+      .header-accent {
+        color: #f59e0b;
+        font-weight: 600;
+      }
+      .success-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
       }
       .content {
-        padding: 30px 0;
+        background: white;
+        padding: 40px 30px;
+        border-radius: 0 0 12px 12px;
+      }
+      .content p {
+        margin: 0 0 16px 0;
+        color: #475569;
+      }
+      .content h3 {
+        font-family: 'DM Serif Display', Georgia, serif;
+        color: #0f172a;
+        font-size: 20px;
+        margin: 24px 0 12px 0;
+      }
+      .highlight-box {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        margin: 24px 0;
+      }
+      .highlight-box p {
+        margin: 0;
+        color: #0f172a;
+        font-weight: 500;
       }
       .button {
         display: inline-block;
-        background-color: #00cc6a;
-        color: white;
-        padding: 12px 30px;
+        background-color: #f59e0b;
+        color: #0f172a !important;
+        padding: 16px 32px;
         text-decoration: none;
-        border-radius: 25px;
+        border-radius: 8px;
         margin: 20px 0;
-        font-weight: bold;
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .button:hover {
+        background-color: #d97706;
+      }
+      ul {
+        padding-left: 20px;
+        margin: 16px 0;
+      }
+      ul li {
+        color: #475569;
+        margin-bottom: 8px;
       }
       .footer {
         text-align: center;
-        color: #666;
-        font-size: 14px;
-        margin-top: 40px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
+        color: #94a3b8;
+        font-size: 13px;
+        margin-top: 24px;
+        padding: 20px;
+      }
+      .footer a {
+        color: #f59e0b;
+        text-decoration: none;
       }
     </style>
   </head>
   <body>
-    <div class="header">
-      <h1>Your Time Freedom Report is Ready!</h1>
-    </div>
+    <div class="wrapper">
+      <div class="header">
+        <div class="success-badge">✓ Report Ready</div>
+        <h1>Your <span class="header-accent">Time Freedom Report</span> is Ready!</h1>
+      </div>
 
-    <div class="content">
-      <p>Hi ${greeting},</p>
+      <div class="content">
+        <p>Hi ${greeting},</p>
 
-      <p>Thank you for taking the first step toward reclaiming your time and productivity. Your personalized Time Freedom Report is attached to this email.</p>
+        <p>Thank you for taking the first step toward reclaiming your time and productivity. Your personalized <strong>Time Freedom Report</strong> is attached to this email.</p>
 
-      <p>This report shows you exactly which tasks in your daily, weekly, and monthly routine could be delegated to an Executive Assistant, potentially saving you hours each week.</p>
+        <div class="highlight-box">
+          <p>📊 This report shows you exactly which tasks could be delegated to an Executive Assistant, potentially saving you <strong>hours each week</strong>.</p>
+        </div>
 
-      <h3>What's Next?</h3>
-      <p>If you're ready to chat with our team about all the areas where an assistant can help you buy back time, schedule using the link below or email me here directly.</p>
+        <h3>What's Next?</h3>
+        <p>Ready to chat with our team about all the areas where an assistant can help you buy back time? Schedule a free consultation below.</p>
 
-      <p>
-        <a href="${CALENDLY_URL}" class="button">Schedule Your Consultation</a>
-      </p>
+        <p style="text-align: center;">
+          <a href="${CALENDLY_URL}" class="button">Book Your Free Consultation</a>
+        </p>
 
-      <p>During your consultation, we'll:</p>
-      <ul>
-        <li>Review your Time Freedom Report together</li>
-        <li>Discuss your specific needs and preferences</li>
-        <li>Show you how our EA matching process works</li>
-        <li>Answer any questions you have</li>
-      </ul>
+        <p><strong>During your consultation, we'll:</strong></p>
+        <ul>
+          <li>Review your Time Freedom Report together</li>
+          <li>Discuss your specific needs and preferences</li>
+          <li>Show you how our EA matching process works</li>
+          <li>Answer any questions you have</li>
+        </ul>
 
-      <p>Best regards,<br>
-      The Assistant Launch Team</p>
-    </div>
+        <p>Best regards,<br>
+        <strong>The Assistant Launch Team</strong> 🚀</p>
+      </div>
 
-    <div class="footer">
-      <p>&copy; ${currentYear} Assistant Launch. All rights reserved.</p>
-      <p>Questions? Reply to this email or visit <a href="${COMPANY_URL}">assistantlaunch.com</a></p>
+      <div class="footer">
+        <p>&copy; ${currentYear} Assistant Launch. All rights reserved.</p>
+        <p>Questions? Reply to this email or visit <a href="${COMPANY_URL}">assistantlaunch.com</a></p>
+      </div>
     </div>
   </body>
 </html>`;

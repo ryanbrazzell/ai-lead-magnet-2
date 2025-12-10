@@ -59,7 +59,7 @@ function VideoCard({ videoId, title }: { videoId: string; title: string }) {
         {isPlaying ? (
           <iframe
             className="absolute inset-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&showinfo=0`}
             title={title}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -124,11 +124,11 @@ export function VideoTestimonials() {
             <Users className="w-4 h-4" />
             1,300+ Founders Helped
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-serif">
             Over 1,300 Founders Have Gotten 18+ Hours Back Every Week
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            See how they stopped doing $10/hour tasks and started focusing on what actually grows their business
+            See how they stopped doing $15/hour tasks and started focusing on what actually grows their business
           </p>
         </div>
 

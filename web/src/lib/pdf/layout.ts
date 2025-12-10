@@ -4,11 +4,12 @@
  * Functions for generating sections of the EA Time Freedom Report PDF.
  * Enhanced with ROI metrics and visual polish matching the web UI.
  *
- * Design System:
- * - Primary (Purple): #6F00FF - Brand, headers, emphasis
- * - Secondary (Green): #00cc6a - EA badges, success indicators
- * - Accent (Red): #ef4444 - Cost highlights
- * - Text: #374151 - Body content
+ * Design System (matching globals.css):
+ * - Primary (Navy): #0f172a - Headers, hero backgrounds, brand elements
+ * - Accent (Gold): #f59e0b - CTAs, highlights, continue buttons
+ * - Success (Green): #10b981 - EA badges, positive indicators
+ * - Cost (Red): #dc2626 - Cost/expense indicators
+ * - Text: #334155 - Body content
  */
 
 import type { jsPDF } from 'jspdf';
@@ -18,29 +19,48 @@ import type { UnifiedLeadData } from '@/types/lead';
 import type { ROICalculation } from '@/lib/roi-calculator';
 
 /**
+ * Helper to convert hex to RGB and set color
+ */
+function setHexColor(doc: jsPDF, hex: string, type: 'fill' | 'text' | 'draw') {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (result) {
+    const r = parseInt(result[1], 16);
+    const g = parseInt(result[2], 16);
+    const b = parseInt(result[3], 16);
+    if (type === 'fill') doc.setFillColor(r, g, b);
+    if (type === 'text') doc.setTextColor(r, g, b);
+    if (type === 'draw') doc.setDrawColor(r, g, b);
+  }
+}
+
+/**
  * Enhanced color palette matching web UI design
+ * Navy (#0f172a) + Gold (#f59e0b) + Green (#10b981)
  */
 export const ENHANCED_COLORS = {
-  // Brand colors
-  purple: '#6F00FF',
-  purpleDark: '#5B00D4',
-  indigo: '#4F46E5',
+  // Brand colors - Navy/Gold scheme (matches globals.css)
+  navy: '#0f172a',       // Primary brand - headers, hero backgrounds
+  navyLight: '#1e293b',  // Slate-800 - lighter navy for contrast
+  gold: '#f59e0b',       // Accent - CTAs, highlights
+  goldLight: '#fcd34d',  // Light gold - subtle accents
 
-  // UI colors
-  green: '#00cc6a',
-  greenLight: '#dcfce7',
-  red: '#ef4444',
-  redLight: '#fef2f2',
-  amber: '#f59e0b',
+  // Success/EA colors
+  green: '#10b981',      // Success green - EA badges
+  greenLight: '#d1fae5', // Light green - EA badge backgrounds
+
+  // Cost colors
+  red: '#dc2626',        // Red-600 - cost indicators
+  redLight: '#fef2f2',   // Red-50 - cost badge backgrounds
 
   // Neutrals
   white: '#ffffff',
-  gray50: '#f9fafb',
-  gray100: '#f3f4f6',
-  gray200: '#e5e7eb',
-  gray600: '#4b5563',
-  gray700: '#374151',
-  gray900: '#111827',
+  gray50: '#f8fafc',
+  gray100: '#f1f5f9',
+  gray200: '#e2e8f0',
+  gray400: '#94a3b8',
+  gray600: '#475569',
+  gray700: '#334155',
+  gray900: '#0f172a',
 } as const;
 
 /**
@@ -74,55 +94,59 @@ export function addPDFHeader(
   leadData: UnifiedLeadData,
   colors: PDFColorScheme
 ): number {
-  let yPosition = 25;
+  // Brand Header Strip
+  setHexColor(doc, ENHANCED_COLORS.navy, 'fill');
+  doc.rect(0, 0, 210, 20, 'F'); // Full width navy bar
 
-  // Title: "EA Time Freedom Report" centered, 28pt bold
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.setTextColor(colors.primary);
-  doc.text('EA Time Freedom Report', 105, yPosition, { align: 'center' });
-  yPosition += 15;
-
-  // Subtitle with lead info - 14pt normal, #666666
+  // Logo/Brand Text (Left)
   doc.setFontSize(14);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor('#666666');
+  doc.setFont('helvetica', 'bold');
+  setHexColor(doc, ENHANCED_COLORS.white, 'text');
+  doc.text('Assistant Launch', 15, 12);
 
-  // Full name
+  // Report Title (Right)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  setHexColor(doc, ENHANCED_COLORS.gold, 'text'); // Gold accent
+  doc.text('TIME FREEDOM REPORT', 195, 12, { align: 'right' });
+
+  // Reset text color
+  setHexColor(doc, colors.text, 'text');
+
+  let yPosition = 35; // Start content below header
+
+  // Personalized Greeting
   const fullName = [leadData.firstName, leadData.lastName]
     .filter(Boolean)
     .join(' ');
+  
   if (fullName) {
-    doc.text(fullName, 105, yPosition, { align: 'center' });
-    yPosition += 7;
-  }
-
-  // Title
-  if (leadData.title) {
-    doc.text(leadData.title, 105, yPosition, { align: 'center' });
-    yPosition += 7;
-  }
-
-  // Business type
-  if (leadData.businessType) {
-    doc.text(leadData.businessType, 105, yPosition, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    setHexColor(doc, colors.primary, 'text');
+    doc.text(`Prepared for: ${fullName}`, 20, yPosition);
+    
+    // Date on same line, right aligned
+    doc.setFont('helvetica', 'normal');
+    setHexColor(doc, colors.secondary, 'text');
+    const formattedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    doc.text(formattedDate, 190, yPosition, { align: 'right' });
+    
     yPosition += 10;
   }
 
-  // Date - formatted as "Month Day, Year", 12pt
-  doc.setFontSize(12);
-  const formattedDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  doc.text(formattedDate, 105, yPosition, { align: 'center' });
-  yPosition += 20;
-
-  // Separator line at current position
-  doc.setDrawColor(colors.borderGray);
-  doc.line(20, yPosition, 190, yPosition);
-  yPosition += 20;
+  // Optional: Business info if available
+  if (leadData.businessType) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    setHexColor(doc, colors.secondary, 'text');
+    doc.text(leadData.businessType, 20, yPosition - 4); // Just below name
+    yPosition += 5;
+  }
 
   return yPosition;
 }
@@ -147,26 +171,39 @@ export function addExecutiveSummary(
 ): number {
   let yPosition = startY;
 
-  // Section header: 18pt bold, primary color
-  doc.setFontSize(18);
+  // Premium Insight Card Container
+  const cardWidth = 170;
+  const cardX = (210 - cardWidth) / 2;
+  
+  // Light Blue/Gray background for contrast (not just plain text)
+  setHexColor(doc, '#f8fafc', 'fill'); // slate-50
+  setHexColor(doc, colors.borderGray, 'draw');
+  doc.setLineWidth(0.1);
+  doc.roundedRect(cardX, yPosition, cardWidth, 45, 3, 3, 'FD');
+
+  // "Executive Summary" Label - Small, uppercase, tracking wide
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(colors.primary);
-  doc.text('Executive Summary', 25, yPosition);
-  yPosition += 12;
+  setHexColor(doc, ENHANCED_COLORS.gray400, 'text'); // Muted label
+  doc.text('EXECUTIVE SUMMARY', cardX + 10, yPosition + 12);
 
-  // Summary text: 12pt normal, text color
-  doc.setFontSize(12);
+  // Main Insight Headline
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  setHexColor(doc, colors.primary, 'text');
+  const headline = `${eaPercent}% of your workload can be delegated immediately.`;
+  doc.text(headline, cardX + 10, yPosition + 22);
+
+  // Body Text
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(colors.text);
+  setHexColor(doc, ENHANCED_COLORS.gray600, 'text'); // Softer body text
+  const summaryText = `Based on our analysis of your responses, approximately ${eaPercent}% of your daily, weekly, and monthly tasks are prime candidates for delegation to an Executive Assistant. This represents a significant opportunity to reclaim your time.`;
+  
+  const summaryLines = doc.splitTextToSize(summaryText, cardWidth - 20);
+  doc.text(summaryLines, cardX + 10, yPosition + 30);
 
-  const summaryText = `Based on our analysis, approximately ${eaPercent}% of your tasks could be delegated to an Executive Assistant. This represents a significant opportunity to reclaim your time and focus on high-value activities that drive your business forward.`;
-
-  // Wrap text to 165px width
-  const summaryLines = doc.splitTextToSize(summaryText, 165);
-  doc.text(summaryLines, 25, yPosition);
-  yPosition += summaryLines.length * 5.5 + 15;
-
-  return yPosition;
+  return yPosition + 55; // Return new Y position
 }
 
 /**
@@ -190,13 +227,13 @@ export function addKeyInsightsBox(
   colors: PDFColorScheme
 ): number {
   // Gray background box: 25, startY, 165x25
-  doc.setFillColor(colors.lightGray);
+  setHexColor(doc, colors.lightGray, 'fill');
   doc.rect(25, startY, 165, 25, 'F');
 
   // "Key Insights" header: 14pt bold
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(colors.primary);
+  setHexColor(doc, colors.primary, 'text');
   doc.text('Key Insights', 30, startY + 10);
 
   // Calculate EA task count
@@ -256,7 +293,7 @@ export function addTaskSection(
   // Section title: 16pt bold, primary color
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(colors.primary);
+  setHexColor(doc, colors.primary, 'text');
   doc.text(title, 25, yPosition);
   yPosition += 12;
 
@@ -275,7 +312,7 @@ export function addTaskSection(
     // Task number and title: 11pt bold
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(colors.primary);
+    setHexColor(doc, colors.primary, 'text');
 
     const taskNumber = `${index + 1}.`;
     doc.text(taskNumber, 25, yPosition);
@@ -284,7 +321,7 @@ export function addTaskSection(
     // EA Task indicator: right-aligned in green for isEA=true
     if (task.isEA) {
       doc.setFontSize(10);
-      doc.setTextColor(colors.secondary);
+      setHexColor(doc, colors.secondary, 'text');
       doc.setFont('helvetica', 'bold');
       doc.text('\u2713 EA Task', 185, yPosition, { align: 'right' });
     }
@@ -293,14 +330,14 @@ export function addTaskSection(
     // Task description: 10pt normal, wrapped to 155px
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor('#666666');
+    setHexColor(doc, '#666666', 'text');
     const descLines = doc.splitTextToSize(task.description, 155);
     doc.text(descLines, 32, yPosition);
     yPosition += descLines.length * 4.5;
 
     // Owner line: 9pt, #999999
     doc.setFontSize(9);
-    doc.setTextColor('#999999');
+    setHexColor(doc, '#999999', 'text');
     doc.text(`Owner: ${task.owner}`, 32, yPosition);
     yPosition += 10;
   });
@@ -377,18 +414,19 @@ export function addCTABox(
 ): number {
   const url = calendlyUrl || DEFAULT_CALENDLY_URL;
 
-  // Green background box
-  doc.setFillColor(colors.secondary);
-  doc.rect(25, startY, 165, 20, 'F');
+  // Gold background box (matches web UI CTA)
+  doc.setFillColor(ENHANCED_COLORS.gold);
+  doc.roundedRect(25, startY, 165, 24, 3, 3, 'F');
 
-  // White text: 12pt bold
+  // Navy text for contrast: 12pt bold
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor('white');
-  doc.text('Ready to get started? Schedule your consultation:', 30, startY + 8);
-  doc.text(url, 30, startY + 15);
+  doc.setTextColor(ENHANCED_COLORS.navy);
+  doc.text('Ready to get started? Schedule your consultation:', 30, startY + 10);
+  doc.setFontSize(11);
+  doc.text(url, 30, startY + 18);
 
-  return startY + 20;
+  return startY + 30;
 }
 
 /**
@@ -406,24 +444,31 @@ export function addFooterToAllPages(doc: jsPDF, colors: PDFColorScheme): void {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
 
-    // Footer separator line at y=280
-    doc.setDrawColor(colors.borderGray);
+    // Footer separator line at y=280 - gold accent
+    doc.setDrawColor(ENHANCED_COLORS.gold);
+    doc.setLineWidth(0.5);
     doc.line(20, 280, 190, 280);
 
-    // Branding text: 10pt normal, #999999
+    // Branding text: navy color for brand recognition
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor('#999999');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(ENHANCED_COLORS.navy);
     doc.text(
-      'Generated by Assistant Launch • assistantlaunch.com',
+      'Generated by Assistant Launch',
       105,
       285,
       { align: 'center' }
     );
 
-    // Page numbers: #cccccc
-    doc.setTextColor('#cccccc');
-    doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    // URL in gold
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(ENHANCED_COLORS.gold);
+    doc.text('assistantlaunch.com', 105, 289, { align: 'center' });
+
+    // Page numbers: muted
+    doc.setFontSize(9);
+    doc.setTextColor(ENHANCED_COLORS.gray400);
+    doc.text(`Page ${i} of ${pageCount}`, 105, 294, { align: 'center' });
   }
 }
 
@@ -449,7 +494,7 @@ function formatMultiplier(multiplier: number): string {
 /**
  * Add ROI Hero Section
  *
- * Renders a purple gradient-style box with the revenue unlocked headline.
+ * Renders a navy hero box with gold accent bar and revenue unlocked headline.
  * Matches the RevenueHero component from the web UI.
  *
  * @param doc - jsPDF document instance
@@ -466,18 +511,18 @@ export function addROIHeroSection(
 ): number {
   const boxHeight = 65;
   const boxWidth = 170;
-  const boxX = 20;
+  const boxX = (210 - boxWidth) / 2; // Center horizontally (210mm is A4 width)
 
-  // Purple gradient background (simulated with solid color + overlay)
-  doc.setFillColor(ENHANCED_COLORS.purple);
+  // Navy background (matches web UI hero)
+  doc.setFillColor(ENHANCED_COLORS.navy);
   doc.roundedRect(boxX, startY, boxWidth, boxHeight, 4, 4, 'F');
 
-  // Add a subtle darker strip at top for depth
-  doc.setFillColor(ENHANCED_COLORS.purpleDark);
-  doc.roundedRect(boxX, startY, boxWidth, 8, 4, 0, 'F');
+  // Gold accent bar at top for brand pop
+  doc.setFillColor(ENHANCED_COLORS.gold);
+  doc.roundedRect(boxX, startY, boxWidth, 4, 4, 0, 'F');
 
   // "Revenue Potential Unlocked" badge
-  doc.setFillColor('rgba(255,255,255,0.2)');
+  // Note: jsPDF doesn't support rgba, using solid color for text background
   doc.setFontSize(9);
   doc.setTextColor(ENHANCED_COLORS.white);
   doc.text('REVENUE POTENTIAL UNLOCKED', 105, startY + 12, { align: 'center' });
@@ -498,9 +543,11 @@ export function addROIHeroSection(
   doc.text(`annually by delegating just ${roi.weeklyHoursDelegated} hours per week`, 105, startY + 52, { align: 'center' });
 
   // Calculation flow at bottom
-  doc.setFontSize(9);
+  doc.setFontSize(10); // Increased from 9
+  doc.setFont('helvetica', 'bold'); // Changed to bold for clarity
   const flowY = startY + 60;
-  const flowText = `${roi.weeklyHoursDelegated} hrs/week → ${roi.monthlyHoursUnlocked} hrs/month → ${formatCurrency(roi.ceoHourlyRate)}/hr activities`;
+  // Replaced arrows with pipes and added spacing to prevent character overlapping/encoding issues
+  const flowText = `${roi.weeklyHoursDelegated} hrs/week   |   ${roi.monthlyHoursUnlocked} hrs/month   |   ${formatCurrency(roi.ceoHourlyRate)}/hr activities`;
   doc.text(flowText, 105, flowY, { align: 'center' });
 
   return startY + boxHeight + 15;
@@ -524,83 +571,80 @@ export function addROIAnalysisSection(
 ): number {
   let yPos = startY;
 
-  // Card container
-  doc.setDrawColor(ENHANCED_COLORS.gray200);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(20, yPos, 170, 75, 3, 3, 'S');
+  // Modern Card Container (No border, just shadow-like fill for header)
+  // We'll use a split layout: Left side = Metrics, Right side = Net Result
 
-  // Header bar
-  doc.setFillColor(ENHANCED_COLORS.gray50);
-  doc.roundedRect(20, yPos, 170, 12, 3, 0, 'F');
-
-  doc.setFontSize(11);
+  // 1. Left Side: Cost Breakdown
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(ENHANCED_COLORS.gray700);
-  doc.text('ROI Analysis', 26, yPos + 8);
+  doc.setTextColor(ENHANCED_COLORS.gray400); // Uppercase label
+  doc.text('FINANCIAL IMPACT', 20, yPos);
+  
+  yPos += 15;
 
-  yPos += 18;
-
-  // Annual Revenue Unlocked line
-  doc.setFillColor(ENHANCED_COLORS.greenLight);
-  doc.circle(28, yPos + 2, 4, 'F');
+  // Metric 1: Revenue Unlocked
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.navy);
+  doc.text(formatCurrency(roi.annualRevenueUnlocked), 20, yPos);
+  
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(ENHANCED_COLORS.gray700);
-  doc.text('Annual Revenue Unlocked', 36, yPos + 4);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(ENHANCED_COLORS.green);
-  doc.text(`+${formatCurrency(roi.annualRevenueUnlocked)}`, 184, yPos + 4, { align: 'right' });
-
-  yPos += 14;
-
-  // EA Investment line
-  doc.setFillColor(ENHANCED_COLORS.gray100);
-  doc.circle(28, yPos + 2, 4, 'F');
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(ENHANCED_COLORS.gray700);
-  doc.text('EA Investment (annual)', 36, yPos + 4);
-  doc.setFont('helvetica', 'bold');
   doc.setTextColor(ENHANCED_COLORS.gray600);
-  doc.text(`-${formatCurrency(roi.eaInvestment)}`, 184, yPos + 4, { align: 'right' });
+  doc.text('Annual Revenue Unlocked', 20, yPos + 6);
 
-  yPos += 12;
+  yPos += 20;
 
-  // Dashed divider
-  doc.setLineDashPattern([2, 2], 0);
-  doc.setDrawColor(ENHANCED_COLORS.gray200);
-  doc.line(26, yPos, 184, yPos);
-  doc.setLineDashPattern([], 0);
-
-  yPos += 10;
-
-  // NET RETURN line
-  doc.setFillColor(ENHANCED_COLORS.purple);
-  doc.circle(28, yPos + 2, 4, 'F');
+  // Metric 2: EA Investment
+  doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(ENHANCED_COLORS.gray900);
-  doc.text('NET RETURN', 36, yPos + 4);
-  doc.setFontSize(14);
-  doc.setTextColor(ENHANCED_COLORS.purple);
-  doc.text(formatCurrency(roi.netReturn), 184, yPos + 4, { align: 'right' });
-
-  yPos += 16;
-
-  // ROI Multiplier box
-  const multiplierBoxY = yPos;
-  doc.setFillColor(ENHANCED_COLORS.gray50);
-  doc.roundedRect(26, multiplierBoxY, 158, 16, 2, 2, 'F');
-
-  doc.setFontSize(9);
+  doc.setTextColor(ENHANCED_COLORS.gray600); // Muted for cost
+  doc.text(formatCurrency(roi.eaInvestment), 20, yPos);
+  
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(ENHANCED_COLORS.gray600);
-  doc.text('ROI MULTIPLIER', 105, multiplierBoxY + 6, { align: 'center' });
+  doc.text('EA Investment (Annual)', 20, yPos + 6);
 
-  doc.setFontSize(16);
+  // 2. Right Side: Net Return Card (Gold/Navy Highlight)
+  const cardX = 110;
+  const cardY = startY - 5;
+  const cardWidth = 80;
+  const cardHeight = 70;
+
+  // Main Card Background
+  doc.setFillColor(ENHANCED_COLORS.navy);
+  doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 4, 4, 'F');
+
+  // "Net Return" Label
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(ENHANCED_COLORS.purple);
-  doc.text(formatMultiplier(roi.roiMultiplier), 105, multiplierBoxY + 14, { align: 'center' });
+  doc.setTextColor(ENHANCED_COLORS.gray400); // Lighter text on navy
+  doc.text('NET ANNUAL RETURN', cardX + 10, cardY + 15);
 
-  return startY + 85;
+  // Net Return Value (Huge Green/Gold)
+  doc.setFontSize(32);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.green); // Pop of green for profit
+  doc.text(formatCurrency(roi.netReturn), cardX + 10, cardY + 30);
+
+  // Divider
+  doc.setDrawColor(ENHANCED_COLORS.navyLight);
+  doc.setLineWidth(0.5);
+  doc.line(cardX + 10, cardY + 40, cardX + cardWidth - 10, cardY + 40);
+
+  // ROI Multiplier
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(ENHANCED_COLORS.white);
+  doc.text('ROI Multiplier', cardX + 10, cardY + 52);
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.gold); // Gold for the multiplier
+  doc.text(formatMultiplier(roi.roiMultiplier), cardX + cardWidth - 10, cardY + 52, { align: 'right' });
+
+  return startY + 80;
 }
 
 /**
@@ -671,26 +715,27 @@ export function addEnhancedTaskSection(
     pageBreakOccurred = true;
   }
 
-  // Frequency-based colors
+  // Frequency-based colors (matching web UI brand)
   const frequencyColors = {
-    daily: { badge: '#dbeafe', text: '#1e40af' },    // blue
-    weekly: { badge: '#f3e8ff', text: '#7e22ce' },   // violet
-    monthly: { badge: '#fef3c7', text: '#b45309' },  // amber
+    daily: { badge: ENHANCED_COLORS.gray100, text: ENHANCED_COLORS.navy },     // navy text
+    weekly: { badge: ENHANCED_COLORS.gray100, text: ENHANCED_COLORS.navy },    // navy text
+    monthly: { badge: ENHANCED_COLORS.gray100, text: ENHANCED_COLORS.navy },   // navy text
   };
 
   const freqColor = frequencyColors[frequency];
 
-  // Section title with task count badge
+  // Section title with task count badge - using Navy for brand consistency
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(colors.primary);
+  doc.setTextColor(ENHANCED_COLORS.navy);
   doc.text(title, 25, yPosition);
 
-  // Task count badge
-  doc.setFillColor(freqColor.badge);
+  // Task count badge - gold accent
+  doc.setFillColor(ENHANCED_COLORS.goldLight);
   doc.roundedRect(155, yPosition - 5, 30, 8, 2, 2, 'F');
   doc.setFontSize(8);
-  doc.setTextColor(freqColor.text);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.navy);
   doc.text(`${tasks.length} tasks`, 170, yPosition, { align: 'center' });
 
   yPosition += 10;
@@ -730,51 +775,57 @@ export function addEnhancedTaskSection(
 
     const annualCost = hoursPerOccurrence * yearlyMultiplier * ceoHourlyRate;
 
-    // Task row background (alternating)
-    if (index % 2 === 0) {
-      doc.setFillColor(ENHANCED_COLORS.gray50);
-      doc.rect(22, yPosition - 3, 166, 16, 'F');
-    }
+    // Task row background (Card style)
+    // White background with light border for cleaner look
+    const rowHeight = 22; // Increased height for breathing room
+    doc.setFillColor(ENHANCED_COLORS.white);
+    doc.setDrawColor(ENHANCED_COLORS.gray200);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(22, yPosition - 4, 166, rowHeight, 2, 2, 'FD'); // Fill and Draw
 
     // Task number and title
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(11); // Slightly larger
     doc.setTextColor(ENHANCED_COLORS.gray900);
-    doc.text(`${index + 1}. ${task.title}`, 25, yPosition + 3);
+    const titleText = `${index + 1}. ${task.title}`;
+    // Truncate title if too long to avoid overlap
+    const safeTitle = titleText.length > 65 ? titleText.substring(0, 62) + '...' : titleText;
+    doc.text(safeTitle, 28, yPosition + 3);
 
-    // EA badge if applicable
+    // EA badge if applicable (Pill shape)
     const isEA = task.isEA || task.owner?.toLowerCase() === 'ea';
     if (isEA) {
       doc.setFillColor(ENHANCED_COLORS.greenLight);
-      doc.roundedRect(120, yPosition - 1, 16, 6, 1, 1, 'F');
+      doc.roundedRect(28, yPosition + 6, 14, 5, 2, 2, 'F');
       doc.setFontSize(7);
       doc.setTextColor(ENHANCED_COLORS.green);
-      doc.text('EA', 128, yPosition + 3, { align: 'center' });
+      doc.text('EA', 35, yPosition + 9.5, { align: 'center' });
     }
 
-    // Annual cost (right side, red accent)
+    // Annual cost (Right side badge)
     doc.setFillColor(ENHANCED_COLORS.redLight);
-    doc.roundedRect(150, yPosition - 2, 35, 8, 1, 1, 'F');
-    doc.setFontSize(8);
+    doc.roundedRect(150, yPosition, 32, 7, 2, 2, 'F');
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(ENHANCED_COLORS.red);
-    doc.text(`${formatCurrency(annualCost)}/yr`, 185, yPosition + 3, { align: 'right' });
+    doc.text(`${formatCurrency(annualCost)}/yr`, 166, yPosition + 4.5, { align: 'center' });
 
-    yPosition += 8;
-
-    // Description (if available and space permits)
-    if (task.description && yPosition < PAGE_BREAK_THRESHOLD - 10) {
+    // Description (Muted text below)
+    if (task.description) {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setTextColor(ENHANCED_COLORS.gray600);
-      const descLines = doc.splitTextToSize(task.description, 140);
+      // Clean description of newlines
+      const cleanDesc = task.description.replace(/\n/g, ' ');
+      // Wrap text
+      const descLines = doc.splitTextToSize(cleanDesc, 115);
       if (descLines.length > 0) {
-        doc.text(descLines[0], 25, yPosition + 3);
-        yPosition += 6;
+        // Show max 1 line to keep card uniform
+        doc.text(descLines[0] + (descLines.length > 1 ? '...' : ''), 45, yPosition + 9.5);
       }
     }
 
-    yPosition += 4;
+    yPosition += rowHeight + 4; // Gap between cards
   });
 
   return { yPosition: yPosition + 5, pageBreakOccurred };

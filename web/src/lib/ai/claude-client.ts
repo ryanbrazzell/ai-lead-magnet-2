@@ -1,73 +1,180 @@
+/**
+ * Claude AI Client for Task Generation
+ *
+ * Integrates with Claude 3.5 Haiku for generating personalized
+ * task reports. Drop-in replacement for Gemini client.
+ *
+ * Configuration:
+ * - Model: claude-3-5-haiku-20241022 (fast, cost-effective)
+ * - Temperature: 0.6
+ * - Max Output Tokens: 4096
+ * - Timeout: 60 seconds
+ * - Retries: 1
+ */
+
 import Anthropic from '@anthropic-ai/sdk';
 import type { TaskGenerationResult } from '@/types';
 
+// Claude model configuration
+// Using claude-3-5-haiku-20241022 - fast and cost-effective
+// Other options: claude-sonnet-4-5, claude-3-7-sonnet-latest
+export const CLAUDE_CONFIG = {
+  model: 'claude-3-5-haiku-20241022',
+  temperature: 0.6,
+  maxTokens: 4096,
+  timeout: 60000, // 60 seconds
+  maxRetries: 1,
+} as const;
+
 /**
- * Generate tasks using Claude Haiku 4.5
- * 
- * Uses the Anthropic API to generate structured task reports.
- * Haiku 4.5 is optimized for speed while maintaining quality.
- * 
- * @param prompt - The complete prompt string
- * @returns TaskGenerationResult
+ * Get API key from environment variables
+ *
+ * @returns The API key string
+ * @throws Error if key is not present
  */
-export async function generateWithClaude(prompt: string): Promise<TaskGenerationResult> {
+export function getApiKey(): string {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+
+  if (apiKey && apiKey.trim() !== '') {
+    return apiKey;
   }
 
+  throw new Error(
+    'Missing API key: Set ANTHROPIC_API_KEY environment variable'
+  );
+}
+
+/**
+ * Parse Claude response with defensive JSON handling
+ *
+ * Handles common response issues:
+ * - Markdown code blocks (```json ... ```)
+ * - Leading "json" prefix
+ * - Extra whitespace
+ *
+ * @param responseText - Raw response text from Claude
+ * @returns Parsed TaskGenerationResult
+ * @throws Error if parsing fails
+ */
+export function parseClaudeResponse(responseText: string): TaskGenerationResult {
+  let cleanedText = responseText.trim();
+
+  // Strip markdown code blocks
+  if (cleanedText.startsWith('```json')) {
+    cleanedText = cleanedText.slice(7);
+  } else if (cleanedText.startsWith('```')) {
+    cleanedText = cleanedText.slice(3);
+  }
+
+  if (cleanedText.endsWith('```')) {
+    cleanedText = cleanedText.slice(0, -3);
+  }
+
+  // Strip leading "json" if present (without backticks)
+  if (cleanedText.startsWith('json\n')) {
+    cleanedText = cleanedText.slice(5);
+  }
+
+  cleanedText = cleanedText.trim();
+
+  try {
+    const parsed = JSON.parse(cleanedText) as TaskGenerationResult;
+    return parsed;
+  } catch (error) {
+    const parseError = error as Error;
+    throw new Error(
+      `Failed to parse Claude response: ${parseError.message}. Response preview: ${cleanedText.slice(0, 200)}...`
+    );
+  }
+}
+
+/**
+ * Generate tasks using Claude AI
+ *
+ * High-level function that handles the complete flow:
+ * 1. Validates API key availability
+ * 2. Makes API call with timeout/retry
+ * 3. Parses and returns result
+ *
+ * @param prompt - The complete prompt including lead data
+ * @returns TaskGenerationResult with tasks grouped by frequency
+ * @throws Error with structured message for debugging
+ */
+export async function generateWithClaude(
+  prompt: string
+): Promise<TaskGenerationResult> {
+  console.log('Claude API: Starting task generation', {
+    promptLength: prompt.length,
+    model: CLAUDE_CONFIG.model,
+    timeout: CLAUDE_CONFIG.timeout,
+    maxRetries: CLAUDE_CONFIG.maxRetries,
+  });
+
+  const startTime = Date.now();
+  const apiKey = getApiKey();
+
+  // Initialize Anthropic client
   const anthropic = new Anthropic({
     apiKey,
   });
 
-  console.log('[Claude] Generating tasks with Claude Haiku 4.5...');
-  const startTime = Date.now();
+  let lastError: Error | null = null;
+  let attempt = 0;
+  const maxAttempts = CLAUDE_CONFIG.maxRetries + 1;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 4096,
-      temperature: 0.7,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`[Claude] Generation completed in ${duration}ms`);
-
-    // Extract text content
-    const contentBlock = response.content[0];
-    if (contentBlock.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
-    }
-
-    let jsonStr = contentBlock.text;
-
-    // Clean up markdown code blocks if present
-    if (jsonStr.includes('```json')) {
-      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    } else if (jsonStr.includes('```')) {
-      jsonStr = jsonStr.replace(/```\s*/g, '');
-    }
-    
-    jsonStr = jsonStr.trim();
+  while (attempt < maxAttempts) {
+    attempt++;
 
     try {
-      const result = JSON.parse(jsonStr) as TaskGenerationResult;
-      return result;
-    } catch (parseError) {
-      console.error('[Claude] JSON Parse Error:', parseError);
-      console.error('[Claude] Raw Output:', jsonStr);
-      throw new Error('Failed to parse Claude response as JSON');
-    }
-  } catch (error) {
-    console.error('[Claude] API Error:', error);
-    throw error;
-  }
-}
+      const response = await anthropic.messages.create({
+        model: CLAUDE_CONFIG.model,
+        max_tokens: CLAUDE_CONFIG.maxTokens,
+        temperature: CLAUDE_CONFIG.temperature,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
 
+      // Extract text content from response
+      const textContent = response.content.find((block) => block.type === 'text');
+      if (!textContent || textContent.type !== 'text') {
+        throw new Error('Claude API returned empty or invalid response structure');
+      }
+
+      const responseText = textContent.text;
+      const result = parseClaudeResponse(responseText);
+
+      console.log('Claude API: Task generation successful', {
+        duration: Date.now() - startTime,
+        totalTasks: result.total_task_count,
+        eaPercent: result.ea_task_percent,
+        inputTokens: response.usage?.input_tokens,
+        outputTokens: response.usage?.output_tokens,
+      });
+
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      lastError = err;
+
+      // Log retry attempt
+      if (attempt < maxAttempts) {
+        console.warn(
+          `Claude API attempt ${attempt} failed, retrying...`,
+          lastError.message
+        );
+      }
+    }
+  }
+
+  // All retries exhausted
+  console.error('Claude API: Task generation failed', {
+    duration: Date.now() - startTime,
+    error: lastError?.message,
+  });
+
+  throw lastError || new Error('Claude API call failed after all retries');
+}

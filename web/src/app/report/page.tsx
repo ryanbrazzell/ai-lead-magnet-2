@@ -10,7 +10,6 @@
 
 import { Suspense } from 'react';
 import { ThankYouContent } from '@/components/thank-you/thank-you-content';
-import { PageLayout } from '@/components/layout/page-layout';
 
 export const metadata = {
   title: 'Your EA Roadmap is Ready | Time Freedom Report',
@@ -19,11 +18,9 @@ export const metadata = {
 
 export default function ReportPage() {
   return (
-    <PageLayout logo="/assistant-launch-logo.png" logoHref="https://www.assistantlaunch.com">
-      <Suspense fallback={<ReportLoading />}>
-        <ThankYouContent />
-      </Suspense>
-    </PageLayout>
+    <Suspense fallback={<ReportLoading />}>
+      <ThankYouContent />
+    </Suspense>
   );
 }
 

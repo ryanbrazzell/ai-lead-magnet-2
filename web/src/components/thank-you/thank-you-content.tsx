@@ -1,30 +1,32 @@
 /**
  * ThankYouContent Component
- * Hybrid approach: Show compelling hook on screen, full report via email
+ * Main report page composition
  *
- * Flow:
- * 1. Analyzing animation (builds anticipation)
- * 2. Hero earnings (the big money number)
- * 3. ROI Dashboard (condensed stats + chart)
- * 4. Video Section
- * 5. CTA to book call
- * 6. Calendar scheduling
- * 7. Email teaser (full report in inbox)
+ * Sections in order:
+ * 1. Navigation Header (navy bar with logo)
+ * 2. Success Banner (green gradient)
+ * 3. Hero Pain (navy, "highest-paid assistant")
+ * 4. Cost Card (time lost + ROI breakdown + video)
+ * 5. How It Works (Right Person, Right Process, Right Support)
+ * 6. CTA Section with Calendar (iClosed widget)
+ * 7. Social Proof (testimonials)
+ * 8. Final CTA
  */
 
 "use client";
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Header } from '@/components/layout/header';
 import { ConfirmationBanner } from './confirmation-banner';
-import { HeroEarnings } from './hero-earnings';
+import { HeroPain } from './hero-pain';
+import { CostCard } from './cost-card';
+import { CTASection } from './cta-section';
+import { SocialProofSection } from './social-proof-section';
+import { FinalCTASection } from './final-cta-section';
+import { HowItWorksSection } from './how-it-works-section';
 import { AnalyzingAnimation } from './analyzing-animation';
-import { VideoSection } from './video-section';
-import { CalendarSection } from './calendar-section';
-import { ROIDashboard } from './roi-dashboard';
-import { VideoTestimonials } from '@/components/social-proof/video-testimonials';
 import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
-import type { TaskGenerationResult } from '@/types';
 
 interface FormDataFromURL {
   firstName: string;
@@ -89,9 +91,16 @@ export function ThankYouContent() {
     [taskHours, formData?.revenue]
   );
 
-  // Check if we have task hours data (ROI calculator was used)
-  const hasROIData = !!formData?.taskHours;
-  const totalHours = Object.values(taskHours).reduce((sum, h) => sum + h, 0);
+  // Calculate annual hours for display
+  const totalWeeklyHours = Object.values(taskHours).reduce((sum, h) => sum + h, 0);
+  const annualHours = totalWeeklyHours * 52;
+
+  // Handle CTA button clicks to scroll to calendar section container
+  const handleCTAClick = React.useCallback(() => {
+    setTimeout(() => {
+      document.getElementById('schedule-call-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }, []);
 
   // Generate PDF and send email when analysis completes
   const generateAndSendReport = React.useCallback(async () => {
@@ -148,17 +157,14 @@ export function ThankYouContent() {
       }
 
       // Send email with PDF
-      const emailResponse = await fetch('/api/send-report-email', {
+      const emailResponse = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: formData.email,
+          to: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          pdfBase64: pdfResult.pdf,
-          revenueUnlocked: roi.annualRevenueUnlocked,
-          weeklyHoursSaved: roi.weeklyHoursDelegated,
-          roiMultiplier: roi.roiMultiplier,
+          pdfBuffer: pdfResult.pdf,
         }),
       });
 
@@ -171,22 +177,7 @@ export function ThankYouContent() {
         setEmailError(emailResult.error || 'Failed to send email');
       }
 
-      // TEMPORARILY DISABLED FOR TESTING - Close CRM update (report URL)
       console.log('[TEST MODE] Close CRM report URL update disabled');
-      // if (formData.leadId) {
-      //   try {
-      //     await fetch('/api/close/update-lead', {
-      //       method: 'PUT',
-      //       headers: { 'Content-Type': 'application/json' },
-      //       body: JSON.stringify({
-      //         leadId: formData.leadId,
-      //         reportUrl: window.location.href,
-      //       }),
-      //     });
-      //   } catch (updateError) {
-      //     console.error('Failed to update lead:', updateError);
-      //   }
-      // }
     } catch (err) {
       console.error('Error generating/sending report:', err);
       setEmailError('Failed to generate report');
@@ -196,83 +187,58 @@ export function ThankYouContent() {
   // Handle analysis complete
   const handleAnalysisComplete = React.useCallback(() => {
     setShowAnalyzing(false);
-    // Start generating and sending the report in background
     generateAndSendReport();
   }, [generateAndSendReport]);
-
-  const scrollToCalendar = () => {
-    document.getElementById('calendar-section')?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   // Show analyzing animation first
   if (showAnalyzing) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <AnalyzingAnimation
-          firstName={formData?.firstName || 'there'}
-          onComplete={handleAnalysisComplete}
-          duration={3500}
-        />
-      </div>
+      <AnalyzingAnimation
+        firstName={formData?.firstName || 'there'}
+        onComplete={handleAnalysisComplete}
+        duration={3500}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Confirmation Banner */}
-      <ConfirmationBanner
-        message="Your full Time Freedom Report is on its way to your inbox"
+    <div className="min-h-screen w-full" style={{ background: '#f1f5f9' }}>
+      {/* 1. Navigation Header */}
+      <Header 
+        logo={<span style={{ fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif', fontSize: '24px', color: '#f59e0b' }}>Assistant Launch 🚀</span>} 
+        href="https://www.assistantlaunch.com" 
+        showNav={true}
+        className="bg-[#0f172a]"
       />
 
-      {/* Main Content - Full width with padding */}
-      <div className="w-full px-3 py-6 space-y-6">
+      {/* 2. Success Banner */}
+      <ConfirmationBanner email={formData?.email} />
 
-        {/* 1. Hero Earnings - The big money number + CTA */}
-        {hasROIData && totalHours > 0 && (
-          <HeroEarnings
-            taskHours={taskHours}
-            revenueRange={formData?.revenue || '$500k to $1M'}
-            firstName={formData?.firstName || 'there'}
-            onBookCall={scrollToCalendar}
-          />
-        )}
+      {/* 3. Hero Pain Section */}
+      <HeroPain firstName={formData?.firstName || 'there'} />
 
-        {/* 2. ROI Dashboard - Condensed stats + chart */}
-        {hasROIData && totalHours > 0 && (
-          <ROIDashboard
-            taskHours={taskHours}
-            revenueRange={formData?.revenue || '$500k to $1M'}
-            firstName={formData?.firstName || 'there'}
-          />
-        )}
+      {/* 4. Cost Card (overlaps hero) */}
+      <CostCard
+        taskHours={taskHours}
+        revenueRange={formData?.revenue || '$500k to $1M'}
+      />
 
-        {/* 3. Video Section */}
-        <section className="space-y-3">
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Watch This Important Video
-            </h2>
-            <p className="text-sm text-gray-500">
-              See how busy founders like you reclaimed 10+ hours per week
-            </p>
-          </div>
-          <VideoSection />
-        </section>
+      {/* 5. How It Works + Future Pacing */}
+      <HowItWorksSection />
 
-        {/* 4. Calendar Scheduling Section */}
-        <div id="calendar-section">
-          <CalendarSection
-            firstName={formData?.firstName || ''}
-            lastName={formData?.lastName || ''}
-            email={formData?.email || ''}
-            phone={formData?.phone || ''}
-          />
-        </div>
+      {/* 6. CTA Section with Calendar */}
+      <CTASection
+        firstName={formData?.firstName || ''}
+        lastName={formData?.lastName || ''}
+        email={formData?.email || ''}
+        phone={formData?.phone || ''}
+      />
 
-      </div>
+      {/* 7. Social Proof */}
+      <SocialProofSection />
 
-      {/* Video Testimonials Section */}
-      <VideoTestimonials />
+      {/* 8. Final CTA */}
+      <FinalCTASection annualHours={annualHours} onButtonClick={handleCTAClick} />
     </div>
   );
 }

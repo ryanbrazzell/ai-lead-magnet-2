@@ -25,7 +25,7 @@ describe('Prompt System', () => {
 
       // Verify key sections are present (from original 240-line prompt)
       expect(TIME_FREEDOM_PROMPT_JSON).toContain(
-        'You are a professional executive assistant'
+        'You are a professional Executive Assistant'
       );
       expect(TIME_FREEDOM_PROMPT_JSON).toContain('{LEAD_CONTEXT}');
       expect(TIME_FREEDOM_PROMPT_JSON).toContain(
@@ -159,7 +159,7 @@ describe('Prompt System', () => {
       expect(prompt).toContain('Primary Challenges: Time management');
 
       // Verify prompt structure is still intact
-      expect(prompt).toContain('You are a professional executive assistant');
+      expect(prompt).toContain('You are a professional Executive Assistant');
       expect(prompt).toContain('OUTPUT JSON');
     });
   });

@@ -67,6 +67,8 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
     setIsOpen(false);
+    // Ensure focus returns to main button for better mobile UX
+    selectRef.current?.querySelector('button')?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -129,9 +131,14 @@ const CustomSelect = ({ label, value, options, onChange, error, id }: CustomSele
                 key={option.value}
                 type="button"
                 onClick={() => handleSelect(option.value)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  handleSelect(option.value);
+                }}
                 className={cn(
                   "w-full px-5 py-3.5 text-left text-lg",
-                  "hover:bg-gray-50 transition-colors",
+                  "hover:bg-gray-50 active:bg-gray-100 transition-colors",
+                  "min-h-[44px]", // Minimum touch target size for mobile
                   value === option.value && "bg-blue-50 text-blue-700 font-medium"
                 )}
                 role="option"
@@ -170,16 +177,20 @@ export function BusinessDetailsScreen({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('[BusinessDetailsScreen] Form submitted', { revenue, painPoints });
+
     // Validate revenue
     const revenueError = validateSelection(revenue, 'your revenue range');
 
     if (revenueError) {
+      console.log('[BusinessDetailsScreen] Validation failed:', revenueError);
       setLocalErrors({
         revenue: revenueError || undefined,
       });
       return;
     }
 
+    console.log('[BusinessDetailsScreen] Validation passed, proceeding to report');
     setLocalErrors({});
     await onSubmit(revenue, painPoints);
   };

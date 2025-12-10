@@ -2,10 +2,10 @@
  * PillButton Component
  *
  * A pill-shaped CTA button for the EA Time Freedom Report design system.
- * Supports three color variants based on the color psychology journey:
- * - primary: Purple (#6F00FF) for brand entry (Step 0) and exit (final steps)
- * - progress: Yellow (#FFFC8C) for mid-journey momentum (Steps 1-2)
- * - disabled: Muted yellow (#F9E57F) for validation/error states
+ * Supports three color variants:
+ * - primary: Navy (#0f172a) for brand CTAs and main actions
+ * - progress: Gold (#f59e0b) for mid-journey momentum (Steps 1-2)
+ * - disabled: Light gold (#fcd34d) for validation/error states
  *
  * Features:
  * - Hover lift animation (translateY(-2px)) without color change
@@ -76,12 +76,12 @@ const pillButtonVariants = cva(
   {
     variants: {
       /**
-       * Color variants based on color psychology journey
+       * Color variants for navy/gold brand scheme
        */
       variant: {
         /**
-         * Primary (Purple) - Brand entry and exit
-         * Used for Step 0 "LET'S START" and final "GET MY ROADMAP"
+         * Primary (Navy) - Main CTAs
+         * Used for Step 0 "LET'S START" and final actions
          */
         primary: [
           'bg-primary text-white',
@@ -89,20 +89,20 @@ const pillButtonVariants = cva(
         ],
 
         /**
-         * Progress (Yellow) - Mid-journey momentum
+         * Progress (Gold) - Mid-journey momentum
          * Used for Steps 1-2 "CONTINUE" buttons
          */
         progress: [
-          'bg-progress text-black',
+          'bg-progress text-navy',
           'focus-visible:ring-progress',
         ],
 
         /**
-         * Disabled (Muted Yellow) - Validation/error states
+         * Disabled (Light Gold) - Validation/error states
          * Used when form has validation errors
          */
         disabled: [
-          'bg-progress-disabled text-black',
+          'bg-progress-disabled text-navy',
           'cursor-not-allowed',
           'focus-visible:ring-progress-disabled',
         ],
@@ -134,11 +134,11 @@ export interface PillButtonProps
  * PillButton - Large pill-shaped CTA button
  *
  * @example
- * // Primary variant (default) - Purple
+ * // Primary variant (default) - Navy
  * <PillButton>LET'S START</PillButton>
  *
  * @example
- * // Progress variant - Yellow
+ * // Progress variant - Gold
  * <PillButton variant="progress">CONTINUE</PillButton>
  *
  * @example

@@ -31,37 +31,48 @@ export function CalendarSection({
   if (fullName) params.set('iclosedName', fullName);
   if (email) params.set('iclosedEmail', email);
   if (phone) params.set('iclosedPhone', phone);
+  
+  // Set time format to 12-hour (AM/PM)
+  params.set('timeFormat', '12h');
 
   const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
   return (
-    <section className="py-12 border-t border-gray-200">
-      <div className="text-center mb-8">
-        <p className="text-xl text-gray-600 mb-2">
-          While you&apos;re waiting for your Roadmap...
-        </p>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-          Want to <span className="text-primary">Learn How To Scale</span> Your Business with an EA?
-        </h2>
-        <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
-          Note: This call is <strong>NOT</strong> required to receive your EA Roadmap. 
-          Only schedule if you&apos;d like to see if you&apos;re a fit for our EA implementation workshop.
-        </p>
-      </div>
-
-      {/* iClosed Widget Container */}
-      <div className="max-w-4xl mx-auto px-4 overflow-hidden">
-        <iframe
-          src={iClosedUrl}
-          style={{ 
-            width: '100%', 
-            height: '700px', 
-            border: 'none', 
-            borderRadius: '8px',
-            display: 'block'
+    <section
+      id="calendar-section"
+      style={{
+        background: 'white',
+        padding: '60px 0',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '0 20px',
+        }}
+      >
+        {/* iClosed Widget Container */}
+        <div
+          style={{
+            width: '100%',
+            minHeight: '600px',
+            overflow: 'hidden',
+            position: 'relative',
+            zIndex: 0,
           }}
-          title="Schedule a call - Executive Assistant Discovery"
-          allow="payment"
-        />
+        >
+          <iframe
+            src={iClosedUrl}
+            style={{
+              width: '100%',
+              height: '600px',
+              border: 'none',
+              borderRadius: '8px',
+            }}
+            title="Schedule a call - Executive Assistant Discovery"
+            allow="payment"
+          />
+        </div>
       </div>
     </section>
   );

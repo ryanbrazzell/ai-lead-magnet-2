@@ -1,10 +1,10 @@
 /**
  * Header Component
  *
- * Header with logo and navigation matching assistantlaunch.com exactly
- * - Transparent background
+ * Header with logo and navigation
+ * - Navy background (#0f172a)
  * - Montserrat font (fallback for Helvetica Now Display)
- * - Orange accent color rgb(242, 97, 51)
+ * - Gold accent color (#f59e0b)
  * - Dropdown menu for "About" section
  */
 
@@ -106,7 +106,7 @@ function DropdownMenu({
         <a
           key={item.href}
           href={item.href}
-          className="block px-4 py-2 text-white hover:text-[#F26133] transition-colors"
+          className="block px-4 py-2 text-white hover:text-[#f59e0b] transition-colors"
           style={{
             fontFamily: 'var(--font-nav), Montserrat, sans-serif',
             fontSize: '16px',
@@ -134,9 +134,9 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
     <header
       className={cn(
         'w-full',
-        'bg-[#1A1A2E]',
+        'bg-[#0f172a]',
         'px-4 md:px-6',
-        'py-4',
+        'py-2 md:py-4',
         'relative z-50',
         className
       )}
@@ -176,7 +176,7 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                   <button
                     className={cn(
                       "flex items-center gap-1 transition-colors px-3 py-2",
-                      isActive(link.href) ? "text-[#F26133]" : "text-white hover:text-[#F26133]"
+                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
                     )}
                     style={{
                       fontFamily: 'var(--font-nav), Montserrat, sans-serif',
@@ -200,7 +200,7 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                     href={link.href}
                     className={cn(
                       "transition-colors px-3 py-2 block",
-                      isActive(link.href) ? "text-[#F26133]" : "text-white hover:text-[#F26133]"
+                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
                     )}
                     style={{
                       fontFamily: 'var(--font-nav), Montserrat, sans-serif',
@@ -258,7 +258,7 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                         <a
                           key={child.href}
                           href={child.href}
-                          className="text-white hover:text-[#F26133] transition-colors"
+                          className="text-white hover:text-[#f59e0b] transition-colors"
                           style={{
                             fontFamily: 'var(--font-nav), Montserrat, sans-serif',
                             fontSize: '16px',
@@ -276,7 +276,7 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                     href={link.href}
                     className={cn(
                       "py-2 transition-colors",
-                      isActive(link.href) ? "text-[#F26133]" : "text-white hover:text-[#F26133]"
+                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
                     )}
                     style={{
                       fontFamily: 'var(--font-nav), Montserrat, sans-serif',
