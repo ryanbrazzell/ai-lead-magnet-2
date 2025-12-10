@@ -119,8 +119,8 @@ export function PageLayout({
           'flex-1',
           // White background on main content area
           'bg-white',
-          // Vertical padding for content breathing room
-          'py-8 md:py-12'
+          // Vertical padding for content breathing room - reduced on mobile
+          'py-4 md:py-12'
         )}
       >
         {/* Max-width container with horizontal padding */}

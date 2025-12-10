@@ -15,7 +15,7 @@ export default function Home() {
       <HeroSection
         headline={
           <>
-            If you don&apos;t have an executive assistant, <strong>you ARE the executive assistant.</strong>
+            If you don&apos;t have an Executive Assistant, you <span style={{ background: 'linear-gradient(180deg, transparent 25%, #fde68a 25%)', fontWeight: 'bold' }}>ARE</span> the Executive Assistant.
           </>
         }
         subheadline="Get your free personalized EA Time Freedom Report in under 30 seconds."

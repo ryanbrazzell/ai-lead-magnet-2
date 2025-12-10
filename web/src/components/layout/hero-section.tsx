@@ -48,7 +48,7 @@ export function HeroSection({
 }: HeroSectionProps) {
   return (
     <section
-      className="w-full max-w-6xl mx-auto px-4 py-2 md:py-3"
+      className="w-full max-w-6xl mx-auto px-4 py-1 md:py-3"
       aria-label="Hero section"
     >
       {/* VERIFICATION REQUIRED: Compare spacing with https://acquisition.com/roadmap in browser */}
@@ -60,7 +60,11 @@ export function HeroSection({
         <div className="w-full text-center">
           <h1
             data-testid="hero-headline"
-            className="text-hero text-foreground tracking-tight"
+            className="text-hero text-foreground tracking-tight font-serif"
+            style={{
+              fontSize: 'clamp(28px, 5vw, 48px)',
+              fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+            }}
           >
             {headline}
           </h1>
@@ -68,7 +72,7 @@ export function HeroSection({
           {subheadline && (
             <p
               data-testid="hero-subheadline"
-              className="text-lg md:text-xl text-gray-600 mt-4"
+              className="text-lg md:text-xl text-gray-600 mt-4 font-semibold"
             >
               {subheadline}
             </p>
