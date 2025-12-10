@@ -1,14 +1,14 @@
 /**
  * Claude AI Client for Task Generation
  *
- * Integrates with Claude 3.5 Haiku for generating personalized
- * task reports. Drop-in replacement for Gemini client.
+ * Integrates with Claude Sonnet 4.5 for generating high-quality,
+ * in-depth personalized task reports.
  *
  * Configuration:
- * - Model: claude-3-5-haiku-20241022 (fast, cost-effective)
+ * - Model: claude-sonnet-4-5-20250514 (high-quality responses)
  * - Temperature: 0.6
  * - Max Output Tokens: 4096
- * - Timeout: 60 seconds
+ * - Timeout: 90 seconds
  * - Retries: 1
  */
 
@@ -16,13 +16,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { TaskGenerationResult } from '@/types';
 
 // Claude model configuration
-// Using claude-3-5-haiku-20241022 - fast and cost-effective
-// Other options: claude-sonnet-4-5, claude-3-7-sonnet-latest
+// Using Claude Sonnet 4.5 for high-quality, in-depth responses
 export const CLAUDE_CONFIG = {
-  model: 'claude-3-5-haiku-20241022',
+  model: 'claude-sonnet-4-5-20250929',
   temperature: 0.6,
   maxTokens: 4096,
-  timeout: 60000, // 60 seconds
+  timeout: 90000, // 90 seconds for Sonnet
   maxRetries: 1,
 } as const;
 

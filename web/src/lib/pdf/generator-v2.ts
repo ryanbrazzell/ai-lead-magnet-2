@@ -99,9 +99,12 @@ function transformToPDFData(
   ];
   const totalTasksEA = allTasks.filter(t => t.isEA).length;
 
-  // Use ROI values if available, otherwise estimate
-  const annualValue = roi?.annualRevenueUnlocked || 109200;
-  const weeklyHours = roi?.weeklyHoursDelegated || 21;
+  // Use ROI values if available, otherwise use defaults matching the report page
+  // Default taskHours on report page: email:3, personalLife:2, calendar:2, businessProcesses:3 = 10 hrs/week
+  // Default revenue: $500k to $1M = $375/hr CEO rate
+  // Default annual value: 10 hrs/week * 52 weeks * $375/hr = $195,000
+  const annualValue = roi?.annualRevenueUnlocked || 195000;
+  const weeklyHours = roi?.weeklyHoursDelegated || 10;
   const eaInvestment = roi?.eaInvestment || 33000;
   const netReturn = roi?.netReturn || (annualValue - eaInvestment);
   const roiMultiplier = Number((roi?.roiMultiplier || (annualValue / eaInvestment)).toFixed(1));
@@ -109,17 +112,41 @@ function transformToPDFData(
   // Generate analysis text
   const analysisText = `Based on your revenue level and the workload you described, you are spending roughly ${weeklyHours} hours per week on tasks that do not require your expertise. That is over ${Math.round(weeklyHours * 52)} hours per year — time that could go toward closing deals, building relationships, or being present with your family.`;
 
-  // Transform tasks (limit to 5 per category as per new design)
-  const dailyTasks = report.tasks.daily
+  // Separate EA tasks (isEA=true or owner="EA") vs Founder tasks (isEA=false or owner="You")
+  const separateTasks = (tasks: Task[]) => {
+    const eaTasks = tasks.filter(t => t.isEA || t.owner?.toLowerCase() === 'ea');
+    const founderTasks = tasks.filter(t => !t.isEA && t.owner?.toLowerCase() !== 'ea');
+    return { eaTasks, founderTasks };
+  };
+
+  const dailySeparated = separateTasks(report.tasks.daily);
+  const weeklySeparated = separateTasks(report.tasks.weekly);
+  const monthlySeparated = separateTasks(report.tasks.monthly);
+
+  // Transform EA tasks (limit to 5 per category)
+  const dailyTasks = dailySeparated.eaTasks
     .slice(0, 5)
     .map(t => transformTask(t, 'daily'));
 
-  const weeklyTasks = report.tasks.weekly
+  const weeklyTasks = weeklySeparated.eaTasks
     .slice(0, 5)
     .map(t => transformTask(t, 'weekly'));
 
-  const monthlyTasks = report.tasks.monthly
+  const monthlyTasks = monthlySeparated.eaTasks
     .slice(0, 5)
+    .map(t => transformTask(t, 'monthly'));
+
+  // Transform Founder tasks (limit to 3 per category)
+  const dailyFounderTasks = dailySeparated.founderTasks
+    .slice(0, 3)
+    .map(t => transformTask(t, 'daily'));
+
+  const weeklyFounderTasks = weeklySeparated.founderTasks
+    .slice(0, 3)
+    .map(t => transformTask(t, 'weekly'));
+
+  const monthlyFounderTasks = monthlySeparated.founderTasks
+    .slice(0, 3)
     .map(t => transformTask(t, 'monthly'));
 
   return {
@@ -135,6 +162,9 @@ function transformToPDFData(
     daily_tasks: dailyTasks,
     weekly_tasks: weeklyTasks,
     monthly_tasks: monthlyTasks,
+    daily_founder_tasks: dailyFounderTasks,
+    weekly_founder_tasks: weeklyFounderTasks,
+    monthly_founder_tasks: monthlyFounderTasks,
   };
 }
 

@@ -129,6 +129,10 @@ export interface PDFReportData {
   daily_tasks: PDFTask[];
   weekly_tasks: PDFTask[];
   monthly_tasks: PDFTask[];
+  // Founder tasks - things delegation frees them up for
+  daily_founder_tasks?: PDFTask[];
+  weekly_founder_tasks?: PDFTask[];
+  monthly_founder_tasks?: PDFTask[];
 }
 
 // =============================================================================
@@ -446,6 +450,55 @@ export function renderTaskCard(
 }
 
 /**
+ * Founder Tasks Section - "Delegating this frees you up to:"
+ */
+export function renderFounderTasksSection(
+  doc: jsPDF,
+  tasks: PDFTask[],
+  y: number
+): number {
+  if (!tasks || tasks.length === 0) return y;
+
+  // Section header with accent background
+  setColor(doc, COLORS.accentLight, 'fill');
+  roundedRect(doc, MARGIN, y, CONTENT_WIDTH, 10, 3, 'F');
+
+  setColor(doc, COLORS.accent, 'text');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Delegating this frees you up to:', MARGIN + 5, y + 7);
+
+  y += 15;
+
+  // Render each founder task as a simple bullet item
+  tasks.forEach((task) => {
+    // Bullet point
+    setColor(doc, COLORS.accent, 'fill');
+    doc.circle(MARGIN + 3, y + 2, 1.5, 'F');
+
+    // Task name
+    setColor(doc, COLORS.ink, 'text');
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(task.name, MARGIN + 10, y + 4);
+
+    // Description (if provided)
+    if (task.description) {
+      setColor(doc, COLORS.inkSecondary, 'text');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const descLines = doc.splitTextToSize(task.description, CONTENT_WIDTH - 15);
+      doc.text(descLines[0], MARGIN + 10, y + 10);
+      y += 16;
+    } else {
+      y += 10;
+    }
+  });
+
+  return y + 5;
+}
+
+/**
  * CTA Block - Call to action
  */
 export function renderCTABlock(doc: jsPDF, y: number): number {
@@ -528,7 +581,7 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
 }
 
 /**
- * Build a tasks page
+ * Build a tasks page (EA tasks only)
  */
 export function buildTasksPage(
   doc: jsPDF,
@@ -544,6 +597,68 @@ export function buildTasksPage(
 
   tasks.forEach((task, index) => {
     y = renderTaskCard(doc, index + 1, task.name, task.description, task.time_saved, y);
+  });
+}
+
+/**
+ * Build a founder tasks page (what delegation frees them up for)
+ */
+export function buildFounderTasksPage(
+  doc: jsPDF,
+  tasks: PDFTask[],
+  title: string,
+  subtitle: string
+): void {
+  doc.addPage();
+  let y = 20;
+
+  // Golden accent header for founder tasks
+  setColor(doc, COLORS.accentLight, 'fill');
+  doc.rect(0, 0, PAGE_WIDTH, 50, 'F');
+
+  // Title with accent color
+  setColor(doc, COLORS.accent, 'text');
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, MARGIN, y + 15);
+
+  // Subtitle
+  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(subtitle, MARGIN, y + 25);
+
+  y = 65;
+
+  // Render each founder task with emphasis
+  tasks.forEach((task, index) => {
+    // Task card with accent border
+    setColor(doc, COLORS.accent, 'draw');
+    doc.setLineWidth(1);
+    roundedRect(doc, MARGIN, y, CONTENT_WIDTH, 45, 4, 'S');
+
+    // Number badge
+    setColor(doc, COLORS.accent, 'fill');
+    doc.circle(MARGIN + 12, y + 12, 8, 'F');
+    setColor(doc, COLORS.white, 'text');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(index + 1), MARGIN + 12, y + 14.5, { align: 'center' });
+
+    // Task name
+    setColor(doc, COLORS.ink, 'text');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(task.name, MARGIN + 28, y + 14);
+
+    // Description
+    setColor(doc, COLORS.inkSecondary, 'text');
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const descLines = doc.splitTextToSize(task.description, CONTENT_WIDTH - 35);
+    doc.text(descLines.slice(0, 2), MARGIN + 28, y + 25);
+
+    y += 55;
   });
 }
 
@@ -588,37 +703,67 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData): void
   // Page 1: Summary
   buildSummaryPage(doc, data);
 
-  // Page 2: Daily Tasks
+  // Page 2: Daily EA Tasks
   if (data.daily_tasks.length > 0) {
     buildTasksPage(
       doc,
       data.daily_tasks,
-      'Top 5 Daily Tasks',
+      'Top 5 Daily Tasks to Delegate to Your EA',
       'High-frequency tasks eating your time every single day'
     );
   }
 
-  // Page 3: Weekly Tasks
+  // Page 3: Daily Founder Tasks (what delegation frees you up for)
+  if (data.daily_founder_tasks && data.daily_founder_tasks.length > 0) {
+    buildFounderTasksPage(
+      doc,
+      data.daily_founder_tasks,
+      'Delegating Daily Tasks Frees You Up To...',
+      'Strategic activities that only YOU can do'
+    );
+  }
+
+  // Page 4: Weekly EA Tasks
   if (data.weekly_tasks.length > 0) {
     buildTasksPage(
       doc,
       data.weekly_tasks,
-      'Top 5 Weekly Tasks',
+      'Top 5 Weekly Tasks to Delegate to Your EA',
       'Recurring tasks that stack up week after week'
     );
   }
 
-  // Page 4: Monthly Tasks
+  // Page 5: Weekly Founder Tasks
+  if (data.weekly_founder_tasks && data.weekly_founder_tasks.length > 0) {
+    buildFounderTasksPage(
+      doc,
+      data.weekly_founder_tasks,
+      'Delegating Weekly Tasks Frees You Up To...',
+      'High-value work that drives your business forward'
+    );
+  }
+
+  // Page 6: Monthly EA Tasks
   if (data.monthly_tasks.length > 0) {
     buildTasksPage(
       doc,
       data.monthly_tasks,
-      'Top 5 Monthly Tasks',
+      'Top 5 Monthly Tasks to Delegate to Your EA',
       'Administrative work that drains strategic thinking time'
     );
   }
 
-  // Page 5: CTA
+  // Page 7: Monthly Founder Tasks
+  if (data.monthly_founder_tasks && data.monthly_founder_tasks.length > 0) {
+    buildFounderTasksPage(
+      doc,
+      data.monthly_founder_tasks,
+      'Delegating Monthly Tasks Frees You Up To...',
+      'Big-picture initiatives that grow your business'
+    );
+  }
+
+  // Final Page: CTA
   buildCTAPage(doc);
 
   // Add footers to all pages
