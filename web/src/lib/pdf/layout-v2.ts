@@ -499,10 +499,11 @@ export function renderFounderTasksSection(
 }
 
 /**
- * CTA Block - Call to action
+ * CTA Block - Call to action with clickable button
  */
 export function renderCTABlock(doc: jsPDF, y: number): number {
   const blockHeight = 45;
+  const bookingUrl = 'https://app.iclosed.io/e/assistantlaunch/support';
 
   // Background
   setColor(doc, COLORS.accentLight, 'fill');
@@ -526,11 +527,19 @@ export function renderCTABlock(doc: jsPDF, y: number): number {
   doc.setFont('helvetica', 'bold');
   doc.text('Schedule Free Consultation', PAGE_WIDTH / 2, btnY + 8, { align: 'center' });
 
-  // URL
-  setColor(doc, COLORS.inkSecondary, 'text');
+  // Add clickable link to the button area
+  doc.link(btnX, btnY, btnWidth, btnHeight, { url: bookingUrl });
+
+  // URL display (also clickable)
+  setColor(doc, COLORS.accent, 'text');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('calendly.com/assistantlaunch/discovery-call', PAGE_WIDTH / 2, y + 40, { align: 'center' });
+  const urlText = 'app.iclosed.io/e/assistantlaunch/support';
+  doc.text(urlText, PAGE_WIDTH / 2, y + 40, { align: 'center' });
+
+  // Make the URL text clickable too
+  const urlWidth = doc.getTextWidth(urlText);
+  doc.link((PAGE_WIDTH - urlWidth) / 2, y + 36, urlWidth, 6, { url: bookingUrl });
 
   return y + blockHeight + 10;
 }
