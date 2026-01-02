@@ -21,14 +21,11 @@ interface RevenueScreenProps {
 }
 
 const revenueOptions = [
-  { value: 'Under $100k', label: 'Under $100k' },
-  { value: '$100k-$250k', label: '$100k - $250k' },
-  { value: '$250k-$500k', label: '$250k - $500k' },
-  { value: '$500k-$1M', label: '$500k - $1M' },
-  { value: '$1M-$3M', label: '$1M - $3M' },
-  { value: '$3M-$10M', label: '$3M - $10M' },
-  { value: '$10M-$30M', label: '$10M - $30M' },
-  { value: '$30M+', label: '$30M+' },
+  { value: 'Under $500k', label: 'Under $500,000' },
+  { value: '$500k-$1M', label: '$500,000 to $1,000,000' },
+  { value: '$1M-$5M', label: '$1,000,000 to $4,999,999' },
+  { value: '$5M-$10M', label: '$5,000,000 to $9,999,999' },
+  { value: 'Over $10M', label: 'Over $10,000,000' },
 ];
 
 export function RevenueScreen({
