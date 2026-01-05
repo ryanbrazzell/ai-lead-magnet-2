@@ -21,13 +21,14 @@ export const REVENUE_MAPPINGS: RevenueMapping[] = [
   { range: 'Over $10M', midpoint: 15000000, ceoHourlyRate: 5000 }, // Capped at $5k
 ];
 
-// Weekly hours by revenue tier (minimum 10 hrs, scales with complexity)
+// Weekly hours by revenue tier (scales dramatically with business complexity)
+// Under $500k = 15 hrs base, then 50% increase per tier
 export const WEEKLY_HOURS_BY_REVENUE: Record<string, number> = {
-  'Under $500k': 10,
-  '$500k-$1M': 12,
-  '$1M-$5M': 14,
-  '$5M-$10M': 16,
-  'Over $10M': 18,
+  'Under $500k': 15,
+  '$500k-$1M': 22,      // ~50% more than base
+  '$1M-$5M': 30,        // ~50% more
+  '$5M-$10M': 40,       // ~33% more (complexity ceiling)
+  'Over $10M': 50,      // ~25% more (max complexity)
 };
 
 // EA assistant annual investment

@@ -5,6 +5,9 @@
 
 "use client";
 
+import * as React from 'react';
+import Script from 'next/script';
+
 interface CTASectionProps {
   firstName?: string;
   lastName?: string;
@@ -26,7 +29,7 @@ export function CTASection({
   if (fullName) params.set('iclosedName', fullName);
   if (email) params.set('iclosedEmail', email);
   if (phone) params.set('iclosedPhone', phone);
-  
+
   // Set time format to 12-hour (AM/PM)
   params.set('timeFormat', '12h');
 
@@ -135,23 +138,25 @@ export function CTASection({
           id="calendar-section"
           style={{
             width: '100%',
-            minHeight: '600px',
+            minHeight: '620px',
             overflow: 'hidden',
             position: 'relative',
             borderRadius: '12px',
             marginBottom: '8px',
           }}
         >
-          <iframe
-            src={iClosedUrl}
+          <div
+            className="iclosed-widget"
+            data-url={iClosedUrl}
+            title="Executive Assistant Discovery Call"
             style={{
               width: '100%',
-              height: '600px',
-              border: 'none',
-              borderRadius: '12px',
+              height: '620px',
             }}
-            title="Schedule a call - Executive Assistant Discovery"
-            allow="payment"
+          />
+          <Script
+            src="https://app.iclosed.io/assets/widget.js"
+            strategy="lazyOnload"
           />
         </div>
 
