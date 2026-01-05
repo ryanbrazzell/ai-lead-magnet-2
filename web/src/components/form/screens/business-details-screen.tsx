@@ -30,14 +30,11 @@ interface BusinessDetailsScreenProps {
 
 const revenueOptions = [
   { value: '', label: 'Select...' },
-  { value: 'Under $100k', label: 'Under $100k' },
-  { value: '$100k to $250k', label: '$100k to $250k' },
-  { value: '$250K to $500k', label: '$250K to $500k' },
-  { value: '$500k to $1M', label: '$500k to $1M' },
-  { value: '$1M to $3M', label: '$1M to $3M' },
-  { value: '$3M to $10M', label: '$3M to $10M' },
-  { value: '$10M to $30M', label: '$10M to $30M' },
-  { value: '$30 Million+', label: '$30 Million+' },
+  { value: 'Under $500k', label: 'Under $500,000' },
+  { value: '$500k-$1M', label: '$500,000 to $1,000,000' },
+  { value: '$1M-$5M', label: '$1,000,000 to $4,999,999' },
+  { value: '$5M-$10M', label: '$5,000,000 to $9,999,999' },
+  { value: 'Over $10M', label: 'Over $10,000,000' },
 ];
 
 interface CustomSelectProps {
