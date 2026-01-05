@@ -11,18 +11,24 @@ export interface RevenueMapping {
   ceoHourlyRate: number;
 }
 
-// Revenue ranges mapped to midpoints and CEO hourly rates
-// CEO Hourly Rate = Midpoint / 2,000 working hours per year
+// Revenue ranges mapped to midpoints, CEO hourly rates (capped at $5k), and weekly hours
+// CEO Hourly Rate = Midpoint / 2,000 working hours per year (max $5,000/hr)
 export const REVENUE_MAPPINGS: RevenueMapping[] = [
-  { range: 'Under $100k', midpoint: 50000, ceoHourlyRate: 25 },
-  { range: '$100k to $250k', midpoint: 175000, ceoHourlyRate: 88 },
-  { range: '$250K to $500k', midpoint: 375000, ceoHourlyRate: 188 },
-  { range: '$500k to $1M', midpoint: 750000, ceoHourlyRate: 375 },
-  { range: '$1M to $3M', midpoint: 2000000, ceoHourlyRate: 1000 },
-  { range: '$3M to $10M', midpoint: 6500000, ceoHourlyRate: 3250 },
-  { range: '$10M to $30M', midpoint: 20000000, ceoHourlyRate: 10000 },
-  { range: '$30 Million+', midpoint: 50000000, ceoHourlyRate: 25000 },
+  { range: 'Under $500k', midpoint: 250000, ceoHourlyRate: 125 },
+  { range: '$500k-$1M', midpoint: 750000, ceoHourlyRate: 375 },
+  { range: '$1M-$5M', midpoint: 3000000, ceoHourlyRate: 1500 },
+  { range: '$5M-$10M', midpoint: 7500000, ceoHourlyRate: 3750 },
+  { range: 'Over $10M', midpoint: 15000000, ceoHourlyRate: 5000 }, // Capped at $5k
 ];
+
+// Weekly hours by revenue tier (minimum 10 hrs, scales with complexity)
+export const WEEKLY_HOURS_BY_REVENUE: Record<string, number> = {
+  'Under $500k': 10,
+  '$500k-$1M': 12,
+  '$1M-$5M': 14,
+  '$5M-$10M': 16,
+  'Over $10M': 18,
+};
 
 // EA assistant annual investment
 export const EA_ANNUAL_INVESTMENT = 33000; // $2,750/month x 12
@@ -41,6 +47,32 @@ export function getCeoHourlyRate(revenueRange: string): number {
 export function getRevenueMidpoint(revenueRange: string): number {
   const mapping = REVENUE_MAPPINGS.find(m => m.range === revenueRange);
   return mapping?.midpoint ?? 100000;
+}
+
+/**
+ * Get weekly hours from revenue range string
+ */
+export function getWeeklyHoursByRevenue(revenueRange: string): number {
+  return WEEKLY_HOURS_BY_REVENUE[revenueRange] ?? 15; // Default 15 hrs if not found
+}
+
+/**
+ * Get TaskHours object distributed across categories based on revenue tier
+ */
+export function getTaskHoursByRevenue(revenueRange: string): TaskHours {
+  const totalHours = getWeeklyHoursByRevenue(revenueRange);
+  // Distribute hours across categories (roughly equal with slight variation)
+  const emailHours = Math.round(totalHours * 0.30); // 30% on email
+  const personalLifeHours = Math.round(totalHours * 0.20); // 20% on personal
+  const calendarHours = Math.round(totalHours * 0.20); // 20% on calendar
+  const businessProcessesHours = totalHours - emailHours - personalLifeHours - calendarHours; // remainder
+
+  return {
+    email: emailHours,
+    personalLife: personalLifeHours,
+    calendar: calendarHours,
+    businessProcesses: businessProcessesHours,
+  };
 }
 
 export interface TaskHours {
