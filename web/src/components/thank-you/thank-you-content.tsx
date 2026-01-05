@@ -28,7 +28,7 @@ import { FinalCTASection } from './final-cta-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { OverwhelmSection } from './overwhelm-section';
 import { AnalyzingAnimation } from './analyzing-animation';
-import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
+import { calculateROI, getTaskHoursByRevenue, type TaskHours } from '@/lib/roi-calculator';
 
 interface FormDataFromURL {
   firstName: string;
@@ -79,18 +79,16 @@ export function ThankYouContent() {
     }
   }, [searchParams]);
 
-  // Default task hours if not provided
-  const taskHours: TaskHours = formData?.taskHours ?? {
-    email: 3,
-    personalLife: 2,
-    calendar: 2,
-    businessProcesses: 3,
-  };
+  // Default revenue range
+  const revenueRange = formData?.revenue || '$500k-$1M';
 
-  // Calculate ROI for email
+  // Get task hours based on revenue tier (or use provided taskHours)
+  const taskHours: TaskHours = formData?.taskHours ?? getTaskHoursByRevenue(revenueRange);
+
+  // Calculate ROI based on revenue
   const roi = React.useMemo(
-    () => calculateROI(taskHours, formData?.revenue || '$500k to $1M'),
-    [taskHours, formData?.revenue]
+    () => calculateROI(taskHours, revenueRange),
+    [taskHours, revenueRange]
   );
 
   // Calculate annual hours for display
@@ -146,7 +144,7 @@ export function ThankYouContent() {
             stageName: 'Prioritize',
           },
           taskHours: taskHours,
-          revenueRange: formData.revenue || '$500k to $1M',
+          revenueRange: revenueRange,
         }),
       });
 
@@ -222,7 +220,7 @@ export function ThankYouContent() {
       {/* 4. Cost Card (overlaps hero) */}
       <CostCard
         taskHours={taskHours}
-        revenueRange={formData?.revenue || '$500k to $1M'}
+        revenueRange={revenueRange}
       />
 
       {/* 5. Overwhelm Section - Shows everything they're still doing + client proof */}
