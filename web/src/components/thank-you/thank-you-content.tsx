@@ -23,8 +23,10 @@ import { HeroPain } from './hero-pain';
 import { CostCard } from './cost-card';
 import { CTASection } from './cta-section';
 import { SocialProofSection } from './social-proof-section';
+import { FAQSection } from './faq-section';
 import { FinalCTASection } from './final-cta-section';
 import { HowItWorksSection } from './how-it-works-section';
+import { OverwhelmSection } from './overwhelm-section';
 import { AnalyzingAnimation } from './analyzing-animation';
 import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
 
@@ -223,10 +225,13 @@ export function ThankYouContent() {
         revenueRange={formData?.revenue || '$500k to $1M'}
       />
 
-      {/* 5. How It Works + Future Pacing */}
+      {/* 5. Overwhelm Section - Shows everything they're still doing + client proof */}
+      <OverwhelmSection />
+
+      {/* 6. How It Works + Future Pacing */}
       <HowItWorksSection />
 
-      {/* 6. CTA Section with Calendar */}
+      {/* 7. CTA Section with Calendar */}
       <CTASection
         firstName={formData?.firstName || ''}
         lastName={formData?.lastName || ''}
@@ -237,7 +242,10 @@ export function ThankYouContent() {
       {/* 7. Social Proof */}
       <SocialProofSection />
 
-      {/* 8. Final CTA */}
+      {/* 8. FAQ Section */}
+      <FAQSection />
+
+      {/* 9. Final CTA */}
       <FinalCTASection annualHours={annualHours} onButtonClick={handleCTAClick} />
     </div>
   );

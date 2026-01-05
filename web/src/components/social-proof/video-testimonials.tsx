@@ -28,25 +28,25 @@ const testimonials = [
     name: 'Keri Ford',
     title: 'Founder, The 1% Woman Coach',
     initials: 'KF',
-    quote: "My company has grown, and is thriving, thanks to the support and amazingness of Anne. I really don't know what I would do without her. She allows me to be in my zone of genius to create the vision, team, and servitude that I have always dreamed of.",
+    quote: "I haven't touched my inbox in 3 weeks. Anne handles it all — I just get the highlights that actually matter.",
   },
   {
     name: 'David Horner',
     title: 'CFO, Auckland Flying School',
     initials: 'DH',
-    quote: "Just a couple of weeks into it and Aileen is making a massive difference to my workday. Managing to get so much more done!",
+    quote: "Went from 7 days a week grinding to focused work hours. Aileen runs my entire schedule — I just show up where I'm needed.",
   },
   {
     name: 'Jake Kauffman',
     title: 'Founder, JKC',
     initials: 'JK',
-    quote: "I honestly couldn't imagine my life without Maria. Her level of excellence is always on point.",
+    quote: "Took a 2-week vacation without touching my laptop. Maria kept everything running — clients didn't even notice I was gone.",
   },
   {
     name: 'Mitch Swersky',
     title: 'Co-founder, NSBA Group',
     initials: 'MS',
-    quote: "She really cares. She made some great SOP's which we didn't even ask her to!",
+    quote: "She proactively built SOPs we didn't even ask for. Now my team runs itself — I'm finally working ON the business, not IN it.",
   },
 ];
 
@@ -85,7 +85,7 @@ function VideoCard({ videoId, title }: { videoId: string; title: string }) {
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
             {/* Play button */}
             <div className="relative z-10 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Play className="w-6 h-6 text-primary ml-1" fill="currentColor" />
+              <Play className="w-6 h-6 text-[#f59e0b] ml-1" fill="currentColor" />
             </div>
           </button>
         )}
@@ -97,12 +97,12 @@ function VideoCard({ videoId, title }: { videoId: string; title: string }) {
 function TestimonialCard({ name, title, initials, quote }: typeof testimonials[0]) {
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition-all duration-300">
-      <Quote className="w-8 h-8 text-primary/20 mb-4" />
+      <Quote className="w-8 h-8 text-[#f59e0b]/30 mb-4" />
       <p className="text-gray-700 leading-relaxed mb-6">
         {quote}
       </p>
       <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary to-violet-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+        <div className="w-10 h-10 bg-gradient-to-br from-[#0f172a] to-[#1e293b] rounded-full flex items-center justify-center text-white font-semibold text-sm">
           {initials}
         </div>
         <div>
@@ -120,7 +120,7 @@ export function VideoTestimonials() {
       <div className="max-w-6xl mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0f172a]/10 text-[#0f172a] rounded-full text-sm font-medium mb-4">
             <Users className="w-4 h-4" />
             1,300+ Founders Helped
           </div>
@@ -159,7 +159,7 @@ export function VideoTestimonials() {
         </div>
 
         {/* Founder Message */}
-        <div className="bg-gradient-to-br from-primary to-violet-700 text-white rounded-2xl p-8 md:p-12 max-w-4xl mx-auto">
+        <div className="bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white rounded-2xl p-8 md:p-12 max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="flex-shrink-0">
               <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">

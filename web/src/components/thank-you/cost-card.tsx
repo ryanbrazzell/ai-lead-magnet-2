@@ -202,7 +202,7 @@ export function CostCard({ taskHours, revenueRange }: CostCardProps) {
           <div
             style={{
               fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
-              fontSize: '24px',
+              fontSize: '32px',
               color: '#f59e0b',
             }}
           >
@@ -393,8 +393,6 @@ export function CostCard({ taskHours, revenueRange }: CostCardProps) {
           </div>
         </div>
 
-        {/* Video Section */}
-        <VideoEmbed videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ" />
       </div>
     </div>
   );

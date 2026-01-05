@@ -6,7 +6,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/** Initialize Resend client lazily to avoid build errors */
+let resend: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
+  }
+  return resend;
+}
 
 interface SendReportEmailRequest {
   email: string;
@@ -175,7 +182,7 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send email with Resend
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: "Ryan at Assistant Launch <ryan@assistantlaunch.com>",
       to: email,
       subject: `${firstName}, Your EA Time Freedom Report is Ready`,

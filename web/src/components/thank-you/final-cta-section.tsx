@@ -44,7 +44,7 @@ export function FinalCTASection({ annualHours, onButtonClick }: FinalCTASectionP
             marginBottom: '16px',
           }}
         >
-          Ready to spend {annualHours} hours on growth instead of admin?
+          You&apos;ve seen the cost. {annualHours}+ hours per year. Now let&apos;s fix it.
         </h2>
         <p
           style={{
@@ -56,7 +56,7 @@ export function FinalCTASection({ annualHours, onButtonClick }: FinalCTASectionP
             marginRight: 'auto',
           }}
         >
-          Let&apos;s show you exactly how to delegate these tasks — without the months of training.
+          Schedule your call and we&apos;ll walk you through the exact delegation system that frees up your calendar for growth work.
         </p>
         <button
           onClick={handleClick}
@@ -83,7 +83,7 @@ export function FinalCTASection({ annualHours, onButtonClick }: FinalCTASectionP
             e.currentTarget.style.background = 'white';
           }}
         >
-          Show Me How To Delegate This
+          Book Your EA Strategy Call
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path d="M10 0L8.59 1.41 14.17 7H0v2h14.17l-5.58 5.59L10 16l8-8-8-8z" fill="currentColor" />
           </svg>
