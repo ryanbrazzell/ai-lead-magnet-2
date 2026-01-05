@@ -11,24 +11,24 @@ export interface RevenueMapping {
   ceoHourlyRate: number;
 }
 
-// Revenue ranges mapped to midpoints, CEO hourly rates (capped at $5k), and weekly hours
-// CEO Hourly Rate = Midpoint / 2,000 working hours per year (max $5,000/hr)
+// Revenue ranges mapped to realistic CEO hourly rates
 export const REVENUE_MAPPINGS: RevenueMapping[] = [
-  { range: 'Under $500k', midpoint: 250000, ceoHourlyRate: 125 },
-  { range: '$500k-$1M', midpoint: 750000, ceoHourlyRate: 375 },
-  { range: '$1M-$5M', midpoint: 3000000, ceoHourlyRate: 1500 },
-  { range: '$5M-$10M', midpoint: 7500000, ceoHourlyRate: 3750 },
-  { range: 'Over $10M', midpoint: 15000000, ceoHourlyRate: 5000 }, // Capped at $5k
+  { range: 'Under $500k', midpoint: 250000, ceoHourlyRate: 100 },
+  { range: '$500k-$1M', midpoint: 750000, ceoHourlyRate: 300 },
+  { range: '$1M-$3M', midpoint: 2000000, ceoHourlyRate: 300 },
+  { range: '$3M-$5M', midpoint: 4000000, ceoHourlyRate: 500 },
+  { range: '$5M-$10M', midpoint: 7500000, ceoHourlyRate: 750 },
+  { range: 'Over $10M', midpoint: 15000000, ceoHourlyRate: 1000 },
 ];
 
-// Weekly hours by revenue tier (scales dramatically with business complexity)
-// Under $500k = 15 hrs base, then 50% increase per tier
+// Weekly hours by revenue tier
 export const WEEKLY_HOURS_BY_REVENUE: Record<string, number> = {
   'Under $500k': 15,
-  '$500k-$1M': 22,      // ~50% more than base
-  '$1M-$5M': 30,        // ~50% more
-  '$5M-$10M': 40,       // ~33% more (complexity ceiling)
-  'Over $10M': 50,      // ~25% more (max complexity)
+  '$500k-$1M': 15,        // 12 + 25%
+  '$1M-$3M': 19,          // 15 + 25%
+  '$3M-$5M': 19,          // 15 + 25%
+  '$5M-$10M': 15,         // 12 + 25%
+  'Over $10M': 12,        // 10 + 25%
 };
 
 // EA assistant annual investment

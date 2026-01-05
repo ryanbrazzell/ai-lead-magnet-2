@@ -32,8 +32,9 @@ const revenueOptions = [
   { value: '', label: 'Select...' },
   { value: 'Under $500k', label: 'Under $500,000' },
   { value: '$500k-$1M', label: '$500,000 to $1,000,000' },
-  { value: '$1M-$5M', label: '$1,000,000 to $4,999,999' },
-  { value: '$5M-$10M', label: '$5,000,000 to $9,999,999' },
+  { value: '$1M-$3M', label: '$1,000,000 to $3,000,000' },
+  { value: '$3M-$5M', label: '$3,000,000 to $5,000,000' },
+  { value: '$5M-$10M', label: '$5,000,000 to $10,000,000' },
   { value: 'Over $10M', label: 'Over $10,000,000' },
 ];
 
