@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 
 export default function IclosedRedirectPage() {
-  const searchParams = useSearchParams();
-
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      typeof window !== "undefined" ? window.location.search : ""
+    );
 
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("track", "Schedule", {
@@ -21,7 +20,7 @@ export default function IclosedRedirectPage() {
       ? `/thank-you?${params.toString()}`
       : "/thank-you";
     window.location.replace(redirectUrl);
-  }, [searchParams]);
+  }, []);
 
   return (
     <main className="min-h-screen bg-white flex items-center justify-center px-6">
