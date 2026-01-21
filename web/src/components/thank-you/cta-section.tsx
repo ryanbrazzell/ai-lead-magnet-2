@@ -6,7 +6,7 @@
 "use client";
 
 import * as React from 'react';
-import Script from 'next/script';
+import { useRouter } from 'next/navigation';
 
 interface CTASectionProps {
   firstName?: string;
@@ -21,6 +21,46 @@ export function CTASection({
   email = '',
   phone = '',
 }: CTASectionProps) {
+  const router = useRouter();
+
+  // Listen for postMessage from iClosed iframe for booking completion
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from iClosed
+      if (!event.origin.includes('iclosed.io')) return;
+
+      console.log('[CTASection] Received postMessage from iClosed:', JSON.stringify(event.data, null, 2));
+
+      // iClosed may send various message formats - check for booking completion
+      const data = event.data;
+      
+      // Handle different possible message formats
+      if (
+        data?.type === 'booking_complete' ||
+        data?.type === 'iclosed_booking_complete' ||
+        data?.event === 'booking_complete' ||
+        data?.action === 'redirect' ||
+        (typeof data === 'string' && data.includes('booking'))
+      ) {
+        console.log('[CTASection] Booking complete detected, redirecting to thank-you page');
+        
+        // Build redirect URL with user data
+        const params = new URLSearchParams();
+        if (firstName) params.set('first_name', firstName);
+        if (email) params.set('email', email);
+        
+        const redirectUrl = params.toString() 
+          ? `/thank-you?${params.toString()}`
+          : '/thank-you';
+        
+        router.push(redirectUrl);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [firstName, email, router]);
+
   // Build iClosed URL with pre-filled data
   const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
   const params = new URLSearchParams();
@@ -133,7 +173,7 @@ export function CTASection({
           3-7 days to EA Kickoff
         </div>
 
-        {/* iClosed Calendar Widget */}
+        {/* iClosed Calendar - Using iframe (no auto-scroll issues) */}
         <div
           id="calendar-section"
           style={{
@@ -145,18 +185,16 @@ export function CTASection({
             marginBottom: '8px',
           }}
         >
-          <div
-            className="iclosed-widget"
-            data-url={iClosedUrl}
-            title="Executive Assistant Discovery Call"
+          <iframe
+            src={iClosedUrl}
             style={{
               width: '100%',
               height: '620px',
+              border: 'none',
+              borderRadius: '12px',
             }}
-          />
-          <Script
-            src="https://app.iclosed.io/assets/widget.js"
-            strategy="lazyOnload"
+            title="Schedule a call - Executive Assistant Discovery"
+            allow="payment; clipboard-write"
           />
         </div>
 
