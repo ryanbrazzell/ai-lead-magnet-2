@@ -18,16 +18,18 @@ export function BookingConfirmedContent() {
   // Read user data from URL params (passed by iClosed redirect)
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
   const email = searchParams.get('email') || '';
+  const pixelAlreadyFired = searchParams.get('pixel_fired') === '1';
 
   // Fire Meta Pixel Schedule event on page load
   useEffect(() => {
+    if (pixelAlreadyFired) return;
     if (typeof window !== 'undefined' && (window as any).fbq) {
       (window as any).fbq('track', 'Schedule', {
         content_name: 'EA Discovery Call',
         content_category: 'Call Booking'
       });
     }
-  }, []);
+  }, [pixelAlreadyFired]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,11 +133,12 @@ export function BookingConfirmedContent() {
           <div className="flex items-center justify-center gap-2 mb-3">
             <MessageCircle className="w-5 h-5 text-primary" />
             <h3 className="text-lg font-semibold text-gray-900">
-              Having Issues?
+              Please Confirm Your Call
             </h3>
           </div>
           <p className="text-gray-600 mb-4">
-            If you don&apos;t receive the calendar invite or have any questions, text us right away:
+            We&apos;ll reach out to make sure your call is confirmed. If you don&apos;t see the confirmation on your end, text our cell below.
+            Your call will be cancelled on the day of the event if it isn&apos;t confirmed.
           </p>
           <a
             href="sms:+16199524992"
