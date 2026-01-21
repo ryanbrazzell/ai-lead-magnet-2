@@ -18,18 +18,16 @@ export function BookingConfirmedContent() {
   // Read user data from URL params (passed by iClosed redirect)
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
   const email = searchParams.get('email') || '';
-  const pixelAlreadyFired = searchParams.get('pixel_fired') === '1';
 
   // Fire Meta Pixel Schedule event on page load
   useEffect(() => {
-    if (pixelAlreadyFired) return;
     if (typeof window !== 'undefined' && (window as any).fbq) {
       (window as any).fbq('track', 'Schedule', {
         content_name: 'EA Discovery Call',
         content_category: 'Call Booking'
       });
     }
-  }, [pixelAlreadyFired]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
