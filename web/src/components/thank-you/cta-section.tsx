@@ -22,6 +22,39 @@ export function CTASection({
   email = '',
   phone = '',
 }: CTASectionProps) {
+  // Store scroll position to prevent iClosed widget from auto-scrolling
+  const scrollPositionRef = React.useRef<number>(0);
+  const scrollLockActiveRef = React.useRef<boolean>(false);
+
+  // Save scroll position before widget loads
+  React.useEffect(() => {
+    scrollPositionRef.current = window.scrollY;
+  }, []);
+
+  // Restore scroll position after widget script loads (prevents auto-scroll)
+  const handleScriptLoad = React.useCallback(() => {
+    // Lock scroll restoration for 2 seconds to catch widget initialization
+    scrollLockActiveRef.current = true;
+    const savedPosition = scrollPositionRef.current;
+
+    // Immediately restore position
+    window.scrollTo(0, savedPosition);
+
+    // Set up interval to keep restoring scroll position for 2 seconds
+    // This catches any delayed scroll attempts by the widget
+    const intervalId = setInterval(() => {
+      if (scrollLockActiveRef.current) {
+        window.scrollTo(0, savedPosition);
+      }
+    }, 50);
+
+    // Release scroll lock after 2 seconds
+    setTimeout(() => {
+      scrollLockActiveRef.current = false;
+      clearInterval(intervalId);
+    }, 2000);
+  }, []);
+
   // Build iClosed URL with pre-filled data
   const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
   const params = new URLSearchParams();
@@ -159,6 +192,7 @@ export function CTASection({
           <Script
             src="https://app.iclosed.io/assets/widget.js"
             strategy="lazyOnload"
+            onLoad={handleScriptLoad}
           />
         </div>
 
