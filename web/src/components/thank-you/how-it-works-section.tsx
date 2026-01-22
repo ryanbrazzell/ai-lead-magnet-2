@@ -31,17 +31,17 @@ export function HowItWorksSection() {
               marginBottom: '12px',
             }}
           >
-            How Assistant Launch Solves This Problem
+            Three Things Your Last Assistant Didn&apos;t Have
           </h2>
           <p
             style={{
               fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
               color: '#475569',
-              maxWidth: '400px',
+              maxWidth: '500px',
               margin: '0 auto',
             }}
           >
-            Get your time back in 3 simple steps
+            The right skills. The right system. The right support. Most companies give you one. We install all three.
           </p>
         </div>
 
@@ -59,7 +59,10 @@ export function HowItWorksSection() {
           <div
             style={{
               textAlign: 'center',
-              padding: '16px 24px',
+              padding: '24px',
+              border: '2px solid #e2e8f0',
+              borderRadius: '12px',
+              backgroundColor: '#fafafa',
             }}
             className="how-it-works-step"
           >
@@ -94,7 +97,7 @@ export function HowItWorksSection() {
                 marginBottom: '8px',
               }}
             >
-              Right Person
+              The Right Person
             </h3>
             <p
               style={{
@@ -103,7 +106,7 @@ export function HowItWorksSection() {
                 color: '#475569',
               }}
             >
-              We pair you with a highly vetted EA, fully trained on buy back your time principles and AI.
+              9 out of 10 assistants were trained by busy founders who didn&apos;t know what they were doing. Our EAs think like operators.
             </p>
           </div>
 
@@ -111,7 +114,10 @@ export function HowItWorksSection() {
           <div
             style={{
               textAlign: 'center',
-              padding: '16px 24px',
+              padding: '24px',
+              border: '2px solid #e2e8f0',
+              borderRadius: '12px',
+              backgroundColor: '#fafafa',
             }}
             className="how-it-works-step"
           >
@@ -146,7 +152,7 @@ export function HowItWorksSection() {
                 marginBottom: '8px',
               }}
             >
-              Right Process
+              The Right System
             </h3>
             <p
               style={{
@@ -155,7 +161,7 @@ export function HowItWorksSection() {
                 color: '#475569',
               }}
             >
-              Our 4-week accelerator integrates your assistant, so you&apos;re both operating at the highest level.
+              15-minute daily syncs, clear ownership zones, structured handoffs. No more &quot;I didn&apos;t know you wanted me to do that.&quot;
             </p>
           </div>
 
@@ -163,7 +169,10 @@ export function HowItWorksSection() {
           <div
             style={{
               textAlign: 'center',
-              padding: '16px 24px',
+              padding: '24px',
+              border: '2px solid #e2e8f0',
+              borderRadius: '12px',
+              backgroundColor: '#fafafa',
             }}
             className="how-it-works-step"
           >
@@ -200,7 +209,7 @@ export function HowItWorksSection() {
                 fontStyle: 'italic',
               }}
             >
-              Right Support
+              The Right Support
             </h3>
             <p
               style={{
@@ -209,12 +218,12 @@ export function HowItWorksSection() {
                 color: '#475569',
               }}
             >
-              <em>Actual Support</em> – We oversee and improve your relationship every day to guarantee you never fail.
+              Our client success team oversees your relationship every day, proactively solving issues before they grow.
             </p>
           </div>
         </div>
 
-        {/* Future Pacing Box */}
+        {/* 4-Week EA Accelerator Guarantee Box */}
         <div
           style={{
             background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
@@ -232,32 +241,8 @@ export function HowItWorksSection() {
               marginBottom: '24px',
             }}
           >
-            Imagine when you wake up...
+            4-Week EA Accelerator Guarantee®
           </h3>
-
-          {/* Main checkmark point */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-              textAlign: 'left',
-              maxWidth: '500px',
-              margin: '0 auto 24px',
-            }}
-          >
-            <span style={{ color: '#10b981', fontSize: '20px', flexShrink: 0 }}>✓</span>
-            <span
-              style={{
-                fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-                fontSize: '16px',
-                color: '#0f172a',
-                fontWeight: 600,
-              }}
-            >
-              You are working <span style={{ textDecoration: 'underline' }}>ON</span> the business instead of <span style={{ textDecoration: 'underline' }}>IN</span> it
-            </span>
-          </div>
 
           {/* Sub-header with bullet points */}
           <div
@@ -270,29 +255,50 @@ export function HowItWorksSection() {
             <p
               style={{
                 fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-                fontSize: '15px',
+                fontSize: '17px',
                 color: '#0f172a',
-                fontWeight: 600,
-                marginBottom: '12px',
-                paddingLeft: '32px',
+                fontWeight: 700,
+                marginBottom: '16px',
+                lineHeight: 1.5,
               }}
             >
-              Your assistant owns and manages:
+              Most companies match you with an assistant and disappear. We do the opposite.
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                fontSize: '15px',
+                color: '#475569',
+                marginBottom: '16px',
+                lineHeight: 1.6,
+              }}
+            >
+              In the first 4 weeks, we&apos;re in the trenches with you and your EA, building systems, transferring knowledge, and ensuring nothing falls through the cracks.
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                fontSize: '15px',
+                color: '#0f172a',
+                marginBottom: '12px',
+              }}
+            >
+              By Week 4, your EA <strong>owns</strong>:
             </p>
             <ul
               style={{
                 fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
                 fontSize: '14px',
                 color: '#475569',
-                paddingLeft: '52px',
+                paddingLeft: '20px',
                 margin: 0,
                 listStyleType: 'disc',
               }}
             >
-              <li style={{ marginBottom: '6px' }}>Your email</li>
-              <li style={{ marginBottom: '6px' }}>Your personal life</li>
-              <li style={{ marginBottom: '6px' }}>The recurring processes in the business</li>
-              <li>Your time and energy</li>
+              <li style={{ marginBottom: '8px' }}><strong style={{ color: '#0f172a' }}>Your inbox</strong> — you&apos;ll forget you ever managed it</li>
+              <li style={{ marginBottom: '8px' }}><strong style={{ color: '#0f172a' }}>Your calendar</strong> — no more playing Tetris with your schedule</li>
+              <li style={{ marginBottom: '8px' }}><strong style={{ color: '#0f172a' }}>Your recurring processes</strong> — the $15/hr work that eats your week</li>
+              <li style={{ marginBottom: '8px' }}><strong style={{ color: '#0f172a' }}>Your personal logistics</strong> — travel, birthdays, appointments handled</li>
             </ul>
           </div>
         </div>
@@ -303,16 +309,7 @@ export function HowItWorksSection() {
         @media (max-width: 600px) {
           .how-it-works-grid {
             grid-template-columns: 1fr !important;
-            gap: 0 !important;
-          }
-          .how-it-works-step {
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 24px !important;
-            margin-bottom: 8px;
-          }
-          .how-it-works-step:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
+            gap: 16px !important;
           }
         }
       `}</style>

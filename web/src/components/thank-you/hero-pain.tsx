@@ -16,7 +16,7 @@ function capitalizeFirst(str: string): string {
 }
 
 export function HeroPain({ firstName }: HeroPainProps) {
-  const displayName = capitalizeFirst(firstName);
+  const displayName = capitalizeFirst(firstName.trim());
 
   return (
     <section
@@ -63,7 +63,13 @@ export function HeroPain({ firstName }: HeroPainProps) {
             lineHeight: 1.2,
           }}
         >
-          {displayName}, right now <span style={{ textDecoration: 'underline', background: 'linear-gradient(180deg, transparent 60%, rgba(245, 158, 11, 0.4) 60%)' }}>you</span> are the{' '}
+          {displayName}, right now <span style={{ 
+            backgroundColor: '#f59e0b', 
+            color: '#0f172a', 
+            padding: '2px 8px', 
+            borderRadius: '4px',
+            fontWeight: 600,
+          }}>you</span> are the{' '}
           <span className="highlight" style={{ color: '#f59e0b' }}>
             highest-paid assistant
           </span>{' '}

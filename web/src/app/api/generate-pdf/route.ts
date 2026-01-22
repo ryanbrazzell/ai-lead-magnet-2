@@ -2,9 +2,7 @@
  * API Route: POST /api/generate-pdf
  *
  * Generates an EA Time Freedom Report PDF from task data and lead information.
- * Optionally uploads to S3 for permanent public URL access.
- *
- * Ported from: /tmp/ea-time-freedom-report/app/api/generate-pdf/route.ts
+ * Uploads to Vercel Blob for permanent public URL access.
  *
  * Request Body:
  * {
@@ -21,13 +19,14 @@
  * }
  *
  * Response:
- * Success: { success: true, pdf: string (base64), s3Url: string | null, generatedAt: string }
+ * Success: { success: true, pdf: string (base64), blobUrl: string | null, generatedAt: string }
  * Error: { success: false, error: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 import { generatePDFV2 } from '@/lib/pdf/generator-v2';
-import { uploadToS3, generateSafeFilename } from '@/lib/pdf/s3Service';
+import { generateSafeFilename } from '@/lib/pdf/s3Service';
 import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '@/types';
 
 /**
@@ -127,48 +126,42 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Attempt S3 upload (non-blocking, optional)
-    // Reference: source route.ts lines 150-169
-    let s3Url: string | null = null;
-    const s3BucketName = process.env.S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME;
+    // Generate filename for the PDF
+    const filename = generateSafeFilename(
+      userData.firstName || 'Report',
+      userData.lastName || ''
+    );
 
-    if (
-      process.env.AWS_ACCESS_KEY_ID &&
-      process.env.AWS_SECRET_ACCESS_KEY &&
-      s3BucketName
-    ) {
-      try {
-        // Convert base64 to Buffer for S3 upload
-        const pdfBuffer = Buffer.from(pdfResult.base64, 'base64');
+    // Upload to Vercel Blob for public URL access
+    let blobUrl: string | null = null;
 
-        // Generate safe filename for S3
-        const filename = generateSafeFilename(
-          userData.firstName || 'Report',
-          userData.lastName || ''
-        );
+    try {
+      // Convert base64 to Buffer for Blob upload
+      const pdfBuffer = Buffer.from(pdfResult.base64, 'base64');
 
-        // Upload to S3
-        s3Url = await uploadToS3(pdfBuffer, filename, {
-          contentType: 'application/pdf',
-          makePublic: true,
-        });
+      // Upload to Vercel Blob
+      const blob = await put(`reports/${filename}`, pdfBuffer, {
+        access: 'public',
+        contentType: 'application/pdf',
+      });
 
-        console.log('PDF uploaded to S3:', s3Url);
-      } catch (s3Error: unknown) {
-        // Graceful degradation: log error but continue
-        // Reference: source route.ts lines 165-168
-        const errorMessage = s3Error instanceof Error ? s3Error.message : 'Unknown S3 error';
-        console.error('S3 upload failed (non-critical):', errorMessage);
-        // s3Url remains null - this is acceptable
-      }
+      blobUrl = blob.url;
+      console.log('PDF uploaded to Vercel Blob:', blobUrl);
+    } catch (blobError: unknown) {
+      // Graceful degradation: log error but continue
+      const errorMessage = blobError instanceof Error ? blobError.message : 'Unknown Blob error';
+      console.error('Vercel Blob upload failed (non-critical):', errorMessage);
+      // blobUrl remains null - PDF will still be sent via email
     }
 
-    // Return success response
-    // Reference: source route.ts lines 171-176
+    // Return success response with filename and blob URL for Close CRM
     return NextResponse.json({
       success: true,
       pdf: pdfResult.base64,
-      s3Url: s3Url,
+      filename: filename,
+      blobUrl: blobUrl,
+      // Keep s3Url for backward compatibility
+      s3Url: blobUrl,
       generatedAt: new Date().toISOString(),
     });
   } catch (error: unknown) {

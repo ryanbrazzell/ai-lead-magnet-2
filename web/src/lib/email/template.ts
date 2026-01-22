@@ -5,8 +5,8 @@
  * Ported from /tmp/ea-time-freedom-report/app/api/send-email/route.ts (lines 64-171)
  */
 
-/** Calendly URL for discovery call CTA */
-const CALENDLY_URL = 'https://calendly.com/assistantlaunch/discovery-call';
+/** iClosed booking URL for discovery call CTA */
+const BOOKING_URL = 'https://app.iclosed.io/e/assistantlaunch/support';
 
 /** Company website URL */
 const COMPANY_URL = 'https://assistantlaunch.com';
@@ -159,7 +159,7 @@ export function generateEmailHtml(firstName?: string): string {
         <p>Ready to chat with our team about all the areas where an assistant can help you buy back time? Schedule a free consultation below.</p>
 
         <p style="text-align: center;">
-          <a href="${CALENDLY_URL}" class="button">Book Your Free Consultation</a>
+          <a href="${BOOKING_URL}" class="button">Book Your Free Consultation</a>
         </p>
 
         <p><strong>During your consultation, we'll:</strong></p>
@@ -209,7 +209,7 @@ This report shows you exactly which tasks in your daily, weekly, and monthly rou
 What's Next?
 If you're ready to chat with our team about all the areas where an assistant can help you buy back time, schedule using the link below or email me here directly.
 
-Schedule Your Consultation: ${CALENDLY_URL}
+Schedule Your Consultation: ${BOOKING_URL}
 
 During your consultation, we'll:
 - Review your Time Freedom Report together

@@ -55,10 +55,6 @@ export function NameScreen({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
-      <h2 className="text-question text-center">
-        What's your <strong>name</strong>?
-      </h2>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <FormInput
           type="text"
@@ -82,7 +78,7 @@ export function NameScreen({
 
       <div className="flex justify-center pt-0 md:pt-4">
         <PillButton type="submit" variant="primary" loading={isLoading}>
-          LET'S START
+          SEND MY REPORT
         </PillButton>
       </div>
     </form>

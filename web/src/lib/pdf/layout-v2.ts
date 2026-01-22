@@ -310,7 +310,7 @@ export function renderInvestmentBlock(
   setColor(doc, COLORS.inkSecondary, 'text');
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text('Annual value unlocked', MARGIN + 8, rowY);
+  doc.text('Annual value you could unlock by delegating to your EA', MARGIN + 8, rowY);
   setColor(doc, COLORS.ink, 'text');
   doc.setFont('helvetica', 'bold');
   doc.text(formatCurrency(annualValue), MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
@@ -576,12 +576,12 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
   y += 3;
   y = renderClientBlock(doc, data.client_name, data.date, y);
   y += 8;
-  y = renderHeroMetric(doc, formatCurrency(data.annual_value), 'Annual value you could unlock by delegating', y);
+  y = renderHeroMetric(doc, formatCurrency(data.annual_value), 'Annual value you could unlock by delegating to your EA', y);
   y += 8;
   y = renderMetricsRow(doc, [
     { value: `${data.weekly_hours} hrs`, label: 'Reclaimed Weekly' },
     { value: String(data.total_tasks_ea), label: 'Tasks to Delegate' },
-    { value: `${data.roi_multiplier}x`, label: 'Projected ROI' },
+    { value: `${data.roi_multiplier}x`, label: 'Projected ROI of an EA' },
   ], y);
   y += 5;
   y = renderAnalysisBlock(doc, 'Summary Analysis', data.analysis_text, y);

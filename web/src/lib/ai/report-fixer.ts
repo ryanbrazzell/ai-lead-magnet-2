@@ -210,7 +210,7 @@ function injectCoreEATasks(
     } else {
       // Add to end if no good replacement found (shouldn't happen)
       tasks.push(coreTask);
-      updatedReport.tasks[frequency] = tasks.slice(-10); // Keep only 10 tasks
+      updatedReport.tasks[frequency] = tasks.slice(-8); // Keep only 8 tasks
 
       if (typeof console !== 'undefined') {
         console.warn('[report-fixer] Core EA task added to end', {
@@ -501,13 +501,11 @@ function createGenericTask(frequency: string, index: number): Task {
 /**
  * Fix incorrect task count
  *
- * Ported from reportValidator.ts lines 478-500
- *
- * Ensures exactly 10 tasks in each frequency by trimming excess
+ * Ensures exactly 8 tasks in each frequency (5 EA + 3 Founder) by trimming excess
  * or padding with generic tasks.
  *
  * @param report - The TaskGenerationResult to fix
- * @returns Fixed report with exactly 30 tasks (10 per frequency)
+ * @returns Fixed report with exactly 24 tasks (8 per frequency)
  */
 export function fixTaskCount(report: TaskGenerationResult): TaskGenerationResult {
   const updatedReport: TaskGenerationResult = {
@@ -519,19 +517,19 @@ export function fixTaskCount(report: TaskGenerationResult): TaskGenerationResult
     },
   };
 
-  // Ensure exactly 10 tasks in each frequency
+  // Ensure exactly 8 tasks in each frequency
   const frequencies: TaskFrequency[] = ['daily', 'weekly', 'monthly'];
 
   frequencies.forEach((frequency) => {
     const tasks = updatedReport.tasks[frequency];
 
-    if (tasks.length !== 10) {
-      if (tasks.length > 10) {
-        // Trim to 10 tasks, keeping the most important ones
-        updatedReport.tasks[frequency] = tasks.slice(0, 10);
+    if (tasks.length !== 8) {
+      if (tasks.length > 8) {
+        // Trim to 8 tasks, keeping the most important ones
+        updatedReport.tasks[frequency] = tasks.slice(0, 8);
       } else {
-        // Add generic tasks to reach 10
-        while (updatedReport.tasks[frequency].length < 10) {
+        // Add generic tasks to reach 8
+        while (updatedReport.tasks[frequency].length < 8) {
           updatedReport.tasks[frequency].push(
             createGenericTask(frequency, updatedReport.tasks[frequency].length)
           );
@@ -541,7 +539,7 @@ export function fixTaskCount(report: TaskGenerationResult): TaskGenerationResult
   });
 
   // Update total task count
-  updatedReport.total_task_count = 30;
+  updatedReport.total_task_count = 24;
 
   // Recalculate EA count and percentage
   const allTasks = [

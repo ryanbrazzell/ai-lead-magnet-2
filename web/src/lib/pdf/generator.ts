@@ -28,6 +28,7 @@ import {
   addROIAnalysisSection,
   addChallengeQuestion,
   addEnhancedTaskSection,
+  addSplitTaskSection,
 } from './layout';
 import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
 
@@ -242,44 +243,20 @@ async function addPDFContent(
   }
 
   // 5. Add task sections (daily, weekly, monthly)
-  // Use enhanced sections with annual cost if ROI data available
-  if (roi) {
-    const sections = [
-      { title: 'Daily Tasks', tasks: report.tasks.daily, frequency: 'daily' as const },
-      { title: 'Weekly Tasks', tasks: report.tasks.weekly, frequency: 'weekly' as const },
-      { title: 'Monthly Tasks', tasks: report.tasks.monthly, frequency: 'monthly' as const },
-    ];
+  // Use new split layout: 5 EA tasks + 3 Founder tasks per category
+  const frequencies: Array<'daily' | 'weekly' | 'monthly'> = ['daily', 'weekly', 'monthly'];
 
-    for (const section of sections) {
-      const result = addEnhancedTaskSection(
-        doc,
-        section.title,
-        section.tasks,
-        roi.ceoHourlyRate,
-        section.frequency,
-        yPosition,
-        colors
-      );
-      yPosition = result.yPosition;
-    }
-  } else {
-    // Fallback to original task sections
-    const sections = [
-      { title: 'Daily Tasks & Responsibilities', tasks: report.tasks.daily },
-      { title: 'Weekly Tasks & Responsibilities', tasks: report.tasks.weekly },
-      { title: 'Monthly Tasks & Responsibilities', tasks: report.tasks.monthly },
-    ];
-
-    for (const section of sections) {
-      const result = addTaskSection(
-        doc,
-        section.title,
-        section.tasks,
-        yPosition,
-        colors
-      );
-      yPosition = result.yPosition;
-    }
+  for (const frequency of frequencies) {
+    const tasks = report.tasks[frequency];
+    const result = addSplitTaskSection(
+      doc,
+      frequency,
+      tasks,
+      roi?.ceoHourlyRate || 250, // Default to $250/hr if no ROI
+      yPosition,
+      colors
+    );
+    yPosition = result.yPosition;
   }
 
   // 6. Calculate EA task count for next steps section

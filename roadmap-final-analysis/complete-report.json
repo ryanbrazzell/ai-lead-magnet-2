@@ -1,0 +1,389 @@
+{
+  "url": "https://www.acquisition.com/roadmap",
+  "timestamp": "2025-12-01T00:59:05.893Z",
+  "steps": [
+    {
+      "step": 0,
+      "description": "Landing Page",
+      "screenshot": "step-00-landing-page.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "text",
+            "placeholder": "FIRST NAME",
+            "name": "0-1/firstname",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "LAST NAME",
+            "name": "0-1/lastname",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "LET’S START",
+            "backgroundColor": "rgb(111, 0, 255)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhat’s your name?\n\nLET’S START\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 1,
+      "description": "Name Fields Filled",
+      "screenshot": "step-01-name-fields-filled.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "text",
+            "placeholder": "FIRST NAME",
+            "name": "0-1/firstname",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "LAST NAME",
+            "name": "0-1/lastname",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(236, 240, 243)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "LET’S START",
+            "backgroundColor": "rgb(111, 0, 255)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhat’s your name?\n\nLET’S START\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 2,
+      "description": "Form Step 1",
+      "screenshot": "step-02-form-step-1.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "email",
+            "placeholder": "BUSINESS EMAIL ADDRESS",
+            "name": "0-1/email",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "Previous",
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "18px",
+            "padding": "0px",
+            "borderRadius": "6px",
+            "width": "95px",
+            "height": "18px",
+            "disabled": false
+          },
+          {
+            "text": "CONTINUE",
+            "backgroundColor": "rgb(255, 252, 140)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhere should I email it to?\n\nPrevious\nCONTINUE\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 3,
+      "description": "Form Step 2",
+      "screenshot": "step-03-form-step-2.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "tel",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px 13px 13px 70px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "Previous",
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "18px",
+            "padding": "0px",
+            "borderRadius": "6px",
+            "width": "95px",
+            "height": "18px",
+            "disabled": false
+          },
+          {
+            "text": "CONTINUE",
+            "backgroundColor": "rgb(255, 252, 140)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhat is your phone number?\n\n🇨🇦\nPrevious\nCONTINUE\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 4,
+      "description": "Form Step 3",
+      "screenshot": "step-04-form-step-3.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "text",
+            "placeholder": "Street Address",
+            "name": "0-1/address",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "City",
+            "name": "0-1/city",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "State/Region",
+            "name": "0-1/state",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "Country/Region",
+            "name": "0-1/country",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "Zip Code / Postal",
+            "name": "0-1/hs_state_code",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "Previous",
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "18px",
+            "padding": "0px",
+            "borderRadius": "6px",
+            "width": "95px",
+            "height": "18px",
+            "disabled": false
+          },
+          {
+            "text": "CONTINUE",
+            "backgroundColor": "rgb(111, 0, 255)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhats your shipping address?\n\nPrevious\nCONTINUE\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 5,
+      "description": "Form Step 4",
+      "screenshot": "step-05-form-step-4.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "Previous",
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "18px",
+            "padding": "0px",
+            "borderRadius": "6px",
+            "width": "95px",
+            "height": "18px",
+            "disabled": false
+          },
+          {
+            "text": "GET MY ROADMAP",
+            "backgroundColor": "rgb(111, 0, 255)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhere are you in your business journey?\n\n# of full time employees*\nAnnual Business Revenue*\nAre you a solo owner or have a partner(s)?*\nPrevious\nGET MY ROADMAP\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    },
+    {
+      "step": 6,
+      "description": "After Submit",
+      "screenshot": "step-06-after-submit.png",
+      "analysis": {
+        "question": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.",
+        "visibleInputs": [
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          },
+          {
+            "type": "text",
+            "placeholder": "",
+            "name": "",
+            "fontSize": "20px",
+            "padding": "13px",
+            "backgroundColor": "rgb(245, 248, 250)",
+            "borderRadius": "5px"
+          }
+        ],
+        "visibleButtons": [
+          {
+            "text": "Previous",
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "18px",
+            "padding": "0px",
+            "borderRadius": "6px",
+            "width": "95px",
+            "height": "18px",
+            "disabled": false
+          },
+          {
+            "text": "GET MY ROADMAP",
+            "backgroundColor": "rgb(249, 229, 127)",
+            "color": "rgb(0, 0, 0)",
+            "fontSize": "23.86px",
+            "padding": "27px 10px",
+            "borderRadius": "50px",
+            "width": "408px",
+            "height": "84px",
+            "disabled": false
+          }
+        ],
+        "socialProof": [],
+        "bodyText": "Get Your Free Personalized $100M Scaling Roadmap...in under 30 seconds.\n\nWhere are you in your business journey?\n\n# of full time employees*\nPlease complete this required field.\nAnnual Business Revenue*\nPlease complete this required field.\nAre you a solo owner or have a partner(s)?*\nPlease complete this required field.\nPlease complete all required fields.\nPrevious\nGET MY ROADMAP\n\n\nGet Your Roadmap in Less than 30 Seconds\n\n\nRequested by over 250,000 Business Owners\nBy providing your information today, you are giving consent for us or our partners, to contact you by mail, phone, text, or email using automated telephone dialing system to the data provided, even if the phone number is present on a state or national Do Not Call list. We do not sell your personal information to other companies, and you can withdraw consent at any time. Consent is not a condition of any purchase. By submitting this form, you agree to our Privacy Policy and Terms of Service."
+      }
+    }
+  ]
+}

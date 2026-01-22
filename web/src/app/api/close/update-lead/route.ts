@@ -34,7 +34,14 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { leadId, email, phone, employees, revenue, painPoints, reportUrl } = body;
+    const { leadId, email, phone, employees, revenue, painPoints, reportUrl, reportGenerated, reportFilename } = body;
+
+    // Custom field IDs for Close CRM
+    const CUSTOM_FIELDS = {
+      painPoints: 'cf_8Y2FFKdfC1RFNPPJrf0KSXmhteiUBKE7mVphDEufevm',
+      revenue: 'cf_3ZBZfCabFHWwranwv1nyY1aPU2oLd6TuAcWGlZepQpZ',
+      timeFreedomReportUrl: 'cf_qiHCe6NXTEKZQHLU1rxM091VUQGfMTlpMefEx1tSQAI',
+    };
 
     // Validate required leadId
     if (!leadId) {
@@ -65,22 +72,21 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Custom fields for employees, revenue, pain points, and report URL
-    // Close CRM uses exact field display names as keys
-    if (employees !== undefined || revenue !== undefined || painPoints !== undefined || reportUrl !== undefined) {
-      updatePayload.custom = {};
-      if (employees !== undefined) {
-        updatePayload.custom['Employee Count'] = employees;
-      }
-      if (revenue !== undefined) {
-        updatePayload.custom['Annual Revenue'] = revenue;
-      }
-      if (painPoints !== undefined) {
-        updatePayload.custom['Primary Pain Points'] = painPoints;
-      }
-      if (reportUrl !== undefined) {
-        updatePayload.custom['BBYT Report'] = reportUrl;
-      }
+    // Custom fields using Close CRM field IDs
+    if (revenue !== undefined) {
+      updatePayload[`custom.${CUSTOM_FIELDS.revenue}`] = revenue;
+    }
+    if (painPoints !== undefined) {
+      updatePayload[`custom.${CUSTOM_FIELDS.painPoints}`] = painPoints;
+    }
+    // Store report URL when report is generated
+    if (reportGenerated && reportFilename) {
+      // Construct the full report URL
+      const reportFullUrl = `https://report.assistantlaunch.com/api/reports/${reportFilename}`;
+      updatePayload[`custom.${CUSTOM_FIELDS.timeFreedomReportUrl}`] = reportFullUrl;
+    }
+    if (reportUrl !== undefined) {
+      updatePayload[`custom.${CUSTOM_FIELDS.timeFreedomReportUrl}`] = reportUrl;
     }
 
     // Update lead in Close CRM

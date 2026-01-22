@@ -56,21 +56,20 @@ export async function POST(request: NextRequest) {
     // Combine first and last name
     const fullName = `${firstName} ${lastName}`;
 
-    // Create lead in Close CRM with name and Meta tracking data
-    const leadPayload: Record<string, unknown> = {
-      name: fullName,
+    // Custom field IDs for Close CRM
+    const CUSTOM_FIELDS = {
+      source: 'cf_gU07dqgKBcSNC5ZUf40ywU2sVzTOKpt25chQa7lqFA3',
     };
 
-    // Add Meta tracking cookies as custom fields if present
-    // Note: You may need to create these custom fields in Close CRM first
-    // Custom fields in Close use format: custom.cf_XXXX or custom.lcf_XXXX
-    // For now, we'll store them and they'll be available if custom fields are set up
-    if (meta_fbc) {
-      leadPayload['custom.meta_fbc'] = meta_fbc;
-    }
-    if (meta_fbp) {
-      leadPayload['custom.meta_fbp'] = meta_fbp;
-    }
+    // Lead status ID for "Contacted via iMessage"
+    const STATUS_CONTACTED_VIA_IMESSAGE = 'stat_15lY7bOIOUruTl5a5JwSfpxg9R6Jisp0RKMDd4G2XfQ';
+
+    // Create lead in Close CRM with name, source, and status
+    const leadPayload: Record<string, unknown> = {
+      name: fullName,
+      status_id: STATUS_CONTACTED_VIA_IMESSAGE,
+      [`custom.${CUSTOM_FIELDS.source}`]: 'Lead Magnet',
+    };
 
     // Create lead in Close CRM
     // Close CRM uses HTTP Basic Authentication: base64(apiKey:)
@@ -120,8 +119,8 @@ export async function POST(request: NextRequest) {
     const leadData = await closeResponse.json();
     const leadId = leadData.id;
 
-    // Now update the lead with email using the update endpoint
-    if (email && leadId) {
+    // Now update the lead with contact (name + email) using the update endpoint
+    if (leadId) {
       try {
         const updateResponse = await fetch(`https://api.close.com/api/v1/lead/${leadId}/`, {
           method: 'PUT',
@@ -131,20 +130,46 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             contacts: [{
-              emails: [{ email, type: 'office' }],
+              name: fullName,
+              emails: email ? [{ email, type: 'office' }] : [],
             }],
           }),
         });
 
         if (!updateResponse.ok) {
           const updateErrorText = await updateResponse.text();
-          console.error('Failed to add email to lead:', updateResponse.status, updateErrorText);
+          console.error('Failed to add contact to lead:', updateResponse.status, updateErrorText);
           // Don't fail the whole request - lead was created successfully
-          // Email can be added later via update-lead endpoint
         }
       } catch (updateError) {
-        console.error('Error adding email to lead:', updateError);
+        console.error('Error adding contact to lead:', updateError);
         // Don't fail the whole request - lead was created successfully
+      }
+    }
+
+    // Add Meta tracking data as a note if present
+    if (leadId && (meta_fbc || meta_fbp)) {
+      try {
+        const noteContent = [
+          'Meta Tracking Data:',
+          meta_fbc ? `FBC (Click ID): ${meta_fbc}` : null,
+          meta_fbp ? `FBP (Browser ID): ${meta_fbp}` : null,
+        ].filter(Boolean).join('\n');
+
+        await fetch('https://api.close.com/api/v1/activity/note/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader,
+          },
+          body: JSON.stringify({
+            lead_id: leadId,
+            note: noteContent,
+          }),
+        });
+      } catch (noteError) {
+        console.error('Error adding Meta tracking note:', noteError);
+        // Don't fail - this is non-critical
       }
     }
 

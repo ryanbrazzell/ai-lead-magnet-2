@@ -679,6 +679,167 @@ export function addChallengeQuestion(
 }
 
 /**
+ * Add Split Task Section (5 EA Tasks + 3 Founder Tasks)
+ *
+ * Renders tasks in two groups:
+ * - "Tasks Your EA Can Take Over" (5 EA tasks)
+ * - "Tasks That Free You Up To Focus On" (3 Founder tasks)
+ *
+ * @param doc - jsPDF document instance
+ * @param frequency - Task frequency (daily, weekly, monthly)
+ * @param tasks - Array of tasks (expects 5 EA + 3 Founder)
+ * @param ceoHourlyRate - CEO hourly rate for cost calculation
+ * @param startY - Starting y position
+ * @param colors - Color scheme
+ * @returns Object with final y position
+ */
+export function addSplitTaskSection(
+  doc: jsPDF,
+  frequency: 'daily' | 'weekly' | 'monthly',
+  tasks: Task[],
+  ceoHourlyRate: number,
+  startY: number,
+  colors: PDFColorScheme
+): TaskSectionResult {
+  let yPosition = startY;
+  let pageBreakOccurred = false;
+
+  // Separate EA and Founder tasks
+  const eaTasks = tasks.filter(t => t.isEA || t.owner?.toLowerCase() === 'ea');
+  const founderTasks = tasks.filter(t => !t.isEA && t.owner?.toLowerCase() !== 'ea');
+
+  // Frequency labels
+  const freqLabel = frequency.charAt(0).toUpperCase() + frequency.slice(1);
+
+  // Check for page break before starting
+  if (yPosition > 220) {
+    doc.addPage();
+    yPosition = NEW_PAGE_START_Y;
+    pageBreakOccurred = true;
+  }
+
+  // Section Header - e.g., "DAILY TASKS"
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.navy);
+  doc.text(`${freqLabel.toUpperCase()} TASKS`, 25, yPosition);
+  yPosition += 12;
+
+  // === EA TASKS SECTION ===
+  // Green header bar
+  doc.setFillColor(ENHANCED_COLORS.greenLight);
+  doc.roundedRect(22, yPosition - 4, 166, 10, 2, 2, 'F');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.green);
+  doc.text(`Tasks Your EA Can Take Over (${eaTasks.length})`, 28, yPosition + 3);
+  yPosition += 14;
+
+  // Render EA tasks
+  for (const task of eaTasks) {
+    if (yPosition > PAGE_BREAK_THRESHOLD) {
+      doc.addPage();
+      yPosition = NEW_PAGE_START_Y;
+      pageBreakOccurred = true;
+    }
+
+    // Task row
+    doc.setFillColor(ENHANCED_COLORS.white);
+    doc.setDrawColor(ENHANCED_COLORS.gray200);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(22, yPosition - 3, 166, 14, 2, 2, 'FD');
+
+    // Green EA badge
+    doc.setFillColor(ENHANCED_COLORS.green);
+    doc.roundedRect(26, yPosition, 12, 5, 2, 2, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(ENHANCED_COLORS.white);
+    doc.text('EA', 32, yPosition + 3.5, { align: 'center' });
+
+    // Task title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(ENHANCED_COLORS.gray900);
+    const titleText = task.title.length > 55 ? task.title.substring(0, 52) + '...' : task.title;
+    doc.text(titleText, 42, yPosition + 3);
+
+    // Description (truncated)
+    if (task.description) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(ENHANCED_COLORS.gray600);
+      const desc = task.description.length > 70 ? task.description.substring(0, 67) + '...' : task.description;
+      doc.text(desc, 42, yPosition + 9);
+    }
+
+    yPosition += 17;
+  }
+
+  yPosition += 8;
+
+  // Check for page break before founder section
+  if (yPosition > 240) {
+    doc.addPage();
+    yPosition = NEW_PAGE_START_Y;
+    pageBreakOccurred = true;
+  }
+
+  // === FOUNDER TASKS SECTION ===
+  // Navy header bar
+  doc.setFillColor(ENHANCED_COLORS.navy);
+  doc.roundedRect(22, yPosition - 4, 166, 10, 2, 2, 'F');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(ENHANCED_COLORS.gold);
+  doc.text(`This Frees You Up To Focus On (${founderTasks.length})`, 28, yPosition + 3);
+  yPosition += 14;
+
+  // Render Founder tasks
+  for (const task of founderTasks) {
+    if (yPosition > PAGE_BREAK_THRESHOLD) {
+      doc.addPage();
+      yPosition = NEW_PAGE_START_Y;
+      pageBreakOccurred = true;
+    }
+
+    // Task row
+    doc.setFillColor(ENHANCED_COLORS.gray50);
+    doc.setDrawColor(ENHANCED_COLORS.gray200);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(22, yPosition - 3, 166, 14, 2, 2, 'FD');
+
+    // Gold "YOU" badge
+    doc.setFillColor(ENHANCED_COLORS.gold);
+    doc.roundedRect(26, yPosition, 16, 5, 2, 2, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(ENHANCED_COLORS.navy);
+    doc.text('YOU', 34, yPosition + 3.5, { align: 'center' });
+
+    // Task title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(ENHANCED_COLORS.navy);
+    const titleText = task.title.length > 55 ? task.title.substring(0, 52) + '...' : task.title;
+    doc.text(titleText, 46, yPosition + 3);
+
+    // Description (truncated)
+    if (task.description) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(ENHANCED_COLORS.gray600);
+      const desc = task.description.length > 70 ? task.description.substring(0, 67) + '...' : task.description;
+      doc.text(desc, 46, yPosition + 9);
+    }
+
+    yPosition += 17;
+  }
+
+  return { yPosition: yPosition + 10, pageBreakOccurred };
+}
+
+/**
  * Add Enhanced Task Section with Annual Cost
  *
  * Renders tasks with annual cost prominently displayed.

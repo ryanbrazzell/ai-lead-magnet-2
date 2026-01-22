@@ -18,7 +18,7 @@ export interface HeroSectionProps {
   /** Main headline - supports JSX for bold keywords (e.g., <>Get <strong>Free</strong> Report</>) */
   headline: React.ReactNode;
   /** Optional secondary copy below headline */
-  subheadline?: string;
+  subheadline?: React.ReactNode;
   /** Product mockup image source URL */
   imageSrc?: string;
   /** Alt text for product mockup image */
@@ -72,7 +72,7 @@ export function HeroSection({
           {subheadline && (
             <p
               data-testid="hero-subheadline"
-              className="text-lg md:text-xl text-gray-600 mt-4 font-semibold"
+              className="text-base md:text-lg text-gray-600 mt-3 font-semibold leading-snug"
             >
               {subheadline}
             </p>

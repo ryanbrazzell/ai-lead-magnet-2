@@ -63,10 +63,6 @@ export function SocialProof({
         </div>
       </div>
 
-      {/* Consent/legal text */}
-      <p className="text-xs text-gray-500 text-center max-w-lg px-4 leading-relaxed">
-        {consentText}
-      </p>
     </div>
   );
 }

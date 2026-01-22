@@ -7,6 +7,7 @@ import { HeroSection } from '@/components/layout/hero-section';
 import { FormLayout } from '@/components/layout/form-layout';
 import { MultiStepForm } from '@/components/form/multi-step-form';
 import { VideoTestimonials } from '@/components/social-proof/video-testimonials';
+import { BonusStack } from '@/components/bonus-stack';
 
 export default function Home() {
   return (
@@ -15,10 +16,18 @@ export default function Home() {
       <HeroSection
         headline={
           <>
-            If you don&apos;t have an Executive Assistant, you <span style={{ background: 'linear-gradient(180deg, transparent 25%, #fde68a 25%)', fontWeight: 'bold' }}>ARE</span> the Executive Assistant.
+            <span className="block">Founders Only:</span>
+            <span className="block">Personalized Executive Assistant Time Freedom Report</span>
           </>
         }
-        subheadline="Get your free personalized EA Time Freedom Report in under 30 seconds."
+        subheadline={
+          <>
+            Discover how to buy back over 520 hours of your time in 30 seconds.
+            <span className="block mt-1" style={{ color: '#10b981', fontWeight: 700 }}>
+              $99 Value — Now Free
+            </span>
+          </>
+        }
         imageSrc="/product-mockup.webp"
         imageAlt="EA Time Freedom Report product mockup showing three screens: EA Workflow & Efficiency Hub dashboard, Executive Assistant Roadmap & Task List, and Client Onboarding Automation"
       />
@@ -30,6 +39,9 @@ export default function Home() {
       >
         <MultiStepForm />
       </FormLayout>
+
+      {/* Bonus Stack */}
+      <BonusStack />
 
       {/* Video Testimonials Section */}
       <VideoTestimonials />

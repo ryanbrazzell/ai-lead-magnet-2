@@ -1,11 +1,9 @@
 /**
  * Report Validator Module
  *
- * Ported from: /tmp/ea-time-freedom-report/app/utils/reportValidator.ts
- *
  * Provides validation functions for AI-generated task reports including:
- * - Task count validation (30 total, 10 per frequency)
- * - EA percentage validation (>= 40%)
+ * - Task count validation (24 total, 8 per frequency: 5 EA + 3 Founder)
+ * - EA percentage validation (~63%)
  * - Core EA task detection
  * - Task quality validation
  */
@@ -28,26 +26,26 @@ export function validateReport(report: TaskGenerationResult): ValidationResult {
     // Analyze report structure
     const analysis = analyzeReport(report);
 
-    // Validate task count requirements
-    if (analysis.totalTasks !== 30) {
-      errors.push(`Expected 30 total tasks, got ${analysis.totalTasks}`);
+    // Validate task count requirements (24 total: 8 per category)
+    if (analysis.totalTasks !== 24) {
+      errors.push(`Expected 24 total tasks, got ${analysis.totalTasks}`);
     }
 
-    if (analysis.dailyTasks !== 10) {
-      warnings.push(`Expected 10 daily tasks, got ${analysis.dailyTasks}`);
+    if (analysis.dailyTasks !== 8) {
+      warnings.push(`Expected 8 daily tasks, got ${analysis.dailyTasks}`);
     }
 
-    if (analysis.weeklyTasks !== 10) {
-      warnings.push(`Expected 10 weekly tasks, got ${analysis.weeklyTasks}`);
+    if (analysis.weeklyTasks !== 8) {
+      warnings.push(`Expected 8 weekly tasks, got ${analysis.weeklyTasks}`);
     }
 
-    if (analysis.monthlyTasks !== 10) {
-      warnings.push(`Expected 10 monthly tasks, got ${analysis.monthlyTasks}`);
+    if (analysis.monthlyTasks !== 8) {
+      warnings.push(`Expected 8 monthly tasks, got ${analysis.monthlyTasks}`);
     }
 
-    // Validate EA percentage requirement
-    if (analysis.eaPercentage < 40) {
-      errors.push(`EA percentage too low: ${analysis.eaPercentage}% (minimum 40%)`);
+    // Validate EA percentage requirement (~63% = 15/24)
+    if (analysis.eaPercentage < 50) {
+      errors.push(`EA percentage too low: ${analysis.eaPercentage}% (expected ~63%)`);
     }
 
     // Validate core EA tasks presence

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Time Freedom Report | Assistant Launch</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --navy: #0f172a;
+      --navy-light: #1e293b;
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --red: #ef4444;
+      --red-light: #fca5a5;
+      --green: #10b981;
+      --white: #ffffff;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-400: #94a3b8;
+      --gray-600: #475569;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--gray-100);
+      color: var(--navy);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header */
+    .header {
+      background: var(--navy);
+      padding: 16px 0;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    /* Success Banner */
+    .success-banner {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .success-banner svg {
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* Hero Section - THE PAIN */
+    .hero {
+      background: var(--navy);
+      padding: 60px 0 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 50% 100%, rgba(245, 158, 11, 0.1) 0%, transparent 50%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .pain-label {
+      display: inline-block;
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--red-light);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(32px, 5vw, 48px);
+      color: var(--white);
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .hero h1 .highlight {
+      color: var(--gold);
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      color: var(--gray-400);
+      max-width: 500px;
+      margin: 0 auto 40px;
+    }
+
+    /* The Cost Card */
+    .cost-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 40px;
+      margin: -40px auto 40px;
+      max-width: 600px;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    }
+
+    .cost-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .cost-header h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+    }
+
+    .cost-header .name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      color: var(--navy);
+    }
+
+    /* Time Lost Visual */
+    .time-lost {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 24px;
+      border: 2px solid var(--gold);
+    }
+
+    .time-lost-label {
+      font-size: 14px;
+      color: var(--navy);
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+
+    .time-lost-number {
+      font-family: 'DM Serif Display', serif;
+      font-size: 64px;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .time-lost-unit {
+      font-size: 20px;
+      color: var(--navy);
+      opacity: 0.8;
+    }
+
+    .time-lost-context {
+      font-size: 14px;
+      color: var(--gray-600);
+      margin-top: 12px;
+    }
+
+    /* The Real Cost */
+    .real-cost {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .cost-item {
+      background: var(--gray-100);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .cost-item.negative {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+
+    .cost-item.positive {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .cost-item-label {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+    }
+
+    .cost-item-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+    }
+
+    .cost-item.negative .cost-item-value {
+      color: var(--red);
+    }
+
+    .cost-item.positive .cost-item-value {
+      color: var(--green);
+    }
+
+    /* The Flip */
+    .flip-section {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      color: var(--white);
+    }
+
+    .flip-section h3 {
+      font-size: 16px;
+      color: var(--gold);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .flip-section .big-number {
+      font-family: 'DM Serif Display', serif;
+      font-size: 48px;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .flip-section p {
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      background: var(--white);
+      padding: 48px 0;
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .cta-section p {
+      color: var(--gray-600);
+      margin-bottom: 32px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--gold);
+      color: var(--navy);
+      padding: 18px 36px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .cta-button:hover {
+      background: var(--gold-light);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(245, 158, 11, 0.5);
+    }
+
+    .cta-note {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-top: 16px;
+    }
+
+    /* Social Proof Strip */
+    .social-proof {
+      background: var(--navy);
+      padding: 48px 0;
+    }
+
+    .social-proof-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .social-proof-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--green);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .social-proof h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--white);
+    }
+
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .testimonials {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .testimonial {
+      background: var(--navy-light);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .testimonial-text {
+      color: var(--gray-200);
+      font-size: 15px;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testimonial-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--navy);
+      font-size: 14px;
+    }
+
+    .testimonial-name {
+      color: var(--white);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .testimonial-title {
+      color: var(--gray-400);
+      font-size: 12px;
+    }
+
+    /* Video Section */
+    .video-section {
+      background: var(--white);
+      padding: 60px 0;
+      text-align: center;
+    }
+
+    .video-section h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .video-section p {
+      color: var(--gray-600);
+      margin-bottom: 32px;
+    }
+
+    .video-wrapper {
+      max-width: 640px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      aspect-ratio: 16/9;
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .play-button {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .play-button:hover {
+      transform: scale(1.1);
+    }
+
+    .play-button svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--navy);
+      margin-left: 4px;
+    }
+
+    /* Final CTA */
+    .final-cta {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      padding: 80px 0;
+      text-align: center;
+    }
+
+    .final-cta h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+
+    .final-cta p {
+      color: var(--gray-400);
+      margin-bottom: 32px;
+      max-width: 450px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .final-cta .cta-button {
+      background: var(--white);
+      color: var(--navy);
+    }
+
+    .final-cta .cta-button:hover {
+      background: var(--gray-100);
+    }
+
+    /* Check email reminder */
+    .email-reminder {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 16px 24px;
+      margin-top: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .email-reminder svg {
+      flex-shrink: 0;
+    }
+
+    .email-reminder-text {
+      text-align: left;
+    }
+
+    .email-reminder-text strong {
+      display: block;
+      color: var(--navy);
+      font-size: 14px;
+    }
+
+    .email-reminder-text span {
+      color: var(--gray-600);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <a href="#" class="logo">Assistant Launch 🚀</a>
+    </div>
+  </header>
+
+  <!-- Success Banner -->
+  <div class="success-banner">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm-2 15l-5-5 1.41-1.41L8 12.17l7.59-7.59L17 6l-9 9z" fill="currentColor"/>
+    </svg>
+    Your personalized Time Freedom Report is on its way to your inbox
+  </div>
+
+  <!-- Hero - The Pain -->
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="pain-label">⚠️ The Hidden Cost of "Doing It Yourself"</div>
+      <h1>
+        Ryan, right now you're the <span class="highlight">highest-paid assistant</span> at your company
+      </h1>
+      <p class="hero-subtitle">
+        Every hour you spend on $10/hr tasks is an hour you're not spending on what actually grows your business.
+      </p>
+    </div>
+  </section>
+
+  <!-- The Cost Card -->
+  <div class="container">
+    <div class="cost-card">
+      <div class="cost-header">
+        <h2>Based on your answers</h2>
+        <div class="name">Here's what this is costing you</div>
+      </div>
+
+      <!-- Time Lost -->
+      <div class="time-lost">
+        <div class="time-lost-label">Hours you're losing every week to low-value tasks</div>
+        <div class="time-lost-number">10+</div>
+        <div class="time-lost-unit">hours/week</div>
+        <div class="time-lost-context">That's <strong>520+ hours/year</strong> — or 13 full work weeks</div>
+      </div>
+
+      <!-- The Real Cost -->
+      <div class="real-cost">
+        <div class="cost-item negative">
+          <div class="cost-item-label">What those hours cost you</div>
+          <div class="cost-item-value">$45,760</div>
+        </div>
+        <div class="cost-item positive">
+          <div class="cost-item-label">What an EA costs</div>
+          <div class="cost-item-value">$33,000</div>
+        </div>
+      </div>
+
+      <!-- The Flip -->
+      <div class="flip-section">
+        <h3>The Real Question</h3>
+        <div class="big-number">520 hours</div>
+        <p>What would you do with 520 extra hours next year?<br>Close more deals? Launch that product? Actually take a vacation?</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>Want help making sense of your report?</h2>
+      <p>Book a free 15-minute call to walk through your results and get personalized recommendations.</p>
+      <a href="#" class="cta-button">
+        Walk Through My Report
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 0L8.59 1.41 14.17 7H0v2h14.17l-5.58 5.59L10 16l8-8-8-8z" fill="currentColor"/>
+        </svg>
+      </a>
+      <div class="cta-note">No pressure. Just a quick chat to see if we can help.</div>
+    </div>
+  </section>
+
+  <!-- Social Proof -->
+  <section class="social-proof">
+    <div class="container">
+      <div class="social-proof-header">
+        <div class="social-proof-badge">✓ 1,300+ Founders Helped</div>
+        <h2>They got their time back. You can too.</h2>
+      </div>
+      <div class="testimonials">
+        <div class="testimonial">
+          <p class="testimonial-text">"My company has grown and is thriving, thanks to the support and amazingness of Anne. She allows me to be in my zone of genius."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">KF</div>
+            <div>
+              <div class="testimonial-name">Keri Ford</div>
+              <div class="testimonial-title">Founder, The 1% Woman Coach</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial">
+          <p class="testimonial-text">"Just a couple of weeks into it and Aileen is making a massive difference to my workday. Managing to get so much more done!"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">DH</div>
+            <div>
+              <div class="testimonial-name">David Horner</div>
+              <div class="testimonial-title">CFO, Auckland Flying School</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial">
+          <p class="testimonial-text">"I honestly couldn't imagine my life without Maria. Her level of excellence is always on point."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">JK</div>
+            <div>
+              <div class="testimonial-name">Jake Kauffman</div>
+              <div class="testimonial-title">Founder, JKC</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial">
+          <p class="testimonial-text">"She really cares. She made some great SOP's which we didn't even ask her to!"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MS</div>
+            <div>
+              <div class="testimonial-name">Mitch Swersky</div>
+              <div class="testimonial-title">Co-founder, NSBA Group</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Video Section -->
+  <section class="video-section">
+    <div class="container">
+      <h2>How 1,300+ founders stopped doing $10/hr tasks</h2>
+      <p>Watch this 3-minute video to see exactly how it works</p>
+      <div class="video-wrapper">
+        <div class="play-button">
+          <svg viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="final-cta">
+    <div class="container">
+      <h2>Ready to get your 520 hours back?</h2>
+      <p>Let's walk through your report together and see if we can help you stop being your own assistant.</p>
+      <a href="#" class="cta-button">
+        Book My Free Strategy Call
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 0L8.59 1.41 14.17 7H0v2h14.17l-5.58 5.59L10 16l8-8-8-8z" fill="currentColor"/>
+        </svg>
+      </a>
+      
+      <div class="email-reminder">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b">
+          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+        <div class="email-reminder-text">
+          <strong>Don't forget to check your inbox</strong>
+          <span>Your full Time Freedom Report has the complete breakdown</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

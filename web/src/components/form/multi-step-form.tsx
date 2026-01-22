@@ -37,13 +37,8 @@ export interface FormErrors {
 
 const TOTAL_SCREENS = 4;
 
-// Default task hours used for ROI calculation
-const DEFAULT_TASK_HOURS = {
-  email: 3,
-  personalLife: 2,
-  calendar: 2,
-  businessProcesses: 3,
-};
+// Note: taskHours are now calculated on the report page based on revenue tier
+// See: src/lib/roi-calculator.ts -> getTaskHoursByRevenue()
 
 export function MultiStepForm() {
   const [currentScreen, setCurrentScreen] = React.useState(1);
@@ -108,38 +103,37 @@ export function MultiStepForm() {
           onSubmit={async (email) => {
             goToNextScreen();
 
-            // TEMPORARILY DISABLED FOR TESTING - Close CRM lead creation
-            // const leadPromise = (async () => {
-            //   try {
-            //     const response = await fetch('/api/close/create-lead', {
-            //       method: 'POST',
-            //       headers: { 'Content-Type': 'application/json' },
-            //       body: JSON.stringify({
-            //         firstName: formData.firstName,
-            //         lastName: formData.lastName,
-            //         email,
-            //         meta_fbc: fbc,
-            //         meta_fbp: fbp,
-            //       }),
-            //     });
+            // Close CRM lead creation
+            const leadPromise = (async () => {
+              try {
+                const response = await fetch('/api/close/create-lead', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email,
+                    meta_fbc: fbc,
+                    meta_fbp: fbp,
+                  }),
+                });
 
-            //     const data = await response.json();
+                const data = await response.json();
 
-            //     if (data.success && data.leadId) {
-            //       setLeadId(data.leadId);
-            //       return data.leadId;
-            //     } else {
-            //       console.error('Failed to create lead:', data.error);
-            //       return null;
-            //     }
-            //   } catch (error) {
-            //     console.error('Error creating lead:', error);
-            //     return null;
-            //   }
-            // })();
+                if (data.success && data.leadId) {
+                  setLeadId(data.leadId);
+                  return data.leadId;
+                } else {
+                  console.error('Failed to create lead:', data.error);
+                  return null;
+                }
+              } catch (error) {
+                console.error('Error creating lead:', error);
+                return null;
+              }
+            })();
 
-            // pendingLeadIdRef.current = leadPromise;
-            console.log('[TEST MODE] Close CRM lead creation disabled');
+            pendingLeadIdRef.current = leadPromise;
           }}
         />
       )}
@@ -154,29 +148,28 @@ export function MultiStepForm() {
           onSubmit={async (phone) => {
             goToNextScreen();
 
-            // TEMPORARILY DISABLED FOR TESTING - Close CRM update (phone)
-            console.log('[TEST MODE] Close CRM phone update disabled');
-            // (async () => {
-            //   let currentLeadId = leadId;
-            //   if (!currentLeadId && pendingLeadIdRef.current) {
-            //     currentLeadId = await pendingLeadIdRef.current || '';
-            //     if (currentLeadId) {
-            //       setLeadId(currentLeadId);
-            //     }
-            //   }
+            // Close CRM update (phone)
+            (async () => {
+              let currentLeadId = leadId;
+              if (!currentLeadId && pendingLeadIdRef.current) {
+                currentLeadId = await pendingLeadIdRef.current || '';
+                if (currentLeadId) {
+                  setLeadId(currentLeadId);
+                }
+              }
 
-            //   if (currentLeadId) {
-            //     try {
-            //       await fetch('/api/close/update-lead', {
-            //         method: 'PUT',
-            //         headers: { 'Content-Type': 'application/json' },
-            //         body: JSON.stringify({ leadId: currentLeadId, phone }),
-            //       });
-            //     } catch (error) {
-            //       console.error('Error updating lead with phone:', error);
-            //     }
-            //   }
-            // })();
+              if (currentLeadId) {
+                try {
+                  await fetch('/api/close/update-lead', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leadId: currentLeadId, phone }),
+                  });
+                } catch (error) {
+                  console.error('Error updating lead with phone:', error);
+                }
+              }
+            })();
           }}
         />
       )}
@@ -195,7 +188,7 @@ export function MultiStepForm() {
             // Use current leadId immediately
             const currentLeadId = leadId;
 
-            // Encode form data for report page with default task hours
+            // Encode form data for report page (taskHours calculated on report page based on revenue)
             const reportData = {
               firstName: formData.firstName,
               lastName: formData.lastName,
@@ -203,7 +196,6 @@ export function MultiStepForm() {
               phone: formData.phone,
               revenue: revenue,
               painPoints: painPoints,
-              taskHours: DEFAULT_TASK_HOURS,
               leadId: currentLeadId,
               meta_fbc: fbc,
               meta_fbp: fbp,
@@ -213,8 +205,18 @@ export function MultiStepForm() {
             const encodedData = btoa(JSON.stringify(reportData));
             window.location.href = `/report?data=${encodeURIComponent(encodedData)}`;
 
-            // TEMPORARILY DISABLED FOR TESTING - Close CRM update (business details)
-            console.log('[TEST MODE] Close CRM business details update disabled');
+            // Close CRM update (business details) - fire and forget
+            if (currentLeadId) {
+              fetch('/api/close/update-lead', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  leadId: currentLeadId,
+                  revenue,
+                  painPoints,
+                }),
+              }).catch(error => console.error('Error updating lead with business details:', error));
+            }
           }}
         />
       )}

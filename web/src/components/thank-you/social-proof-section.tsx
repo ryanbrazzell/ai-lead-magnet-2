@@ -16,7 +16,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "My company has grown and is thriving, thanks to the support and amazingness of Anne. She allows me to be in my zone of genius.",
+    text: "I haven't touched my inbox in 3 weeks. Anne handles it all — I just get the highlights that actually matter.",
     name: "Keri Ford",
     title: "Founder, The 1% Woman Coach",
     initials: "KF",
@@ -29,7 +29,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "Just a couple of weeks into it and Aileen is making a massive difference to my workday. Managing to get so much more done!",
+    text: "Went from 7 days a week grinding to focused work hours. Aileen runs my entire schedule — I just show up where I'm needed.",
     name: "David Horner",
     title: "CFO, Auckland Flying School",
     initials: "DH",
@@ -42,7 +42,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "I honestly couldn't imagine my life without Maria. Her level of excellence is always on point.",
+    text: "Took a 2-week vacation without touching my laptop. Maria kept everything running — clients didn't even notice I was gone.",
     name: "Jake Kauffman",
     title: "Founder, JKC",
     initials: "JK",
@@ -55,7 +55,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "She really cares. She made some great SOP's which we didn't even ask her to!",
+    text: "She proactively built SOPs we didn't even ask for. Now my team runs itself — I'm finally working ON the business, not IN it.",
     name: "Mitch Swersky",
     title: "Co-founder, NSBA Group",
     initials: "MS",
@@ -114,31 +114,25 @@ export function SocialProofSection() {
             marginBottom: '40px',
           }}
         >
-          <div
-            style={{
-              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-              display: 'inline-block',
-              background: 'rgba(16, 185, 129, 0.2)',
-              color: '#10b981',
-              padding: '8px 16px',
-              borderRadius: '50px',
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: '16px',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-            }}
-          >
-            ✓ 1,300+ Founders Helped
-          </div>
           <h2
             style={{
               fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
               fontSize: 'clamp(24px, 6vw, 32px)',
               color: 'white',
+              marginBottom: '12px',
             }}
           >
-            They got their time back and scaled their business. You can too.
+            1,300+ executive assistants placed for founders doing $500K to $250M in revenue
           </h2>
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '16px',
+              color: '#94a3b8',
+            }}
+          >
+            They got their time back. You can too.
+          </p>
         </div>
 
         {/* Testimonials Grid - Mixed Text and Video */}
