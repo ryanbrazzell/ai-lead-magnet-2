@@ -19,15 +19,49 @@ export function BookingConfirmedContent() {
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
   const email = searchParams.get('email') || '';
 
-  // Fire Meta Pixel Schedule event on page load
+  // Fire Meta Pixel Schedule event and update Close CRM on page load
   useEffect(() => {
+    // Fire Meta Pixel Schedule event
     if (typeof window !== 'undefined' && (window as any).fbq) {
       (window as any).fbq('track', 'Schedule', {
         content_name: 'EA Discovery Call',
         content_category: 'Call Booking'
       });
     }
-  }, []);
+
+    // Update Close CRM with call booked status
+    const updateCloseCRM = async () => {
+      try {
+        // Try to get leadId from localStorage (set on report page)
+        const storedLeadId = localStorage.getItem('assistantlaunch_leadId');
+        const storedEmail = localStorage.getItem('assistantlaunch_email');
+
+        // Use email from URL params or localStorage
+        const leadEmail = email || storedEmail;
+
+        if (storedLeadId || leadEmail) {
+          await fetch('/api/close/mark-call-booked', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId: storedLeadId,
+              email: leadEmail,
+            }),
+          });
+          console.log('Close CRM updated: call booked');
+
+          // Clear localStorage after successful update
+          localStorage.removeItem('assistantlaunch_leadId');
+          localStorage.removeItem('assistantlaunch_email');
+        }
+      } catch (err) {
+        console.error('Failed to update Close CRM:', err);
+        // Non-blocking - don't affect user experience
+      }
+    };
+
+    updateCloseCRM();
+  }, [email]);
 
   return (
     <div className="min-h-screen bg-white">

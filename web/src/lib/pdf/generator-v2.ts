@@ -211,8 +211,16 @@ export async function generatePDFV2(
     // Transform data to new format
     const pdfData = transformToPDFData(report, leadData, roi);
 
+    // User data for pre-filled booking URLs in CTA
+    const userData = {
+      firstName: leadData.firstName,
+      lastName: leadData.lastName,
+      email: leadData.email,
+      phone: leadData.phone,
+    };
+
     // Generate the report using new layout
-    generateTimeFreedomReport(doc, pdfData);
+    generateTimeFreedomReport(doc, pdfData, userData);
 
     // Add metadata if requested
     if (options.includeMetadata) {

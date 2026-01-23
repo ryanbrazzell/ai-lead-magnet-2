@@ -39,6 +39,8 @@ interface FormDataFromURL {
   painPoints: string;
   leadId: string;
   taskHours?: TaskHours;
+  meta_fbc?: string;
+  meta_fbp?: string;
 }
 
 export function ThankYouContent() {
@@ -131,7 +133,7 @@ export function ThankYouContent() {
         return;
       }
 
-      // Generate PDF
+      // Generate PDF (include all user data for pre-filled booking URL)
       const pdfResponse = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,6 +142,9 @@ export function ThankYouContent() {
           eaPercentage: tasksResult.data?.ea_task_percent || 0,
           userData: {
             firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
             stage: 4,
             stageName: 'Prioritize',
           },
@@ -156,7 +161,7 @@ export function ThankYouContent() {
         return;
       }
 
-      // Send email with PDF
+      // Send email with PDF (include phone for pre-filled booking URL)
       const emailResponse = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,6 +169,7 @@ export function ThankYouContent() {
           to: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
+          phone: formData.phone,
           pdfBuffer: pdfResult.pdf,
         }),
       });
@@ -177,7 +183,23 @@ export function ThankYouContent() {
         setEmailError(emailResult.error || 'Failed to send email');
       }
 
-      console.log('[TEST MODE] Close CRM report URL update disabled');
+      // Update Close CRM with report URL (if we have leadId and blobUrl)
+      if (formData.leadId && pdfResult.blobUrl) {
+        try {
+          await fetch('/api/close/update-lead', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId: formData.leadId,
+              reportUrl: pdfResult.blobUrl,
+            }),
+          });
+          console.log('Close CRM updated with report URL:', pdfResult.blobUrl);
+        } catch (err) {
+          console.error('Failed to update Close CRM with report URL:', err);
+          // Non-blocking - don't fail the whole flow
+        }
+      }
     } catch (err) {
       console.error('Error generating/sending report:', err);
       setEmailError('Failed to generate report');
@@ -235,6 +257,9 @@ export function ThankYouContent() {
         lastName={formData?.lastName || ''}
         email={formData?.email || ''}
         phone={formData?.phone || ''}
+        leadId={formData?.leadId || ''}
+        meta_fbc={formData?.meta_fbc || ''}
+        meta_fbp={formData?.meta_fbp || ''}
       />
 
       {/* 7. Social Proof */}

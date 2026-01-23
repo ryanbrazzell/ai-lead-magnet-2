@@ -5,28 +5,65 @@
  * Ported from /tmp/ea-time-freedom-report/app/api/send-email/route.ts (lines 64-171)
  */
 
-/** iClosed booking URL for discovery call CTA */
-const BOOKING_URL = 'https://app.iclosed.io/e/assistantlaunch/support';
+/** Base iClosed booking URL for discovery call CTA */
+const BOOKING_BASE_URL = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
 
 /** Company website URL */
 const COMPANY_URL = 'https://assistantlaunch.com';
 
 /**
+ * Builds iClosed booking URL with pre-filled user data
+ */
+function buildBookingUrl(userData?: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}): string {
+  if (!userData) return BOOKING_BASE_URL;
+
+  const params = new URLSearchParams();
+  const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ');
+
+  if (fullName) params.set('iclosedName', fullName);
+  if (userData.email) params.set('iclosedEmail', userData.email);
+
+  // Format phone for iClosed - strip the +1 prefix if present, keep just digits
+  if (userData.phone) {
+    const phoneDigits = userData.phone.replace(/\D/g, '');
+    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
+      ? phoneDigits.slice(1)
+      : phoneDigits;
+    params.set('iclosedPhone', formattedPhone);
+  }
+
+  params.set('timeFormat', '12h');
+
+  return params.toString() ? `${BOOKING_BASE_URL}?${params.toString()}` : BOOKING_BASE_URL;
+}
+
+export interface EmailUserData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
+/**
  * Generates the HTML email template for the Time Freedom Report.
  *
  * @param firstName - Optional first name for personalization (falls back to "there")
+ * @param userData - Optional user data for pre-filling the booking URL
  * @returns Complete HTML email string
  *
  * @example
- * const html = generateEmailHtml('John');
- * // Returns HTML with "Hi John," greeting
- *
- * const htmlNoName = generateEmailHtml();
- * // Returns HTML with "Hi there," greeting
+ * const html = generateEmailHtml('John', { firstName: 'John', email: 'john@example.com', phone: '+15551234567' });
+ * // Returns HTML with "Hi John," greeting and pre-filled booking URL
  */
-export function generateEmailHtml(firstName?: string): string {
+export function generateEmailHtml(firstName?: string, userData?: EmailUserData): string {
   const greeting = firstName || 'there';
   const currentYear = new Date().getFullYear();
+  const bookingUrl = buildBookingUrl(userData);
 
   return `<!DOCTYPE html>
 <html>
@@ -159,7 +196,7 @@ export function generateEmailHtml(firstName?: string): string {
         <p>Ready to chat with our team about all the areas where an assistant can help you buy back time? Schedule a free consultation below.</p>
 
         <p style="text-align: center;">
-          <a href="${BOOKING_URL}" class="button">Book Your Free Consultation</a>
+          <a href="${bookingUrl}" class="button">Book Your Free Consultation</a>
         </p>
 
         <p><strong>During your consultation, we'll:</strong></p>
@@ -190,15 +227,17 @@ export function generateEmailHtml(firstName?: string): string {
  * that block or don't support HTML.
  *
  * @param firstName - Optional first name for personalization (falls back to "there")
+ * @param userData - Optional user data for pre-filling the booking URL
  * @returns Plain text email string
  *
  * @example
- * const text = generateEmailText('Jane');
- * // Returns plain text with "Hi Jane," greeting
+ * const text = generateEmailText('Jane', { firstName: 'Jane', email: 'jane@example.com', phone: '+15551234567' });
+ * // Returns plain text with "Hi Jane," greeting and pre-filled booking URL
  */
-export function generateEmailText(firstName?: string): string {
+export function generateEmailText(firstName?: string, userData?: EmailUserData): string {
   const greeting = firstName || 'there';
   const currentYear = new Date().getFullYear();
+  const bookingUrl = buildBookingUrl(userData);
 
   return `Hi ${greeting},
 
@@ -209,7 +248,7 @@ This report shows you exactly which tasks in your daily, weekly, and monthly rou
 What's Next?
 If you're ready to chat with our team about all the areas where an assistant can help you buy back time, schedule using the link below or email me here directly.
 
-Schedule Your Consultation: ${BOOKING_URL}
+Schedule Your Consultation: ${bookingUrl}
 
 During your consultation, we'll:
 - Review your Time Freedom Report together

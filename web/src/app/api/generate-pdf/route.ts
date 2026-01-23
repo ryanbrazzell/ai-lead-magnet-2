@@ -49,6 +49,7 @@ interface GeneratePDFRequestBody {
     firstName?: string;
     lastName?: string;
     email?: string;
+    phone?: string;
     title?: string;
     businessType?: string;
     website?: string;
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
       email: userData.email || '',
+      phone: userData.phone || '',
       title: userData.title || '',
       businessType: userData.businessType || userData.company || '',
       website: userData.website || '',

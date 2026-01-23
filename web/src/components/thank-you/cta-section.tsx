@@ -14,6 +14,9 @@ interface CTASectionProps {
   lastName?: string;
   email?: string;
   phone?: string;
+  leadId?: string;
+  meta_fbc?: string;
+  meta_fbp?: string;
 }
 
 export function CTASection({
@@ -21,6 +24,9 @@ export function CTASection({
   lastName = '',
   email = '',
   phone = '',
+  leadId = '',
+  meta_fbc = '',
+  meta_fbp = '',
 }: CTASectionProps) {
   // Store scroll position to prevent iClosed widget from auto-scrolling
   const scrollPositionRef = React.useRef<number>(0);
@@ -30,6 +36,22 @@ export function CTASection({
   React.useEffect(() => {
     scrollPositionRef.current = window.scrollY;
   }, []);
+
+  // Store leadId and meta tracking values in localStorage so we can retrieve after iClosed redirect
+  React.useEffect(() => {
+    if (leadId) {
+      localStorage.setItem('assistantlaunch_leadId', leadId);
+    }
+    if (email) {
+      localStorage.setItem('assistantlaunch_email', email);
+    }
+    if (meta_fbc) {
+      localStorage.setItem('assistantlaunch_fbc', meta_fbc);
+    }
+    if (meta_fbp) {
+      localStorage.setItem('assistantlaunch_fbp', meta_fbp);
+    }
+  }, [leadId, email, meta_fbc, meta_fbp]);
 
   // Restore scroll position after widget script loads (prevents auto-scroll)
   const handleScriptLoad = React.useCallback(() => {
@@ -62,12 +84,29 @@ export function CTASection({
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
   if (fullName) params.set('iclosedName', fullName);
   if (email) params.set('iclosedEmail', email);
-  if (phone) params.set('iclosedPhone', phone);
+
+  // Format phone for iClosed - strip the +1 prefix if present, keep just digits
+  if (phone) {
+    const phoneDigits = phone.replace(/\D/g, '');
+    // If it starts with 1 and is 11 digits, it's a US number with country code
+    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
+      ? phoneDigits.slice(1) // Remove leading 1
+      : phoneDigits;
+    params.set('iclosedPhone', formattedPhone);
+  }
 
   // Set time format to 12-hour (AM/PM)
   params.set('timeFormat', '12h');
 
+  // Pass Meta tracking values for CAPI attribution via iClosed → Zapier → Meta
+  // These are passed as custom hidden fields that iClosed sends to webhooks
+  if (meta_fbc) params.set('fbc', meta_fbc);
+  if (meta_fbp) params.set('fbp', meta_fbp);
+
   const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+
+  // Debug logging
+  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, meta_fbc, meta_fbp, iClosedUrl });
 
   return (
     <section

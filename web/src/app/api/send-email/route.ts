@@ -60,15 +60,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
       to,
       firstName,
       lastName,
+      phone,
       pdfBuffer,
       html: providedHtml,
       subject,
-    } = body as EmailSendOptions;
+    } = body as EmailSendOptions & { phone?: string };
 
     console.log('Email request data:', {
       to,
       firstName,
       lastName,
+      phone,
       hasPdfBuffer: !!pdfBuffer,
       pdfBufferLength: pdfBuffer ? pdfBuffer.length : 0,
     });
@@ -82,8 +84,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
       );
     }
 
-    // Generate email content
-    const htmlContent = providedHtml || generateEmailHtml(firstName);
+    // Generate email content with pre-filled booking URL
+    const userData = { firstName, lastName, email: to, phone };
+    const htmlContent = providedHtml || generateEmailHtml(firstName, userData);
 
     // Build email subject
     const emailSubject = subject || `${firstName || 'Hi'}, Your Time Freedom Report is Ready`;

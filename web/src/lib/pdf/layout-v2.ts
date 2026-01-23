@@ -499,11 +499,49 @@ export function renderFounderTasksSection(
 }
 
 /**
+ * Builds iClosed booking URL with pre-filled user data
+ */
+function buildBookingUrl(userData?: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}): string {
+  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  if (!userData) return baseUrl;
+
+  const params = new URLSearchParams();
+  const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ');
+
+  if (fullName) params.set('iclosedName', fullName);
+  if (userData.email) params.set('iclosedEmail', userData.email);
+
+  // Format phone for iClosed - strip +1 prefix if present
+  if (userData.phone) {
+    const phoneDigits = userData.phone.replace(/\D/g, '');
+    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
+      ? phoneDigits.slice(1)
+      : phoneDigits;
+    params.set('iclosedPhone', formattedPhone);
+  }
+
+  params.set('timeFormat', '12h');
+  return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+}
+
+export interface CTAUserData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
+/**
  * CTA Block - Call to action with clickable button
  */
-export function renderCTABlock(doc: jsPDF, y: number): number {
+export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): number {
   const blockHeight = 45;
-  const bookingUrl = 'https://app.iclosed.io/e/assistantlaunch/support';
+  const bookingUrl = buildBookingUrl(userData);
 
   // Background
   setColor(doc, COLORS.accentLight, 'fill');
@@ -530,11 +568,11 @@ export function renderCTABlock(doc: jsPDF, y: number): number {
   // Add clickable link to the button area
   doc.link(btnX, btnY, btnWidth, btnHeight, { url: bookingUrl });
 
-  // URL display (also clickable)
+  // URL display (also clickable) - show simple URL, actual link includes prefilled data
   setColor(doc, COLORS.accent, 'text');
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  const urlText = 'app.iclosed.io/e/assistantlaunch/support';
+  const urlText = 'assistantlaunch.com/book';
   doc.text(urlText, PAGE_WIDTH / 2, y + 40, { align: 'center' });
 
   // Make the URL text clickable too
@@ -674,7 +712,7 @@ export function buildFounderTasksPage(
 /**
  * Build the CTA page (last page)
  */
-export function buildCTAPage(doc: jsPDF): void {
+export function buildCTAPage(doc: jsPDF, userData?: CTAUserData): void {
   doc.addPage();
   let y = 20;
 
@@ -687,7 +725,7 @@ export function buildCTAPage(doc: jsPDF): void {
     y
   );
   y += 15;
-  renderCTABlock(doc, y);
+  renderCTABlock(doc, y, userData);
 }
 
 /**
@@ -708,7 +746,7 @@ export function addFootersToAllPages(doc: jsPDF): void {
 /**
  * Generate the complete Time Freedom Report PDF
  */
-export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData): void {
+export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userData?: CTAUserData): void {
   // Page 1: Summary
   buildSummaryPage(doc, data);
 
@@ -773,7 +811,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData): void
   }
 
   // Final Page: CTA
-  buildCTAPage(doc);
+  buildCTAPage(doc, userData);
 
   // Add footers to all pages
   addFootersToAllPages(doc);
