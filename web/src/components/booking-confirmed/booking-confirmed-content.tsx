@@ -13,7 +13,6 @@ import { AlertTriangle, Mail, Calendar, CheckCircle, Instagram, MessageCircle, P
 
 export function BookingConfirmedContent() {
   const searchParams = useSearchParams();
-  const [showVideo, setShowVideo] = useState(false);
   const [phone, setPhone] = useState('');
 
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
@@ -85,32 +84,18 @@ export function BookingConfirmedContent() {
           </p>
         </div>
 
-        {/* Video */}
+        {/* Demo GIF */}
         <div className="mb-8">
           <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
             <Play className="w-4 h-4 text-amber-500" />
-            How to Confirm (30 sec)
+            How to Confirm
           </p>
-          <div
-            className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-900"
-            style={{ aspectRatio: '16/9' }}
-            onClick={() => setShowVideo(true)}
-          >
-            {!showVideo ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center mb-2">
-                  <Play className="w-6 h-6 text-white ml-1" />
-                </div>
-                <p className="text-gray-400 text-xs">Tap to watch</p>
-              </div>
-            ) : (
-              <iframe
-                src="https://www.youtube.com/embed/YOUR_VIDEO_ID?autoplay=1"
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            )}
+          <div className="rounded-lg overflow-hidden border border-gray-200">
+            <img
+              src="/check-email-demo.gif"
+              alt="How to accept your calendar invite"
+              className="w-full h-auto"
+            />
           </div>
         </div>
 
