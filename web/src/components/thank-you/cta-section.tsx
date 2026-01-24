@@ -37,7 +37,7 @@ export function CTASection({
     scrollPositionRef.current = window.scrollY;
   }, []);
 
-  // Store leadId and meta tracking values in localStorage so we can retrieve after iClosed redirect
+  // Store leadId, phone, and meta tracking values in localStorage so we can retrieve after iClosed redirect
   React.useEffect(() => {
     if (leadId) {
       localStorage.setItem('assistantlaunch_leadId', leadId);
@@ -45,13 +45,16 @@ export function CTASection({
     if (email) {
       localStorage.setItem('assistantlaunch_email', email);
     }
+    if (phone) {
+      localStorage.setItem('assistantlaunch_phone', phone);
+    }
     if (meta_fbc) {
       localStorage.setItem('assistantlaunch_fbc', meta_fbc);
     }
     if (meta_fbp) {
       localStorage.setItem('assistantlaunch_fbp', meta_fbp);
     }
-  }, [leadId, email, meta_fbc, meta_fbp]);
+  }, [leadId, email, phone, meta_fbc, meta_fbp]);
 
   // Restore scroll position after widget script loads (prevents auto-scroll)
   const handleScriptLoad = React.useCallback(() => {
@@ -85,13 +88,20 @@ export function CTASection({
   if (fullName) params.set('iclosedName', fullName);
   if (email) params.set('iclosedEmail', email);
 
-  // Format phone for iClosed - strip the +1 prefix if present, keep just digits
+  // Format phone for iClosed - ensure +1 prefix for US numbers
   if (phone) {
     const phoneDigits = phone.replace(/\D/g, '');
-    // If it starts with 1 and is 11 digits, it's a US number with country code
-    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
-      ? phoneDigits.slice(1) // Remove leading 1
-      : phoneDigits;
+    let formattedPhone: string;
+    if (phoneDigits.length === 10) {
+      // 10 digits = US number without country code, add +1
+      formattedPhone = `+1${phoneDigits}`;
+    } else if (phoneDigits.startsWith('1') && phoneDigits.length === 11) {
+      // 11 digits starting with 1 = US number with country code, add +
+      formattedPhone = `+${phoneDigits}`;
+    } else {
+      // Other formats, pass as-is with + if not present
+      formattedPhone = phone.startsWith('+') ? phone : `+${phoneDigits}`;
+    }
     params.set('iclosedPhone', formattedPhone);
   }
 

@@ -14,9 +14,18 @@ import { AlertTriangle, Mail, Calendar, CheckCircle, Instagram, MessageCircle, P
 export function BookingConfirmedContent() {
   const searchParams = useSearchParams();
   const [showVideo, setShowVideo] = useState(false);
+  const [phone, setPhone] = useState('');
 
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
   const email = searchParams.get('email') || '';
+
+  // Retrieve phone from localStorage (stored before iClosed redirect)
+  useEffect(() => {
+    const storedPhone = localStorage.getItem('assistantlaunch_phone');
+    if (storedPhone) {
+      setPhone(storedPhone);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).fbq) {
