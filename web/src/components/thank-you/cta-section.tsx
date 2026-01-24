@@ -32,9 +32,32 @@ export function CTASection({
   const scrollPositionRef = React.useRef<number>(0);
   const scrollLockActiveRef = React.useRef<boolean>(false);
 
-  // Save scroll position before widget loads
+  // Save scroll position and prevent auto-scroll from widget
   React.useEffect(() => {
+    // Save initial scroll position
     scrollPositionRef.current = window.scrollY;
+    
+    // Also prevent any scroll events from the widget during initial load
+    const preventScroll = (e: Event) => {
+      if (scrollLockActiveRef.current) {
+        e.preventDefault();
+        window.scrollTo(0, scrollPositionRef.current);
+      }
+    };
+    
+    // Lock scrolling immediately for 3 seconds after mount
+    scrollLockActiveRef.current = true;
+    window.addEventListener('scroll', preventScroll, { passive: false });
+    
+    const timeoutId = setTimeout(() => {
+      scrollLockActiveRef.current = false;
+      window.removeEventListener('scroll', preventScroll);
+    }, 3000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('scroll', preventScroll);
+    };
   }, []);
 
   // Store leadId, phone, and meta tracking values in localStorage so we can retrieve after iClosed redirect
