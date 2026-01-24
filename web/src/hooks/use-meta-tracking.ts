@@ -43,14 +43,40 @@ export function useMetaTracking(): MetaTrackingValues {
     // Ensure _fbc is created from fbclid if present
     ensureFbc();
 
-    // Get both values
-    const { fbc, fbp } = getMetaTrackingValues();
+    // Get initial values
+    const updateValues = () => {
+      const { fbc, fbp } = getMetaTrackingValues();
+      setValues({
+        fbc,
+        fbp,
+        isReady: true,
+      });
+      return fbp;
+    };
 
-    setValues({
-      fbc,
-      fbp,
-      isReady: true,
-    });
+    // Try to get values immediately
+    const initialFbp = updateValues();
+
+    // If _fbp not available yet, poll for it (Meta Pixel creates it async)
+    // The pixel typically sets _fbp within 1-2 seconds of loading
+    if (!initialFbp) {
+      let attempts = 0;
+      const maxAttempts = 20; // Try for up to 10 seconds (20 * 500ms)
+
+      const pollInterval = setInterval(() => {
+        attempts++;
+        const { fbp } = getMetaTrackingValues();
+
+        if (fbp) {
+          updateValues();
+          clearInterval(pollInterval);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+        }
+      }, 500);
+
+      return () => clearInterval(pollInterval);
+    }
   }, []);
 
   return values;
