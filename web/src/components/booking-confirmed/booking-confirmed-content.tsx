@@ -1,27 +1,24 @@
 /**
  * BookingConfirmedContent Component
  * Displays after someone books a call through iClosed
- * Shows confirmation and next steps
+ * Simple, clean thank you page - mobile first
  */
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
-import { CheckCircle, Mail, Calendar, MessageCircle } from 'lucide-react';
-import { VideoTestimonials } from '@/components/social-proof/video-testimonials';
+import { AlertTriangle, Mail, Calendar, CheckCircle, Instagram, MessageCircle, Play } from 'lucide-react';
 
 export function BookingConfirmedContent() {
   const searchParams = useSearchParams();
+  const [showVideo, setShowVideo] = useState(false);
 
-  // Read user data from URL params (passed by iClosed redirect)
   const firstName = searchParams.get('first_name') || searchParams.get('firstName') || '';
   const email = searchParams.get('email') || '';
 
-  // Fire Meta Pixel Schedule event and update Close CRM on page load
   useEffect(() => {
-    // Fire Meta Pixel Schedule event
     if (typeof window !== 'undefined' && (window as any).fbq) {
       (window as any).fbq('track', 'Schedule', {
         content_name: 'EA Discovery Call',
@@ -29,14 +26,10 @@ export function BookingConfirmedContent() {
       });
     }
 
-    // Update Close CRM with call booked status
     const updateCloseCRM = async () => {
       try {
-        // Try to get leadId from localStorage (set on report page)
         const storedLeadId = localStorage.getItem('assistantlaunch_leadId');
         const storedEmail = localStorage.getItem('assistantlaunch_email');
-
-        // Use email from URL params or localStorage
         const leadEmail = email || storedEmail;
 
         if (storedLeadId || leadEmail) {
@@ -48,15 +41,11 @@ export function BookingConfirmedContent() {
               email: leadEmail,
             }),
           });
-          console.log('Close CRM updated: call booked');
-
-          // Clear localStorage after successful update
           localStorage.removeItem('assistantlaunch_leadId');
           localStorage.removeItem('assistantlaunch_email');
         }
       } catch (err) {
         console.error('Failed to update Close CRM:', err);
-        // Non-blocking - don't affect user experience
       }
     };
 
@@ -65,125 +54,129 @@ export function BookingConfirmedContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Success Banner */}
-      <div className="bg-blue-600 text-white py-4 px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-3">
-          <CheckCircle className="w-6 h-6 flex-shrink-0" />
-          <span className="text-lg md:text-xl font-semibold">
-            Your Call is Booked!
+      {/* Warning Banner - full width */}
+      <div className="w-full bg-red-600 py-3 px-4">
+        <div className="flex items-center justify-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-yellow-300" />
+          <span className="text-sm font-semibold text-white">
+            Your call is NOT confirmed yet!
           </span>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 py-12">
+      {/* Content */}
+      <div className="px-5 py-8 max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-blue-600" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            {firstName ? `${firstName}, You're All Set!` : "You're All Set!"}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {firstName ? `${firstName}, ` : ''}One More Step
           </h1>
-          <p className="text-lg text-gray-600">
-            We&apos;re excited to speak with you. Here&apos;s what happens next:
+          <p className="text-gray-600 text-sm">
+            Accept the calendar invite or your spot may be given away.
           </p>
         </div>
 
-        {/* iClosed Call Details Widget */}
-        <div className="mb-12">
+        {/* Video */}
+        <div className="mb-8">
+          <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+            <Play className="w-4 h-4 text-amber-500" />
+            How to Confirm (30 sec)
+          </p>
           <div
-            className="call-details-widget rounded-xl overflow-hidden border border-gray-200"
-            data-url="https://app.iclosed.io/embed"
-            style={{ width: '100%', height: '340px' }}
-          />
-          <Script
-            src="https://app.iclosed.io/assets/widget.js"
-            strategy="lazyOnload"
-          />
-        </div>
-
-        {/* Next Steps */}
-        <div className="space-y-6 mb-12">
-          {/* Step 1 */}
-          <div className="flex gap-4 p-6 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Mail className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Step 1: Check Your Email
-              </h3>
-              <p className="text-gray-600">
-                {email
-                  ? <>We&apos;ll send a calendar invite to <strong>{email}</strong>. Check your inbox (and spam folder, just in case).</>
-                  : <>You&apos;ll receive a calendar invite shortly. Make sure to check your inbox (and spam folder, just in case).</>
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="flex gap-4 p-6 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Step 2: Confirm the Invite
-              </h3>
-              <p className="text-gray-600">
-                Accept the calendar invite so it shows up on your calendar. This ensures you won&apos;t miss our call.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex gap-4 p-6 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Step 3: Show Up Ready
-              </h3>
-              <p className="text-gray-600">
-                Come prepared to discuss your business and how an Executive Assistant can help you reclaim your time.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Section */}
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <MessageCircle className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Please Confirm Your Call
-            </h3>
-          </div>
-          <p className="text-gray-600 mb-4">
-            We&apos;ll reach out to make sure your call is confirmed. If you don&apos;t see the confirmation on your end, text our cell below.
-            Your call will be cancelled on the day of the event if it isn&apos;t confirmed.
-          </p>
-          <a
-            href="sms:+16199524992"
-            className="inline-flex items-center gap-2 text-xl font-bold text-primary hover:text-primary/80 transition-colors"
+            className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-900"
+            style={{ aspectRatio: '16/9' }}
+            onClick={() => setShowVideo(true)}
           >
-            <MessageCircle className="w-5 h-5" />
-            +1 (619) 952-4992
-          </a>
+            {!showVideo ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-amber-500 flex items-center justify-center mb-2">
+                  <Play className="w-6 h-6 text-white ml-1" />
+                </div>
+                <p className="text-gray-400 text-xs">Tap to watch</p>
+              </div>
+            ) : (
+              <iframe
+                src="https://www.youtube.com/embed/YOUR_VIDEO_ID?autoplay=1"
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 3 Steps */}
+        <div className="mb-8">
+          <p className="text-sm font-semibold text-gray-900 mb-4">Confirm in 3 Steps:</p>
+
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="w-7 h-7 rounded-full bg-gray-900 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">1</div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm flex items-center gap-1">
+                  <Mail className="w-4 h-4 text-amber-500" /> Check your inbox
+                </p>
+                <p className="text-xs text-gray-500">
+                  {email ? <>Look in {email} — check spam too</> : <>Check your email — look in spam too</>}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="w-7 h-7 rounded-full bg-gray-900 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">2</div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm flex items-center gap-1">
+                  <Calendar className="w-4 h-4 text-amber-500" /> Find the calendar invite
+                </p>
+                <p className="text-xs text-gray-500">From Assistant Launch or Google Calendar</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="w-7 h-7 rounded-full bg-green-500 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">3</div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4 text-green-500" /> Click "Accept" or "Yes"
+                </p>
+                <p className="text-xs text-gray-500">This confirms your spot</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Help */}
+        <div className="mb-8">
+          <p className="text-sm text-gray-700 mb-3 text-center">Having trouble? Reach out:</p>
+          <div className="flex flex-col gap-2">
+            <a
+              href="https://instagram.com/ryanbrazzell"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium text-white"
+              style={{ background: 'linear-gradient(135deg, #E1306C 0%, #833AB4 100%)' }}
+            >
+              <Instagram className="w-4 h-4" /> DM Ryan on Instagram
+            </a>
+            <a
+              href="sms:+16199524992"
+              className="flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium text-gray-900 bg-gray-100"
+            >
+              <MessageCircle className="w-4 h-4" /> Text (619) 952-4992
+            </a>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-amber-500 font-semibold">
+          Assistant Launch 🚀
         </div>
       </div>
 
-      {/* Video Testimonials Section */}
-      <VideoTestimonials />
+      {/* Hidden iClosed widget */}
+      <div className="hidden">
+        <div className="call-details-widget" data-url="https://app.iclosed.io/embed" style={{ width: '100%', height: '340px' }} />
+        <Script src="https://app.iclosed.io/assets/widget.js" strategy="lazyOnload" />
+      </div>
     </div>
   );
 }

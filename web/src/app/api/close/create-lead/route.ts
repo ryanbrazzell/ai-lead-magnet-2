@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { firstName, lastName, email, meta_fbc, meta_fbp } = body;
 
+    // Get client IP and User Agent from request headers (for Meta CAPI)
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || '';
+    const clientUserAgent = request.headers.get('user-agent') || '';
+
     // Validate required fields
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
@@ -59,17 +65,35 @@ export async function POST(request: NextRequest) {
     // Custom field IDs for Close CRM
     const CUSTOM_FIELDS = {
       source: 'cf_gU07dqgKBcSNC5ZUf40ywU2sVzTOKpt25chQa7lqFA3',
+      metaFbc: 'cf_UpanwKhodgxgX4iGo9ojwGLnnznVn4QxDInvnQQAtg0',
+      metaFbp: 'cf_It6Q5mcWJ3yVJU0FwWhxpIYLXXOowB3n2jX0pzkkCzx',
+      clientIp: 'cf_iOVXsJqipBnqCE6nXNCht5mrswcy5tUFtrxxK6KWpuj',
+      clientUserAgent: 'cf_MeswVV4QBx6j3UJrs3VOIWnxuO8hAQOrjuKbRFGWYbm',
     };
 
     // Lead status ID for "Contacted via iMessage"
     const STATUS_CONTACTED_VIA_IMESSAGE = 'stat_15lY7bOIOUruTl5a5JwSfpxg9R6Jisp0RKMDd4G2XfQ';
 
-    // Create lead in Close CRM with name, source, and status
+    // Create lead in Close CRM with name, source, status, and Meta tracking
     const leadPayload: Record<string, unknown> = {
       name: fullName,
       status_id: STATUS_CONTACTED_VIA_IMESSAGE,
       [`custom.${CUSTOM_FIELDS.source}`]: 'Lead Magnet',
     };
+
+    // Add Meta tracking data as custom fields (for Zapier → Meta CAPI)
+    if (meta_fbc) {
+      leadPayload[`custom.${CUSTOM_FIELDS.metaFbc}`] = meta_fbc;
+    }
+    if (meta_fbp) {
+      leadPayload[`custom.${CUSTOM_FIELDS.metaFbp}`] = meta_fbp;
+    }
+    if (clientIp) {
+      leadPayload[`custom.${CUSTOM_FIELDS.clientIp}`] = clientIp;
+    }
+    if (clientUserAgent) {
+      leadPayload[`custom.${CUSTOM_FIELDS.clientUserAgent}`] = clientUserAgent;
+    }
 
     // Create lead in Close CRM
     // Close CRM uses HTTP Basic Authentication: base64(apiKey:)
@@ -144,32 +168,6 @@ export async function POST(request: NextRequest) {
       } catch (updateError) {
         console.error('Error adding contact to lead:', updateError);
         // Don't fail the whole request - lead was created successfully
-      }
-    }
-
-    // Add Meta tracking data as a note if present
-    if (leadId && (meta_fbc || meta_fbp)) {
-      try {
-        const noteContent = [
-          'Meta Tracking Data:',
-          meta_fbc ? `FBC (Click ID): ${meta_fbc}` : null,
-          meta_fbp ? `FBP (Browser ID): ${meta_fbp}` : null,
-        ].filter(Boolean).join('\n');
-
-        await fetch('https://api.close.com/api/v1/activity/note/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader,
-          },
-          body: JSON.stringify({
-            lead_id: leadId,
-            note: noteContent,
-          }),
-        });
-      } catch (noteError) {
-        console.error('Error adding Meta tracking note:', noteError);
-        // Don't fail - this is non-critical
       }
     }
 
