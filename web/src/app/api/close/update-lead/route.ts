@@ -61,15 +61,60 @@ export async function PUT(request: NextRequest) {
     // Build update payload based on provided fields
     const updatePayload: any = {};
 
-    // Email and phone go in contacts array
-    if (email || phone) {
-      updatePayload.contacts = [{}];
-      if (email) {
-        updatePayload.contacts[0].emails = [{ email, type: 'office' }];
+    // Close CRM uses HTTP Basic Authentication: base64(apiKey:)
+    const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+
+    // For phone updates, we need to update the contact directly via the contacts endpoint
+    // Otherwise we'd overwrite existing contact data (like email)
+    if (phone) {
+      try {
+        // First, get the lead to find the contact ID
+        const leadResponse = await fetch(
+          `https://api.close.com/api/v1/lead/${leadId}/`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader,
+            },
+          }
+        );
+
+        if (leadResponse.ok) {
+          const leadData = await leadResponse.json();
+          const contactId = leadData.contacts?.[0]?.id;
+
+          if (contactId) {
+            // Update the contact directly with the phone number
+            const contactResponse = await fetch(
+              `https://api.close.com/api/v1/contact/${contactId}/`,
+              {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': authHeader,
+                },
+                body: JSON.stringify({
+                  phones: [{ phone, type: 'office' }],
+                }),
+              }
+            );
+
+            if (!contactResponse.ok) {
+              const errorText = await contactResponse.text();
+              console.error('Failed to update contact with phone:', contactResponse.status, errorText);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating contact with phone:', error);
       }
-      if (phone) {
-        updatePayload.contacts[0].phones = [{ phone, type: 'office' }];
-      }
+    }
+
+    // Email updates (if needed separately) - also use contacts endpoint
+    if (email && !phone) {
+      // Only if email is being updated without phone
+      updatePayload.contacts = [{ emails: [{ email, type: 'office' }] }];
     }
 
     // Custom fields using Close CRM field IDs
@@ -89,9 +134,7 @@ export async function PUT(request: NextRequest) {
       updatePayload[`custom.${CUSTOM_FIELDS.timeFreedomReportUrl}`] = reportUrl;
     }
 
-    // Update lead in Close CRM
-    // Close CRM uses HTTP Basic Authentication: base64(apiKey:)
-    const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
+    // Update lead in Close CRM (for custom fields, etc.)
     const closeResponse = await fetch(
       `https://api.close.com/api/v1/lead/${leadId}/`,
       {
