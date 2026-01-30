@@ -201,11 +201,8 @@ export function MultiStepForm() {
               meta_fbp: fbp,
             };
 
-            // Navigate immediately
-            const encodedData = btoa(JSON.stringify(reportData));
-            window.location.href = `/report?data=${encodeURIComponent(encodedData)}`;
-
-            // Close CRM update (business details) - fire and forget
+            // Close CRM update (business details) - MUST happen before navigation
+            // Using keepalive: true ensures the request completes even if page navigates away
             if (currentLeadId) {
               fetch('/api/close/update-lead', {
                 method: 'PUT',
@@ -215,8 +212,13 @@ export function MultiStepForm() {
                   revenue,
                   painPoints,
                 }),
+                keepalive: true, // Ensures request completes even after navigation
               }).catch(error => console.error('Error updating lead with business details:', error));
             }
+
+            // Navigate to report page
+            const encodedData = btoa(JSON.stringify(reportData));
+            window.location.href = `/report?data=${encodeURIComponent(encodedData)}`;
           }}
         />
       )}
