@@ -257,6 +257,7 @@ export function ThankYouContent() {
         lastName={formData?.lastName || ''}
         email={formData?.email || ''}
         phone={formData?.phone || ''}
+        painPoints={formData?.painPoints || ''}
         leadId={formData?.leadId || ''}
         meta_fbc={formData?.meta_fbc || ''}
         meta_fbp={formData?.meta_fbp || ''}

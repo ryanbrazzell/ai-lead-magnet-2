@@ -14,6 +14,7 @@ interface CTASectionProps {
   lastName?: string;
   email?: string;
   phone?: string;
+  painPoints?: string;
   leadId?: string;
   meta_fbc?: string;
   meta_fbp?: string;
@@ -24,6 +25,7 @@ export function CTASection({
   lastName = '',
   email = '',
   phone = '',
+  painPoints = '',
   leadId = '',
   meta_fbc = '',
   meta_fbp = '',
@@ -131,6 +133,9 @@ export function CTASection({
   // Set time format to 12-hour (AM/PM)
   params.set('timeFormat', '12h');
 
+  // Pass pain points (challenges) to iClosed custom field
+  if (painPoints) params.set('pain', painPoints);
+
   // Pass Meta tracking values for CAPI attribution via iClosed → Zapier → Meta
   // These are passed as custom hidden fields that iClosed sends to webhooks
   if (meta_fbc) params.set('fbc', meta_fbc);
@@ -139,7 +144,7 @@ export function CTASection({
   const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
 
   // Debug logging
-  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, meta_fbc, meta_fbp, iClosedUrl });
+  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, painPoints, meta_fbc, meta_fbp, iClosedUrl });
 
   return (
     <section
