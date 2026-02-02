@@ -141,7 +141,9 @@ export function CTASection({
   if (meta_fbc) params.set('fbc', meta_fbc);
   if (meta_fbp) params.set('fbp', meta_fbp);
 
-  const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  // Build URL and replace + with %20 for spaces (iClosed expects %20, not +)
+  const queryString = params.toString().replace(/\+/g, '%20');
+  const iClosedUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
   // Debug logging
   console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, painPoints, meta_fbc, meta_fbp, iClosedUrl });
