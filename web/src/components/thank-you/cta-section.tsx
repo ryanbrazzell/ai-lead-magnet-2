@@ -109,7 +109,7 @@ export function CTASection({
 
   // Build iClosed URL with pre-filled data
   // Use triage calendar for <$500k revenue, discovery calendar for everyone else
-  const isTriageCall = revenue === '<$500k';
+  const isTriageCall = revenue === 'Under $500k';
   const baseUrl = isTriageCall
     ? 'https://app.iclosed.io/e/assistantlaunch/intro-call'
     : 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
