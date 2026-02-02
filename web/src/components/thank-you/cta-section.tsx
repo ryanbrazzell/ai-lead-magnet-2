@@ -18,6 +18,7 @@ interface CTASectionProps {
   leadId?: string;
   meta_fbc?: string;
   meta_fbp?: string;
+  revenue?: string;
 }
 
 export function CTASection({
@@ -29,6 +30,7 @@ export function CTASection({
   leadId = '',
   meta_fbc = '',
   meta_fbp = '',
+  revenue = '',
 }: CTASectionProps) {
   // Store scroll position to prevent iClosed widget from auto-scrolling
   const scrollPositionRef = React.useRef<number>(0);
@@ -106,7 +108,11 @@ export function CTASection({
   }, []);
 
   // Build iClosed URL with pre-filled data
-  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  // Use triage calendar for <$500k revenue, discovery calendar for everyone else
+  const isTriageCall = revenue === '<$500k';
+  const baseUrl = isTriageCall
+    ? 'https://app.iclosed.io/e/assistantlaunch/intro-call'
+    : 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
   const params = new URLSearchParams();
 
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
@@ -146,7 +152,7 @@ export function CTASection({
   const iClosedUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
   // Debug logging
-  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, painPoints, meta_fbc, meta_fbp, iClosedUrl });
+  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, painPoints, revenue, isTriageCall, meta_fbc, meta_fbp, iClosedUrl });
 
   return (
     <section

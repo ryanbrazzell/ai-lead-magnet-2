@@ -261,6 +261,7 @@ export function ThankYouContent() {
         leadId={formData?.leadId || ''}
         meta_fbc={formData?.meta_fbc || ''}
         meta_fbp={formData?.meta_fbp || ''}
+        revenue={revenueRange}
       />
 
       {/* 7. Social Proof */}
