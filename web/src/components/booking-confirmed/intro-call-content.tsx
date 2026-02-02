@@ -26,34 +26,11 @@ export function IntroCallContent() {
     }
   }, []);
 
+  // Clean up localStorage (no Close CRM update for triage calls - handled manually)
   useEffect(() => {
-    // NO Meta Pixel events fired here - this is for triage calls only
-
-    const updateCloseCRM = async () => {
-      try {
-        const storedLeadId = localStorage.getItem('assistantlaunch_leadId');
-        const storedEmail = localStorage.getItem('assistantlaunch_email');
-        const leadEmail = email || storedEmail;
-
-        if (storedLeadId || leadEmail) {
-          await fetch('/api/close/mark-call-booked', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              leadId: storedLeadId,
-              email: leadEmail,
-            }),
-          });
-          localStorage.removeItem('assistantlaunch_leadId');
-          localStorage.removeItem('assistantlaunch_email');
-        }
-      } catch (err) {
-        console.error('Failed to update Close CRM:', err);
-      }
-    };
-
-    updateCloseCRM();
-  }, [email]);
+    localStorage.removeItem('assistantlaunch_leadId');
+    localStorage.removeItem('assistantlaunch_email');
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
