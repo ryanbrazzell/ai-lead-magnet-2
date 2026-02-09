@@ -15,6 +15,9 @@ import { generateTasks } from '@/lib/ai/task-generator';
 import { validateReport } from '@/lib/ai/report-validator';
 import { fixReportIssues, ensureCoreEATasks } from '@/lib/ai/report-fixer';
 import { sendAsyncNotifications } from '@/lib/email/asyncNotifications';
+import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
+
+export const maxDuration = 60;
 
 /**
  * Generate a correlation ID for request tracking
@@ -186,6 +189,12 @@ export async function POST(request: NextRequest) {
         statusCode,
       });
 
+      void sendCriticalAlert('AI Report Generation Failed', {
+        error: err.message,
+        endpoint: '/api/generate-tasks',
+        userEmail: leadData.email,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -248,6 +257,11 @@ export async function POST(request: NextRequest) {
       correlationId,
       error: err.message,
       stack: err.stack,
+    });
+
+    void sendCriticalAlert('Unexpected Error in Task Generation', {
+      error: err.message,
+      endpoint: '/api/generate-tasks',
     });
 
     return NextResponse.json(

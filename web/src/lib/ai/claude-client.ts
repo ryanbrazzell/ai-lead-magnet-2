@@ -15,6 +15,40 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TaskGenerationResult } from '@/types';
 
+/**
+ * Retry wrapper for transient API failures
+ *
+ * Only retries on server errors (5xx), overload (529), timeouts,
+ * and network failures. Does NOT retry on client errors (4xx).
+ */
+async function callWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 1,
+  delayMs = 2000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isTransient =
+        message.includes('500') ||
+        message.includes('529') ||
+        message.includes('overloaded') ||
+        message.includes('timeout') ||
+        message.includes('ECONNRESET') ||
+        message.includes('fetch failed');
+      if (!isTransient || attempt === maxRetries) throw error;
+      console.warn(
+        `Claude API transient error (attempt ${attempt + 1}), retrying in ${delayMs}ms...`,
+        message
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error('Unreachable');
+}
+
 // Claude model configuration
 // Using Claude Sonnet 4.5 for high-quality, in-depth responses
 export const CLAUDE_CONFIG = {
@@ -125,17 +159,19 @@ export async function generateWithClaude(
     attempt++;
 
     try {
-      const response = await anthropic.messages.create({
-        model: CLAUDE_CONFIG.model,
-        max_tokens: CLAUDE_CONFIG.maxTokens,
-        temperature: CLAUDE_CONFIG.temperature,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
+      const response = await callWithRetry(() =>
+        anthropic.messages.create({
+          model: CLAUDE_CONFIG.model,
+          max_tokens: CLAUDE_CONFIG.maxTokens,
+          temperature: CLAUDE_CONFIG.temperature,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        })
+      );
 
       // Extract text content from response
       const textContent = response.content.find((block) => block.type === 'text');

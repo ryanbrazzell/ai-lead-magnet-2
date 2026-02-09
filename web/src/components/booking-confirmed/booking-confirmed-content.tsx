@@ -46,7 +46,7 @@ export function BookingConfirmedContent() {
       if (storedLeadId) userData.external_id = storedLeadId;
 
       if (Object.keys(userData).length > 0) {
-        (window as any).fbq('init', '985637426985663', userData);
+        (window as any).fbq('setUserProperties', '985637426985663', userData);
       }
 
       (window as any).fbq('track', 'Schedule', {

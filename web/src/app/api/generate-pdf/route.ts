@@ -28,6 +28,9 @@ import { put } from '@vercel/blob';
 import { generatePDFV2 } from '@/lib/pdf/generator-v2';
 import { generateSafeFilename } from '@/lib/pdf/s3Service';
 import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '@/types';
+import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
+
+export const maxDuration = 30;
 
 /**
  * Task hours structure from ROI calculator
@@ -122,6 +125,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Check for PDF generation failure
     if (!pdfResult.success || !pdfResult.base64) {
       console.error('Error generating PDF:', pdfResult.error);
+      void sendCriticalAlert('PDF Generation Failed', {
+        error: pdfResult.error || 'Unknown PDF generation error',
+        endpoint: '/api/generate-pdf',
+        userEmail: userData.email,
+      });
       return NextResponse.json(
         { success: false, error: pdfResult.error || 'Failed to generate PDF' },
         { status: 500 }
@@ -171,6 +179,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Reference: source route.ts lines 178-184
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Error generating PDF:', error);
+    void sendCriticalAlert('Unexpected PDF Error', {
+      error: errorMessage,
+      endpoint: '/api/generate-pdf',
+    });
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

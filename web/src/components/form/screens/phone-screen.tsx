@@ -41,13 +41,7 @@ export function PhoneScreen({
 
     setLocalError(undefined);
 
-    // Fire Meta Pixel Lead event - user has provided name + phone
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'Lead', {
-        content_name: 'EA Time Freedom Report',
-        content_category: 'Lead Magnet'
-      });
-    }
+    // Lead pixel event is now fired from MultiStepForm where user data is in scope
 
     const formattedPhone = formatPhoneE164(phone);
     await onSubmit(formattedPhone);

@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import type { EmailSendOptions, EmailSendResult, EmailErrorResponse } from '@/types/email';
 import { generateEmailHtml } from '@/lib/email/template';
+import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
 
 /** Email address validation regex */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -125,6 +126,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
       console.error('\n=== RESEND ERROR ===');
       console.error('Error:', error);
 
+      void sendCriticalAlert('Report Email Failed to Send', {
+        error: error.message,
+        endpoint: '/api/send-email',
+        userEmail: to,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -157,6 +164,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
     console.error('Error type:', err.constructor.name);
     console.error('Error message:', err.message);
     console.error('Error stack:', err.stack);
+
+    void sendCriticalAlert('Unexpected Email Error', {
+      error: err.message,
+      endpoint: '/api/send-email',
+    });
 
     return NextResponse.json(
       {
