@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Serif_Display, Montserrat } from "next/font/google";
 import "./globals.css";
-import MetaPixel from "@/components/tracking/meta-pixel";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -38,7 +37,6 @@ export default function RootLayout({
         className={`${dmSans.variable} ${dmSerifDisplay.variable} ${montserrat.variable} antialiased`}
         style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
       >
-        <MetaPixel />
         {children}
       </body>
     </html>

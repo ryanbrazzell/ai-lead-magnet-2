@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { firstName, lastName, email, meta_fbc, meta_fbp } = body;
 
-    // Get client IP and User Agent from request headers (for Meta CAPI)
+    // Get client IP and User Agent from request headers
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || request.headers.get('x-real-ip')
       || '';

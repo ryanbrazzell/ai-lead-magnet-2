@@ -9,8 +9,9 @@
  *
  * Request Body:
  * {
- *   leadId?: string,  // Close CRM lead ID (from localStorage)
- *   email?: string    // Fallback: find lead by email if no leadId
+ *   leadId?: string,     // Close CRM lead ID (from localStorage)
+ *   email?: string,      // Fallback: find lead by email if no leadId
+ *   callType?: string    // "triage" for <$500k leads, defaults to "strategy"
  * }
  *
  * Response:
@@ -22,13 +23,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// Lead status ID for "Strategy Call Booked"
+// Lead status IDs
 const STATUS_STRATEGY_CALL_BOOKED = 'stat_DQePUkSNuYYtuwVyfqJ40fOf1KrgwKUqOiUJvTfZ2nP';
+const STATUS_TRIAGE_CALL_BOOKED = 'stat_UEiczhS2rm7a0rcaick2wizlAlL18KRabpGPA9vc7E9';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { leadId, email } = body;
+    const { leadId, email, callType } = body;
 
     // Get API key from environment
     const apiKey = process.env.CLOSE_API_KEY;
@@ -72,7 +74,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }); // Non-blocking
     }
 
-    // Update lead status to "Call Booked"
+    // Update lead status based on call type
+    const statusId = callType === 'triage' ? STATUS_TRIAGE_CALL_BOOKED : STATUS_STRATEGY_CALL_BOOKED;
     const updateResponse = await fetch(
       `https://api.close.com/api/v1/lead/${targetLeadId}/`,
       {
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
           'Authorization': authHeader,
         },
         body: JSON.stringify({
-          status_id: STATUS_STRATEGY_CALL_BOOKED,
+          status_id: statusId,
         }),
       }
     );

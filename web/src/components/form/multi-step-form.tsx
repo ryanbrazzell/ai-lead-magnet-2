@@ -45,9 +45,8 @@ export function MultiStepForm() {
   const [leadId, setLeadId] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(false);
   const pendingLeadIdRef = React.useRef<Promise<string | null> | null>(null);
-  const leadEventFiredRef = React.useRef(false);
 
-  // Get Meta tracking cookies (_fbc and _fbp)
+  // Get Meta tracking cookies (_fbc and _fbp) for Close CRM attribution
   const { fbc, fbp } = useMetaTracking();
 
   const [formData, setFormData] = React.useState<FormData>({
@@ -147,25 +146,6 @@ export function MultiStepForm() {
           onPhoneChange={(value) => updateField('phone', value)}
           onPrevious={goToPreviousScreen}
           onSubmit={async (phone) => {
-            // Fire Meta Pixel Lead event with user matching data
-            if (!leadEventFiredRef.current && typeof window !== 'undefined' && (window as any).fbq) {
-              leadEventFiredRef.current = true;
-              const userData: Record<string, string> = {};
-              if (formData.email) userData.em = formData.email;
-              if (phone) userData.ph = phone;
-              if (fbc) userData.fbc = fbc;
-              if (fbp) userData.fbp = fbp;
-              if (leadId) userData.external_id = leadId;
-
-              if (Object.keys(userData).length > 0) {
-                (window as any).fbq('setUserProperties', '985637426985663', userData);
-              }
-              (window as any).fbq('track', 'Lead', {
-                content_name: 'EA Time Freedom Report',
-                content_category: 'Lead Magnet',
-              });
-            }
-
             goToNextScreen();
 
             // Close CRM update (phone)

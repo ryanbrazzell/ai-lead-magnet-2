@@ -27,33 +27,9 @@ export function BookingConfirmedContent() {
   }, []);
 
   useEffect(() => {
-    // Retrieve tracking values saved before iClosed redirect
-    const storedFbc = localStorage.getItem('assistantlaunch_fbc') || '';
-    const storedFbp = localStorage.getItem('assistantlaunch_fbp') || '';
     const storedEmail = localStorage.getItem('assistantlaunch_email') || '';
-    const storedPhone = localStorage.getItem('assistantlaunch_phone') || '';
     const storedLeadId = localStorage.getItem('assistantlaunch_leadId') || '';
     const leadEmail = email || storedEmail;
-
-    // Fire Meta Pixel Schedule event with user data for attribution matching
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      // Set user data so the pixel can match this event to the ad click
-      const userData: Record<string, string> = {};
-      if (leadEmail) userData.em = leadEmail;
-      if (storedPhone) userData.ph = storedPhone;
-      if (storedFbc) userData.fbc = storedFbc;
-      if (storedFbp) userData.fbp = storedFbp;
-      if (storedLeadId) userData.external_id = storedLeadId;
-
-      if (Object.keys(userData).length > 0) {
-        (window as any).fbq('setUserProperties', '985637426985663', userData);
-      }
-
-      (window as any).fbq('track', 'Schedule', {
-        content_name: 'EA Discovery Call',
-        content_category: 'Call Booking',
-      });
-    }
 
     // Update Close CRM with call booked status
     const updateCloseCRM = async () => {
@@ -75,11 +51,9 @@ export function BookingConfirmedContent() {
 
     updateCloseCRM();
 
-    // Clean up localStorage after firing events
+    // Clean up localStorage
     localStorage.removeItem('assistantlaunch_leadId');
     localStorage.removeItem('assistantlaunch_email');
-    localStorage.removeItem('assistantlaunch_fbc');
-    localStorage.removeItem('assistantlaunch_fbp');
     localStorage.removeItem('assistantlaunch_phone');
   }, [email]);
 

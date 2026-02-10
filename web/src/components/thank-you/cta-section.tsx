@@ -142,8 +142,7 @@ export function CTASection({
   // Pass pain points (challenges) to iClosed custom field
   if (painPoints) params.set('pain', painPoints);
 
-  // Pass Meta tracking values for CAPI attribution via iClosed → Zapier → Meta
-  // These are passed as custom hidden fields that iClosed sends to webhooks
+  // Pass Meta tracking values as custom hidden fields for CRM attribution
   if (meta_fbc) params.set('fbc', meta_fbc);
   if (meta_fbp) params.set('fbp', meta_fbp);
 
