@@ -367,7 +367,7 @@ export function ThankYouContent() {
       </div>
 
       {/* 3. Hero Pain Section */}
-      <HeroPain firstName={formData?.firstName || 'there'} />
+      <HeroPain firstName={formData?.firstName || 'there'} onCTAClick={handleCTAClick} />
 
       {/* 4. Cost Card (overlaps hero) */}
       <CostCard

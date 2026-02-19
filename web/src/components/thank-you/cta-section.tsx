@@ -251,6 +251,18 @@ export function CTASection({
           3-7 days to EA Kickoff
         </div>
 
+        {/* CTA text above calendar */}
+        <h3
+          style={{
+            fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+            fontSize: 'clamp(20px, 5vw, 24px)',
+            color: '#0f172a',
+            marginBottom: '16px',
+          }}
+        >
+          Book Your Time Audit
+        </h3>
+
         {/* iClosed Calendar - Using inline widget (same as services page) */}
         <div
           id="calendar-section"

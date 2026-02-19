@@ -8,6 +8,7 @@
 
 interface HeroPainProps {
   firstName: string;
+  onCTAClick?: () => void;
 }
 
 function capitalizeFirst(str: string): string {
@@ -15,7 +16,7 @@ function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-export function HeroPain({ firstName }: HeroPainProps) {
+export function HeroPain({ firstName, onCTAClick }: HeroPainProps) {
   const displayName = capitalizeFirst(firstName.trim());
 
   return (
@@ -90,6 +91,41 @@ export function HeroPain({ firstName }: HeroPainProps) {
           Every hour you spend on $15/hr tasks is an hour you&apos;re not
           spending on what actually grows your business.
         </p>
+
+        {/* CTA Button - Book Your Time Audit */}
+        <button
+          onClick={onCTAClick}
+          style={{
+            fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: '#0f172a',
+            border: 'none',
+            padding: '16px 32px',
+            fontSize: 'clamp(16px, 4vw, 18px)',
+            fontWeight: 700,
+            borderRadius: '50px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            letterSpacing: '-0.01em',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 32px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)';
+          }}
+        >
+          Book Your Time Audit
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
     </section>
   );
