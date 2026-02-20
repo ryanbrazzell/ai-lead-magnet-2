@@ -32,35 +32,28 @@ export function CTASection({
   meta_fbp = '',
   revenue = '',
 }: CTASectionProps) {
-  // Store scroll position to prevent iClosed widget from auto-scrolling
-  const scrollPositionRef = React.useRef<number>(0);
-  const scrollLockActiveRef = React.useRef<boolean>(false);
-
-  // Save scroll position and prevent auto-scroll from widget
+  // Prevent iClosed widget from auto-scrolling by monkey-patching
+  // Element.prototype.scrollIntoView for elements inside the widget only.
+  // User scrolling (wheel, touch, keyboard) and CTA button scrolls are unaffected.
   React.useEffect(() => {
-    // Save initial scroll position
-    scrollPositionRef.current = window.scrollY;
-    
-    // Also prevent any scroll events from the widget during initial load
-    const preventScroll = (e: Event) => {
-      if (scrollLockActiveRef.current) {
-        e.preventDefault();
-        window.scrollTo(0, scrollPositionRef.current);
+    const origScrollIntoView = Element.prototype.scrollIntoView;
+
+    // Only block scrollIntoView for elements inside the iClosed widget container
+    Element.prototype.scrollIntoView = function (...args: Parameters<typeof origScrollIntoView>) {
+      const widgetContainer = document.getElementById('calendar-section');
+      if (widgetContainer && widgetContainer.contains(this)) {
+        return; // Block — this is the widget trying to auto-scroll
       }
+      return origScrollIntoView.apply(this, args);
     };
-    
-    // Lock scrolling immediately for 3 seconds after mount
-    scrollLockActiveRef.current = true;
-    window.addEventListener('scroll', preventScroll, { passive: false });
-    
+
     const timeoutId = setTimeout(() => {
-      scrollLockActiveRef.current = false;
-      window.removeEventListener('scroll', preventScroll);
-    }, 3000);
-    
+      Element.prototype.scrollIntoView = origScrollIntoView;
+    }, 8000);
+
     return () => {
       clearTimeout(timeoutId);
-      window.removeEventListener('scroll', preventScroll);
+      Element.prototype.scrollIntoView = origScrollIntoView;
     };
   }, []);
 
@@ -83,28 +76,9 @@ export function CTASection({
     }
   }, [leadId, email, phone, meta_fbc, meta_fbp]);
 
-  // Restore scroll position after widget script loads (prevents auto-scroll)
+  // No-op callback — scroll prevention is handled by the useEffect above
   const handleScriptLoad = React.useCallback(() => {
-    // Lock scroll restoration for 2 seconds to catch widget initialization
-    scrollLockActiveRef.current = true;
-    const savedPosition = scrollPositionRef.current;
-
-    // Immediately restore position
-    window.scrollTo(0, savedPosition);
-
-    // Set up interval to keep restoring scroll position for 2 seconds
-    // This catches any delayed scroll attempts by the widget
-    const intervalId = setInterval(() => {
-      if (scrollLockActiveRef.current) {
-        window.scrollTo(0, savedPosition);
-      }
-    }, 50);
-
-    // Release scroll lock after 2 seconds
-    setTimeout(() => {
-      scrollLockActiveRef.current = false;
-      clearInterval(intervalId);
-    }, 2000);
+    console.log('[iClosed] Widget script loaded');
   }, []);
 
   // Build iClosed URL with pre-filled data

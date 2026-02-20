@@ -634,7 +634,8 @@ export function buildTasksPage(
   doc: jsPDF,
   tasks: PDFTask[],
   title: string,
-  subtitle: string
+  subtitle: string,
+  userData?: CTAUserData
 ): void {
   doc.addPage();
   let y = 20;
@@ -645,6 +646,12 @@ export function buildTasksPage(
   tasks.forEach((task, index) => {
     y = renderTaskCard(doc, index + 1, task.name, task.description, task.time_saved, y);
   });
+
+  // Add CTA button at the end of each section if space permits
+  if (userData && y + 55 < PAGE_HEIGHT - 20) {
+    y += 5;
+    renderCTABlock(doc, y, userData);
+  }
 }
 
 /**
@@ -756,7 +763,8 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
       doc,
       data.daily_tasks,
       'Top 5 Daily Tasks to Delegate to Your EA',
-      'High-frequency tasks eating your time every single day'
+      'High-frequency tasks eating your time every single day',
+      userData
     );
   }
 
@@ -776,7 +784,8 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
       doc,
       data.weekly_tasks,
       'Top 5 Weekly Tasks to Delegate to Your EA',
-      'Recurring tasks that stack up week after week'
+      'Recurring tasks that stack up week after week',
+      userData
     );
   }
 
@@ -796,7 +805,8 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
       doc,
       data.monthly_tasks,
       'Top 5 Monthly Tasks to Delegate to Your EA',
-      'Administrative work that drains strategic thinking time'
+      'Administrative work that drains strategic thinking time',
+      userData
     );
   }
 
