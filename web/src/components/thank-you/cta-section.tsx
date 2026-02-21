@@ -32,28 +32,53 @@ export function CTASection({
   meta_fbp = '',
   revenue = '',
 }: CTASectionProps) {
-  // Prevent iClosed widget from auto-scrolling by monkey-patching
-  // Element.prototype.scrollIntoView for elements inside the widget only.
-  // User scrolling (wheel, touch, keyboard) and CTA button scrolls are unaffected.
+  // Prevent iClosed widget from auto-scrolling the page.
+  // The widget can use scrollIntoView, window.scrollTo, window.scroll, or element.focus()
+  // to hijack scroll position. We patch all of them during initialization.
+  // User scrolling (wheel, touch, keyboard) is unaffected — those don't call these APIs.
+  // The CTA "Book Your Time Audit" button uses scrollIntoView (not scrollTo), so we
+  // allow scrollIntoView for elements OUTSIDE the widget container.
   React.useEffect(() => {
     const origScrollIntoView = Element.prototype.scrollIntoView;
+    const origScrollTo = window.scrollTo;
+    const origScroll = window.scroll;
+    const origFocus = HTMLElement.prototype.focus;
 
-    // Only block scrollIntoView for elements inside the iClosed widget container
+    // Block scrollIntoView only for elements inside the widget
     Element.prototype.scrollIntoView = function (...args: Parameters<typeof origScrollIntoView>) {
       const widgetContainer = document.getElementById('calendar-section');
       if (widgetContainer && widgetContainer.contains(this)) {
-        return; // Block — this is the widget trying to auto-scroll
+        return; // Block widget auto-scroll
       }
       return origScrollIntoView.apply(this, args);
     };
 
+    // Block all programmatic window.scrollTo / window.scroll during init
+    window.scrollTo = function () { /* blocked during widget init */ } as typeof window.scrollTo;
+    window.scroll = function () { /* blocked during widget init */ } as typeof window.scroll;
+
+    // Force preventScroll on focus() for elements inside the widget
+    HTMLElement.prototype.focus = function (options?: FocusOptions) {
+      const widgetContainer = document.getElementById('calendar-section');
+      if (widgetContainer && widgetContainer.contains(this)) {
+        return origFocus.call(this, { ...options, preventScroll: true });
+      }
+      return origFocus.call(this, options);
+    };
+
     const timeoutId = setTimeout(() => {
       Element.prototype.scrollIntoView = origScrollIntoView;
-    }, 8000);
+      window.scrollTo = origScrollTo;
+      window.scroll = origScroll;
+      HTMLElement.prototype.focus = origFocus;
+    }, 10000);
 
     return () => {
       clearTimeout(timeoutId);
       Element.prototype.scrollIntoView = origScrollIntoView;
+      window.scrollTo = origScrollTo;
+      window.scroll = origScroll;
+      HTMLElement.prototype.focus = origFocus;
     };
   }, []);
 
