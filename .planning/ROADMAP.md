@@ -45,11 +45,11 @@ Plans:
   3. PDF page 2 shows Core Four ownership areas (Email, Calendar, Personal Life, Recurring Processes) in distinct visual boxes with heading and brief description each
   4. Three Pillars and Core Four content fit on a single page without overflow
   5. All framework content is static (hardcoded copy, not AI-generated) and identical for every lead
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Redesign cover/ROI page (page 1)
-- [ ] 02-02: Build Three Pillars + Core Four framework page (page 2)
+- [ ] 02-01-PLAN.md — Extend PDFReportData with company context fields, thread data from generator, redesign buildSummaryPage with company name and ROI pain messaging
+- [ ] 02-02-PLAN.md — Create buildFrameworkPage with hardcoded Three Pillars + Core Four content, wire into orchestrator as page 2
 
 ### Phase 3: Core Four Task Pages + CTA
 **Goal**: The PDF's central conversion mechanism works — personalized tasks organized by Core Four areas create deliberate overwhelm, and a strong CTA page drives the reader to book a Time Audit call
