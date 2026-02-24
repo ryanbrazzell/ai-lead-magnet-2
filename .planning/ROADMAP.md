@@ -79,11 +79,11 @@ Plans:
   2. AI-generated task descriptions are 2-3 sentences each, specific to the lead's business context
   3. AI output retains the daily/weekly/monthly frequency structure so the existing validator/fixer pipeline continues to pass without errors
   4. The report validator and fixer accept and preserve the coreTaskType field — they do not strip it or reject tasks that include it
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Token budget analysis (pre-phase gate — verify 4096 tokens fits new prompt + output)
-- [ ] 04-02: Update prompt, types, validator, and fixer for coreTaskType
+- [ ] 04-01-PLAN.md — Update main prompt with coreTaskType + richer descriptions, increase maxTokens to 8192
+- [ ] 04-02-PLAN.md — Update fallback prompts with coreTaskType + aligned task counts, fix stale prompt tests
 
 ### Phase 5: PDF Visual Design
 **Goal**: The PDF's visual design is finalized through an adversarial multi-perspective process — marketing, simplicity, and complexity perspectives argue to find the best outcome for this specific use case
