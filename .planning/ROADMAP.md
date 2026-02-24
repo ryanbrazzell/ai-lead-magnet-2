@@ -93,11 +93,11 @@ Plans:
   1. The visual design has been determined through an adversarial process where at least three design perspectives (marketing impact, visual simplicity, information density) were evaluated and the best elements selected
   2. Each Core Four area has a distinct accent color that creates clear visual separation in the task pages
   3. The PDF's visual treatment creates distinct emotional tones per section: urgency/pain on the cover, trust/education on the framework page, overwhelm/volume on the task pages, and clarity/action on the CTA page
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Adversarial design process — generate and evaluate competing visual approaches
-- [ ] 05-02: Apply final design decisions across all pages
+- [ ] 05-01-PLAN.md — Adversarial multi-perspective design process (3 perspectives debate 8 dimensions), produce DESIGN-DECISIONS.md, user checkpoint for approval
+- [ ] 05-02-PLAN.md — Apply finalized design decisions to layout-v2.ts (color constants, per-page treatments, emotional differentiation)
 
 ## Progress
 
