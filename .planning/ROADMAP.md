@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. All PDF color usage goes through pre-computed RGB tuple constants — no hex-parsing setColor calls remain in layout-v2.ts
   3. A checkPageBreak utility exists and correctly adds a new page when content would overflow the current page
   4. The PDF color palette constants cover all planned sections: cover, framework, each Core Four area accent, and CTA
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Delete V1 dead code and build RGB color system
-- [ ] 01-02: Build checkPageBreak utility and extend PDFReportData interface
+- [ ] 01-01-PLAN.md — Delete V1 dead code (5 files), clean V1 references (4 files), replace hex color system with RGB tuple constants, extend palette for all planned sections
+- [ ] 01-02-PLAN.md — Add checkPageBreak utility and integrate into all task rendering loops for overflow protection
 
 ### Phase 2: Cover & ROI + Framework Page
 **Goal**: Pages 1 and 2 of the PDF deliver the first two emotional beats — financial pain (ROI) and framework education (Three Pillars + Core Four) — as complete, visually polished pages
