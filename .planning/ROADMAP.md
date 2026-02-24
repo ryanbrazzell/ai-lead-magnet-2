@@ -63,12 +63,12 @@ Plans:
   5. When AI personalization produces sparse output for a Core Four area, fallback universal EA task examples fill in so every area has substantial content
   6. Page breaks are handled safely — no task content silently clips or disappears at page boundaries
   7. The final PDF page displays a strong CTA with clickable booking link and value proposition reinforcement
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Build Core Four task page renderer with accent colors and page break handling
-- [ ] 03-02: Build fallback content system for thin AI output
-- [ ] 03-03: Build CTA page and wire orchestrator to new page sequence
+- [ ] 03-01-PLAN.md — Add CoreFourArea types, inferCoreTaskType keyword classifier, and buildCoreFourTaskPages multi-page renderer with accent headers and continuous task numbering
+- [ ] 03-02-PLAN.md — Define 24 fallback PDFTask objects (6 per Core Four area), build groupTasksByCoreFour data transform, wire into transformToPDFData
+- [ ] 03-03-PLAN.md — Build buildCTAPageV2 full-page CTA with value proposition, rewire generateTimeFreedomReport to Core Four + CTA page sequence
 
 ### Phase 4: AI Prompt Upgrade
 **Goal**: The AI generates tasks with explicit Core Four classification and richer descriptions, improving grouping precision and content quality without breaking the existing validator/fixer pipeline
