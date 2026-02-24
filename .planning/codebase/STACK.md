@@ -59,17 +59,17 @@
 
 ## Key Dependencies
 
-**Critical:**
-- @anthropic-ai/sdk 0.71.2 - Claude AI API integration for task generation
-- @aws-sdk/client-s3 3.940.0 - AWS S3 SDK for PDF storage
-- @vercel/blob 2.0.0 - Vercel Blob storage for backup PDF hosting
+**Critical (actively used):**
+- @anthropic-ai/sdk 0.71.2 - Claude AI API integration for task generation (model: claude-sonnet-4-5-20250514)
+- @vercel/blob 2.0.0 - Primary PDF storage with permanent public URLs
+- resend 6.5.2 - Primary email provider for report delivery + critical alerts
 - jsPDF 3.0.4 - PDF generation from JavaScript
-- form-data 4.0.5 - FormData builder for API requests
-
-**Email & Communication:**
-- mailgun.js 12.3.0 - Mailgun email service SDK
-- resend 6.5.2 - Resend email service SDK
 - @sentry/nextjs 10.38.0 - Error tracking and performance monitoring
+
+**Legacy (installed but not actively used in production routes):**
+- @aws-sdk/client-s3 3.940.0 - Only `generateSafeFilename()` utility used; no S3 uploads in routes
+- mailgun.js 12.3.0 - Dead code; `mailgun.ts` exists but is never imported by routes
+- form-data 4.0.5 - FormData builder (used by legacy Mailgun integration)
 
 ## Configuration
 
@@ -89,7 +89,7 @@
 - Config file: `web/next.config.ts`
 - Wrapped with Sentry config for error tracking
 - Source maps disabled in Sentry
-- Max request duration: 30 seconds (API routes)
+- Max request duration: varies per route (generate-tasks: 60s, generate-pdf: 30s)
 
 **Vitest:**
 - Config file: `web/vitest.config.ts`
@@ -125,7 +125,7 @@
 **Development:**
 - Node.js 20+
 - npm 10+
-- Active network for API integrations (Claude, Gemini, S3, Mailgun, Resend, Close CRM, Sentry)
+- Active network for API integrations (Claude, Resend, Close CRM, Vercel Blob, Sentry)
 
 **Production:**
 - Deployed on Vercel (project: `timefreedom`)

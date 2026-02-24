@@ -58,7 +58,7 @@
 - Core subdirectories:
   - `src/lib/ai/` - Claude AI client, task generation, prompts, report validation/fixing
   - `src/lib/pdf/` - PDF generation engines (generator.ts, generator-v2.ts), layout logic, Vercel Blob upload
-  - `src/lib/email/` - Email template generation, Mailgun/Resend clients, async notifications
+  - `src/lib/email/` - Email template generation, Resend client, async notifications (Mailgun client exists but is legacy dead code)
   - `src/lib/tracking/` - Analytics and event tracking
   - `src/lib/website/` - Website scraping for company analysis
   - `src/lib/alerts/` - Critical error alerting
@@ -98,19 +98,25 @@
    - ThankYouContent client component mounts
    - Decodes form data from URL params
 
-5. **Task Generation**:
-   - Client calls `POST /api/generate-tasks` with form data
-   - API validates and routes to appropriate AI prompt based on leadType
-   - Claude Sonnet generates 30 tasks (10 daily, 10 weekly, 10 monthly)
+5. **Analyzing Animation** (3.5 seconds):
+   - `AnalyzingAnimation` component displays while user waits
+   - On completion, triggers `generateAndSendReport()` callback
+   - Report generation does NOT start on page load — only after animation finishes
+
+6. **Task Generation** (sequential — not parallel):
+   - Client calls `POST /api/generate-tasks` with form data (leadType always `'main'` from this flow)
+   - API enriches lead data by scraping company website (extracted from email domain via `enrichWithWebsiteAnalysis()`)
+   - Claude Sonnet 4.5 generates 30 tasks (10 daily, 10 weekly, 10 monthly)
    - Validator checks output structure; report-fixer corrects issues
    - Returns TaskGenerationResult
 
-6. **Simultaneous: PDF Generation and Email**:
-   - Client calls `POST /api/generate-pdf` with tasks + user data
-   - API generates PDF using jsPDF layout, uploads to Vercel Blob
-   - Returns base64 PDF + public URL
-   - Client calls `POST /api/send-email` with PDF
-   - API sends via Resend with personalized template
+7. **Sequential: PDF Generation → Email → Close CRM Update**:
+   - Client calls `POST /api/generate-pdf` with tasks + user data + taskHours + revenueRange
+   - API generates PDF using jsPDF V2 layout, uploads to Vercel Blob
+   - Returns base64 PDF + public blobUrl
+   - Client calls `POST /api/send-email` with PDF attachment (base64) via Resend
+   - If leadId and blobUrl available, client calls `PUT /api/close/update-lead` with reportUrl (non-blocking)
+   - Each step waits for the previous to complete — this is a sequential chain, not parallel
 
 **State Management:**
 - Form state: React.useState in MultiStepForm component
@@ -137,8 +143,8 @@
 
 **Email Service Abstraction:**
 - Purpose: Decouple email template from delivery provider
-- Examples: `src/lib/email/template.ts`, `src/lib/email/mailgun.ts`
-- Pattern: Template generates HTML; service routes through Resend/Mailgun
+- Examples: `src/lib/email/template.ts`, `src/app/api/send-email/route.ts`
+- Pattern: Template generates HTML; route sends via Resend with PDF attachment (Mailgun client is legacy dead code)
 
 **ROI Calculator:**
 - Purpose: Centralized business logic for time/revenue calculations
@@ -160,11 +166,12 @@
 - Location: `src/app/report/page.tsx`
 - Triggers: Form submission redirect
 - Responsibilities:
-  - Parse form data from URL params
-  - Trigger task generation via API
-  - Fetch task results and display
-  - Trigger PDF/email generation
-  - Show confirmation + CTA sections
+  - Server renders with Suspense fallback
+  - ThankYouContent client component mounts
+  - Shows 3.5-second AnalyzingAnimation first
+  - On animation complete: sequentially generates tasks → PDF → email
+  - Displays success/error banner with email status + PDF download fallback
+  - Shows sales page sections: HeroPain, CostCard, OverwhelmSection, HowItWorks, CTA with calendar, SocialProof, FAQ, FinalCTA
 
 **API Route: POST /api/generate-tasks:**
 - Location: `src/app/api/generate-tasks/route.ts`
@@ -207,7 +214,7 @@
 - Logging with correlation IDs for request tracing
 
 **Examples:**
-- `src/app/api/generate-tasks/route.ts` validates leadType, email, phone
+- `src/app/api/generate-tasks/route.ts` validates leadType and email (phone is not validated at this endpoint)
 - `src/lib/ai/report-validator.ts` checks task counts (must be 10 per frequency)
 - `src/lib/ai/report-fixer.ts` adds missing EA tasks, fixes frequency mismatches
 - `src/lib/alerts/critical-alert.ts` sends Sentry/email for critical failures

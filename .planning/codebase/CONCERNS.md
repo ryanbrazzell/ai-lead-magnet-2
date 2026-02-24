@@ -79,32 +79,37 @@ const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`;
 - Bug fixes in one may not apply to the other
 - Color scheme inconsistency with web UI
 
+**Confirmed:** Production uses V2. The `generate-pdf/route.ts` imports `generatePDFV2` from `generator-v2.ts`.
+
 **Fix approach:**
-- Audit which layout is actively used in `generator.ts`
-- If v2, remove layout.ts and update all imports
-- If v1, remove v2 and unify on production design
-- Consolidate into single layout system with configurable color schemes
+- Remove `layout.ts` and `generator.ts` (V1 is unused)
+- Rename `generator-v2.ts` → `generator.ts` and `layout-v2.ts` → `layout.ts`
+- Update all imports
 
-### Inconsistent AI Model Dependencies
+### Dead Code: Legacy Gemini, Mailgun, and S3 Integrations
 
-**Issue:** Multiple AI client libraries without clear migration path or deprecation timeline.
+**Issue:** Multiple legacy integration files remain in the codebase but are never imported by active routes. They inflate dependency count and create confusion about what's actually used in production.
 
 **Files:**
-- `web/src/lib/ai/gemini-client.ts` - Google Gemini API
-- `web/src/lib/ai/claude-client.ts` - Anthropic Claude API (referenced in imports)
-- Task generator uses conditional routing based on lead type
+- `web/src/lib/ai/gemini-client.ts` - Google Gemini API (never imported by task-generator.ts)
+- `web/src/lib/email/mailgun.ts` - Mailgun email client (never imported by any API route)
+- `web/src/lib/pdf/s3Service.ts` - S3 upload logic (only `generateSafeFilename` utility is used; actual S3 PutObject is dead)
+
+**Active integrations (for clarity):**
+- AI: Claude only (`claude-client.ts` → `generateWithClaude()`)
+- Email: Resend only (`send-email/route.ts` → Resend SDK)
+- Storage: Vercel Blob only (`generate-pdf/route.ts` → `@vercel/blob` `put()`)
 
 **Impact:**
-- Unclear which model generates which reports
-- Cost tracking difficult across multiple providers
-- Different prompt formats/capabilities per model
-- Switching models requires code changes, not config
+- `package.json` includes unused dependencies: `@aws-sdk/client-s3`, `mailgun.js`, related `form-data`
+- New developers may assume Gemini/Mailgun/S3 are active
+- Legacy env vars in documentation create confusion
 
 **Fix approach:**
-- Document decision: which model is primary, which is fallback
-- Add feature flag: `AI_PRIMARY_MODEL=gemini|claude`
-- Create unified `AIClient` interface, implement per-provider
-- Set deprecation timeline for secondary provider
+- Remove dead files: `gemini-client.ts`, `mailgun.ts`
+- Remove S3 upload logic from `s3Service.ts` (keep `generateSafeFilename` only, or inline it)
+- Remove unused dependencies from `package.json`
+- Clean up env var documentation
 
 ---
 
