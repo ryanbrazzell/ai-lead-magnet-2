@@ -82,7 +82,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Update main prompt with coreTaskType + richer descriptions, increase maxTokens to 8192
+- [x] 04-01-PLAN.md — Update main prompt with coreTaskType + richer descriptions, increase maxTokens to 8192
 - [ ] 04-02-PLAN.md — Update fallback prompts with coreTaskType + aligned task counts, fix stale prompt tests
 
 ### Phase 5: PDF Visual Design
@@ -109,5 +109,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Cleanup & Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. Cover & ROI + Framework Page | 2/2 | Complete | 2026-02-25 |
 | 3. Core Four Task Pages + CTA | 3/3 | Complete | 2026-02-25 |
-| 4. AI Prompt Upgrade | 0/2 | Not started | - |
+| 4. AI Prompt Upgrade | 1/2 | In progress | - |
 | 5. PDF Visual Design | 0/2 | Not started | - |
