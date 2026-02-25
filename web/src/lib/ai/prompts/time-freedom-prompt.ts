@@ -58,13 +58,24 @@ Use the revenue level to adjust task complexity:
 
 If the founder provided notes/challenges, incorporate those specific pain points into the tasks.
 
+===== CORE TASK CLASSIFICATION =====
+Every task MUST include a coreTaskType field indicating which Core Four area it belongs to:
+- "emailManagement": Email inbox, correspondence, filtering, responses
+- "calendarManagement": Scheduling, meetings, appointments, time management
+- "personalLifeManagement": Travel, family, personal errands, vendor coordination, personal appointments
+- "businessProcessManagement": SOPs, workflows, reporting, CRM, recurring operations, automation
+
+Choose the BEST fit for each task. When in doubt, use "businessProcessManagement" (broadest category).
+Tasks are grouped by frequency (daily/weekly/monthly), NOT by coreTaskType.
+
 ===== TASK FORMAT =====
 Each task needs:
 - title: 3-6 engaging words (not generic like "Email Management")
-- description: 15-25 words explaining what this involves
+- description: 2-3 sentences (40-60 words) explaining what this involves, with specific actions and business outcomes. Be detailed and reference the founder's context.
 - owner: "EA" or "You"
 - isEA: true (EA task) or false (Founder task)
 - category: One of Communication|Scheduling|Operations|Strategy|Marketing|Finance|Personal|Management
+- coreTaskType: One of emailManagement|calendarManagement|personalLifeManagement|businessProcessManagement
 
 ===== OUTPUT JSON =====
 {
@@ -73,10 +84,11 @@ Each task needs:
       // 5 EA tasks + 3 Founder tasks = 8 total
       {
         "title": "Priority Inbox Zero Maintenance",
-        "description": "Processing and organizing incoming emails, flagging urgent items, drafting responses, and maintaining inbox at zero.",
+        "description": "Processing and organizing all incoming emails, triaging into priority folders, and drafting responses using your voice. Your inbox stays at zero so you never waste time sorting through messages yourself.",
         "owner": "EA",
         "isEA": true,
-        "category": "Communication"
+        "category": "Communication",
+        "coreTaskType": "emailManagement"
       }
       // ... 7 more daily tasks
     ],
@@ -95,4 +107,5 @@ REQUIREMENTS:
 - ea_task_count must equal 15 (5 EA tasks × 3 categories)
 - ea_task_percent must equal 63 (15/24 × 100, rounded)
 - Tasks must be personalized based on their revenue level and notes
+- Every task must include a coreTaskType field (emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement)
 - Output ONLY valid JSON, no other text.`;
