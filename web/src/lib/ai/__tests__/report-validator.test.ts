@@ -3,8 +3,8 @@
  *
  * Tests for the report validation module including:
  * - validateReport returns ValidationResult with errors/warnings
- * - Task count validation (exactly 30 total, 10 per frequency)
- * - EA percentage validation (>= 40%)
+ * - Task count validation (exactly 24 total, 8 per frequency)
+ * - EA percentage validation (>= 50%)
  * - Core EA task detection (email, calendar, personal life, business process)
  * - analyzeReport returns correct ReportAnalysis
  * - validateTaskQuality catches missing/short titles and descriptions
@@ -49,17 +49,17 @@ function createValidReport(): TaskGenerationResult {
       priority: 'high' as const,
     }));
 
-  // Create tasks with 50% EA (5 EA + 5 Founder per frequency = 15 EA total = 50%)
+  // Create tasks with ~63% EA (5 EA + 3 Founder per frequency = 15 EA total out of 24 = 63%)
   return {
     tasks: {
-      daily: [...createEATasks(5, 'daily'), ...createFounderTasks(5, 'daily')],
-      weekly: [...createEATasks(5, 'weekly'), ...createFounderTasks(5, 'weekly')],
-      monthly: [...createEATasks(5, 'monthly'), ...createFounderTasks(5, 'monthly')],
+      daily: [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
+      weekly: [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
+      monthly: [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
     },
-    ea_task_percent: 50,
+    ea_task_percent: 63,
     ea_task_count: 15,
-    total_task_count: 30,
-    summary: 'Around 50% of tasks can be delegated to your EA.',
+    total_task_count: 24,
+    summary: 'Around 63% of tasks can be delegated to your EA.',
   };
 }
 
@@ -153,10 +153,10 @@ describe('Report Validator', () => {
   });
 
   /**
-   * Test 2: Task count validation (exactly 30 total, 10 per frequency)
+   * Test 2: Task count validation (exactly 24 total, 8 per frequency)
    */
   describe('Task count validation', () => {
-    it('validates exactly 30 total tasks', () => {
+    it('validates exactly 24 total tasks', () => {
       const report = createReportWithCoreEATasks();
 
       const result = validateReport(report);
@@ -165,7 +165,7 @@ describe('Report Validator', () => {
       expect(result.errors.filter(e => e.includes('total tasks'))).toHaveLength(0);
     });
 
-    it('returns error when total tasks is not 30', () => {
+    it('returns error when total tasks is not 24', () => {
       const report = createValidReport();
       report.tasks.daily = report.tasks.daily.slice(0, 5); // Only 5 daily tasks
 
@@ -173,12 +173,12 @@ describe('Report Validator', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some(e => e.includes('total tasks'))).toBe(true);
-      expect(result.errors.some(e => e.includes('25'))).toBe(true); // 5 + 10 + 10 = 25
+      expect(result.errors.some(e => e.includes('21'))).toBe(true); // 5 + 8 + 8 = 21
     });
 
-    it('returns warning when daily tasks count is not 10', () => {
+    it('returns warning when daily tasks count is not 8', () => {
       const report = createValidReport();
-      // Add extra task to daily to trigger warning but maintain 30 total
+      // Add extra task to daily to trigger warning but maintain 24 total
       const extraTask: Task = {
         title: 'Extra Task',
         description: 'An extra task description for testing purposes.',
@@ -187,29 +187,29 @@ describe('Report Validator', () => {
         category: 'Operations',
       };
       report.tasks.daily.push(extraTask);
-      report.tasks.weekly = report.tasks.weekly.slice(0, 9); // Remove one weekly
+      report.tasks.weekly = report.tasks.weekly.slice(0, 7); // Remove one weekly
 
       const result = validateReport(report);
 
-      expect(result.warnings.some(w => w.includes('daily tasks') && w.includes('11'))).toBe(true);
-      expect(result.warnings.some(w => w.includes('weekly tasks') && w.includes('9'))).toBe(true);
+      expect(result.warnings.some(w => w.includes('daily tasks') && w.includes('9'))).toBe(true);
+      expect(result.warnings.some(w => w.includes('weekly tasks') && w.includes('7'))).toBe(true);
     });
 
-    it('validates 10 tasks per frequency', () => {
+    it('validates 8 tasks per frequency', () => {
       const report = createReportWithCoreEATasks();
       const analysis = analyzeReport(report);
 
-      expect(analysis.dailyTasks).toBe(10);
-      expect(analysis.weeklyTasks).toBe(10);
-      expect(analysis.monthlyTasks).toBe(10);
+      expect(analysis.dailyTasks).toBe(8);
+      expect(analysis.weeklyTasks).toBe(8);
+      expect(analysis.monthlyTasks).toBe(8);
     });
   });
 
   /**
-   * Test 3: EA percentage validation (>= 40%)
+   * Test 3: EA percentage validation (>= 50%)
    */
   describe('EA percentage validation', () => {
-    it('validates when EA percentage is at least 40%', () => {
+    it('validates when EA percentage is at least 50%', () => {
       const report = createReportWithCoreEATasks();
 
       const result = validateReport(report);
@@ -217,9 +217,9 @@ describe('Report Validator', () => {
       expect(result.errors.filter(e => e.includes('EA percentage'))).toHaveLength(0);
     });
 
-    it('returns error when EA percentage is below 40%', () => {
+    it('returns error when EA percentage is below 50%', () => {
       const report = createValidReport();
-      // Make most tasks founder tasks (only 3 EA tasks = 10%)
+      // Make most tasks founder tasks (only 3 EA tasks out of 24 = 13%)
       const founderTask: Task = {
         title: 'Founder Strategy Task',
         description: 'A strategic task that only the founder can perform.',
@@ -228,20 +228,20 @@ describe('Report Validator', () => {
         category: 'Strategy',
       };
 
-      report.tasks.daily = Array(10).fill(founderTask).map((t, i) => ({
+      report.tasks.daily = Array(8).fill(founderTask).map((t, i) => ({
         ...t,
         title: `Founder Task ${i + 1}`,
       }));
-      report.tasks.weekly = Array(10).fill(founderTask).map((t, i) => ({
+      report.tasks.weekly = Array(8).fill(founderTask).map((t, i) => ({
         ...t,
         title: `Founder Weekly Task ${i + 1}`,
       }));
-      report.tasks.monthly = Array(10).fill(founderTask).map((t, i) => ({
+      report.tasks.monthly = Array(8).fill(founderTask).map((t, i) => ({
         ...t,
         title: `Founder Monthly Task ${i + 1}`,
       }));
 
-      // Add only 3 EA tasks (10%)
+      // Add only 3 EA tasks (13%)
       report.tasks.daily[0].owner = 'EA';
       report.tasks.daily[0].isEA = true;
       report.tasks.weekly[0].owner = 'EA';
@@ -255,12 +255,12 @@ describe('Report Validator', () => {
       expect(result.errors.some(e => e.includes('EA percentage too low'))).toBe(true);
     });
 
-    it('passes when EA percentage is exactly 40%', () => {
+    it('passes when EA percentage is exactly 50%', () => {
       const report = createValidReport();
-      // 12 EA tasks out of 30 = 40%
+      // 12 EA tasks out of 24 = 50%
       const createMixedTasks = (eaCount: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] => {
         const tasks: Task[] = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 8; i++) {
           tasks.push({
             title: `Task ${i + 1} for ${frequency}`,
             description: `A detailed description for task ${i + 1} in the ${frequency} frequency.`,
@@ -273,7 +273,7 @@ describe('Report Validator', () => {
         return tasks;
       };
 
-      // 4 EA per frequency = 12 total EA = 40%
+      // 4 EA per frequency = 12 total EA out of 24 = 50%
       report.tasks.daily = createMixedTasks(4, 'daily');
       report.tasks.weekly = createMixedTasks(4, 'weekly');
       report.tasks.monthly = createMixedTasks(4, 'monthly');
@@ -426,35 +426,35 @@ describe('Report Validator', () => {
 
       const analysis = analyzeReport(report);
 
-      expect(analysis.totalTasks).toBe(30);
-      expect(analysis.dailyTasks).toBe(10);
-      expect(analysis.weeklyTasks).toBe(10);
-      expect(analysis.monthlyTasks).toBe(10);
+      expect(analysis.totalTasks).toBe(24);
+      expect(analysis.dailyTasks).toBe(8);
+      expect(analysis.weeklyTasks).toBe(8);
+      expect(analysis.monthlyTasks).toBe(8);
     });
 
     it('returns correct EA vs founder task counts', () => {
-      const report = createValidReport(); // 50% EA
+      const report = createValidReport(); // ~63% EA (5 EA + 3 Founder per frequency)
 
       const analysis = analyzeReport(report);
 
       expect(analysis.eaTasks).toBe(15);
-      expect(analysis.founderTasks).toBe(15);
+      expect(analysis.founderTasks).toBe(9);
     });
 
     it('calculates EA percentage using Math.round', () => {
       const report = createValidReport();
-      // 13 EA tasks out of 30 = 43.33...% -> rounds to 43%
+      // Convert 1 founder task per frequency to EA -> 18 EA / 24 = 75%
       report.tasks.daily[5].owner = 'EA';
       report.tasks.daily[5].isEA = true;
       report.tasks.weekly[5].owner = 'EA';
       report.tasks.weekly[5].isEA = true;
       report.tasks.monthly[5].owner = 'EA';
       report.tasks.monthly[5].isEA = true;
-      // Now 18 EA tasks = 60%
+      // Now 18 EA tasks out of 24
 
       const analysis = analyzeReport(report);
 
-      expect(analysis.eaPercentage).toBe(60); // 18/30 = 60%
+      expect(analysis.eaPercentage).toBe(75); // 18/24 = 75%
     });
 
     it('returns correct coreTasksPresent flags', () => {

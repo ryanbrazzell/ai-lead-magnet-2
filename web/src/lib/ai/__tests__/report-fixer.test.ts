@@ -36,30 +36,30 @@ function createTask(overrides: Partial<Task> = {}): Task {
  * Helper to create a valid TaskGenerationResult
  */
 function createValidReport(overrides: Partial<TaskGenerationResult> = {}): TaskGenerationResult {
-  const dailyTasks: Task[] = Array.from({ length: 10 }, (_, i) =>
+  const dailyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
     createTask({
       title: `Daily Task ${i + 1}`,
       frequency: 'daily',
-      isEA: i < 4, // 4 EA tasks per frequency for 40%
-      owner: i < 4 ? 'EA' : 'You',
+      isEA: i < 5, // 5 EA tasks per frequency for ~63%
+      owner: i < 5 ? 'EA' : 'You',
     })
   );
 
-  const weeklyTasks: Task[] = Array.from({ length: 10 }, (_, i) =>
+  const weeklyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
     createTask({
       title: `Weekly Task ${i + 1}`,
       frequency: 'weekly',
-      isEA: i < 4,
-      owner: i < 4 ? 'EA' : 'You',
+      isEA: i < 5,
+      owner: i < 5 ? 'EA' : 'You',
     })
   );
 
-  const monthlyTasks: Task[] = Array.from({ length: 10 }, (_, i) =>
+  const monthlyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
     createTask({
       title: `Monthly Task ${i + 1}`,
       frequency: 'monthly',
-      isEA: i < 4,
-      owner: i < 4 ? 'EA' : 'You',
+      isEA: i < 5,
+      owner: i < 5 ? 'EA' : 'You',
     })
   );
 
@@ -69,9 +69,9 @@ function createValidReport(overrides: Partial<TaskGenerationResult> = {}): TaskG
       weekly: weeklyTasks,
       monthly: monthlyTasks,
     },
-    ea_task_percent: 40,
-    ea_task_count: 12,
-    total_task_count: 30,
+    ea_task_percent: 63,
+    ea_task_count: 15,
+    total_task_count: 24,
     summary: 'Test report summary.',
     ...overrides,
   };
@@ -136,8 +136,8 @@ describe('report-fixer', () => {
       expect(hasEmailAfter).toBe(true);
       expect(hasCalendarAfter).toBe(true);
 
-      // Total should still be 30
-      expect(fixedAllTasks.length).toBe(30);
+      // Total should still be 24
+      expect(fixedAllTasks.length).toBe(24);
     });
 
     it('recalculates EA percentage after injection', () => {
@@ -177,7 +177,7 @@ describe('report-fixer', () => {
       const report = createValidReport();
 
       // Daily: All have delegatable keywords, all founder tasks
-      report.tasks.daily = Array.from({ length: 10 }, (_, i) =>
+      report.tasks.daily = Array.from({ length: 8 }, (_, i) =>
         createTask({
           title: `Schedule meeting ${i + 1}`,
           description: 'Coordinate and book meetings with clients',
@@ -188,7 +188,7 @@ describe('report-fixer', () => {
       );
 
       // Weekly: All have delegatable keywords, all founder tasks
-      report.tasks.weekly = Array.from({ length: 10 }, (_, i) =>
+      report.tasks.weekly = Array.from({ length: 8 }, (_, i) =>
         createTask({
           title: `Research topic ${i + 1}`,
           description: 'Compile research data and update records',
@@ -199,7 +199,7 @@ describe('report-fixer', () => {
       );
 
       // Monthly: 2 EA tasks, rest are founder with keywords
-      report.tasks.monthly = Array.from({ length: 10 }, (_, i) =>
+      report.tasks.monthly = Array.from({ length: 8 }, (_, i) =>
         createTask({
           title: `Process reports ${i + 1}`,
           description: 'Handle and organize monthly reports',
@@ -230,7 +230,7 @@ describe('report-fixer', () => {
     it('converts tasks with delegatable keywords first', () => {
       const report = createValidReport();
 
-      // Set up tasks - some with keywords, some without
+      // Set up tasks - some with keywords, some without; ALL founder tasks
       report.tasks.daily = [
         createTask({
           title: 'Schedule appointments',
@@ -250,10 +250,26 @@ describe('report-fixer', () => {
           isEA: false,
           owner: 'You',
         }),
-        ...Array.from({ length: 7 }, () =>
+        ...Array.from({ length: 5 }, () =>
           createTask({ isEA: false, owner: 'You' })
         ),
       ];
+
+      // Make weekly and monthly all founder tasks too
+      report.tasks.weekly = report.tasks.weekly.map((t) => ({
+        ...t,
+        title: 'Important task',
+        description: 'Critical founder-only work',
+        isEA: false,
+        owner: 'You' as const,
+      }));
+      report.tasks.monthly = report.tasks.monthly.map((t) => ({
+        ...t,
+        title: 'Important task',
+        description: 'Critical founder-only work',
+        isEA: false,
+        owner: 'You' as const,
+      }));
 
       report.ea_task_percent = 0;
 
@@ -273,16 +289,16 @@ describe('report-fixer', () => {
   });
 
   /**
-   * Test 3: fixTaskCount trims/pads to exactly 10 per frequency
+   * Test 3: fixTaskCount trims/pads to exactly 8 per frequency
    *
-   * This test verifies that task arrays are trimmed if over 10
-   * or padded with generic tasks if under 10.
+   * This test verifies that task arrays are trimmed if over 8
+   * or padded with generic tasks if under 8.
    */
   describe('fixTaskCount', () => {
-    it('trims tasks to 10 if over limit', () => {
+    it('trims tasks to 8 if over limit', () => {
       const report = createValidReport();
 
-      // Add extra tasks (12 daily instead of 10)
+      // Add extra tasks (12 daily instead of 8)
       report.tasks.daily = Array.from({ length: 12 }, (_, i) =>
         createTask({
           title: `Daily Task ${i + 1}`,
@@ -292,12 +308,12 @@ describe('report-fixer', () => {
 
       const fixedReport = fixTaskCount(report);
 
-      expect(fixedReport.tasks.daily.length).toBe(10);
-      expect(fixedReport.tasks.weekly.length).toBe(10);
-      expect(fixedReport.tasks.monthly.length).toBe(10);
+      expect(fixedReport.tasks.daily.length).toBe(8);
+      expect(fixedReport.tasks.weekly.length).toBe(8);
+      expect(fixedReport.tasks.monthly.length).toBe(8);
     });
 
-    it('pads tasks to 10 if under limit', () => {
+    it('pads tasks to 8 if under limit', () => {
       const report = createValidReport();
 
       // Reduce to only 5 daily tasks
@@ -308,8 +324,8 @@ describe('report-fixer', () => {
         })
       );
 
-      // Reduce to only 7 weekly tasks
-      report.tasks.weekly = Array.from({ length: 7 }, (_, i) =>
+      // Reduce to only 6 weekly tasks
+      report.tasks.weekly = Array.from({ length: 6 }, (_, i) =>
         createTask({
           title: `Weekly Task ${i + 1}`,
           frequency: 'weekly',
@@ -318,23 +334,23 @@ describe('report-fixer', () => {
 
       const fixedReport = fixTaskCount(report);
 
-      expect(fixedReport.tasks.daily.length).toBe(10);
-      expect(fixedReport.tasks.weekly.length).toBe(10);
-      expect(fixedReport.tasks.monthly.length).toBe(10);
+      expect(fixedReport.tasks.daily.length).toBe(8);
+      expect(fixedReport.tasks.weekly.length).toBe(8);
+      expect(fixedReport.tasks.monthly.length).toBe(8);
 
-      // Total should be exactly 30
+      // Total should be exactly 24
       const totalTasks =
         fixedReport.tasks.daily.length +
         fixedReport.tasks.weekly.length +
         fixedReport.tasks.monthly.length;
-      expect(totalTasks).toBe(30);
+      expect(totalTasks).toBe(24);
     });
 
     it('creates generic tasks with appropriate frequency', () => {
       const report = createValidReport();
 
-      // Reduce to only 8 monthly tasks
-      report.tasks.monthly = Array.from({ length: 8 }, (_, i) =>
+      // Reduce to only 6 monthly tasks
+      report.tasks.monthly = Array.from({ length: 6 }, (_, i) =>
         createTask({
           title: `Monthly Task ${i + 1}`,
           frequency: 'monthly',
@@ -344,7 +360,7 @@ describe('report-fixer', () => {
       const fixedReport = fixTaskCount(report);
 
       // The padded tasks should have valid structure
-      const paddedTasks = fixedReport.tasks.monthly.slice(8);
+      const paddedTasks = fixedReport.tasks.monthly.slice(6);
       paddedTasks.forEach((task) => {
         expect(task.title).toBeDefined();
         expect(task.title.length).toBeGreaterThan(0);
@@ -507,11 +523,11 @@ describe('report-fixer', () => {
         })
       );
 
-      const errors = ['Expected 30 total tasks, got 35'];
+      const errors = ['Expected 24 total tasks, got 31'];
 
       const fixedReport = fixReportIssues(report, errors);
 
-      expect(fixedReport.tasks.daily.length).toBe(10);
+      expect(fixedReport.tasks.daily.length).toBe(8);
     });
 
     it('handles multiple errors', () => {
@@ -547,7 +563,7 @@ describe('report-fixer', () => {
       report.ea_task_percent = 10;
 
       const errors = [
-        'Expected 30 total tasks, got 32',
+        'Expected 24 total tasks, got 28',
         'EA percentage too low: 10% (minimum 40%)',
       ];
 
@@ -559,7 +575,7 @@ describe('report-fixer', () => {
         fixedReport.tasks.weekly.length +
         fixedReport.tasks.monthly.length;
 
-      expect(totalTasks).toBe(30);
+      expect(totalTasks).toBe(24);
       expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
     });
   });

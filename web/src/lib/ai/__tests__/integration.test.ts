@@ -11,21 +11,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { UnifiedLeadData, TaskGenerationResult, Task } from '@/types';
 
-// Mock the Gemini client for integration tests
-vi.mock('../gemini-client', () => ({
-  generateWithGemini: vi.fn(),
+// Mock the Claude client for integration tests
+vi.mock('../claude-client', () => ({
+  generateWithClaude: vi.fn(),
   getApiKey: vi.fn(),
-  parseGeminiResponse: vi.fn(),
-  GEMINI_CONFIG: {
-    model: 'gemini-2.0-flash',
-    endpoint:
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  parseClaudeResponse: vi.fn(),
+  CLAUDE_CONFIG: {
+    model: 'claude-sonnet-4-5-20250929',
     temperature: 0.6,
-    maxOutputTokens: 3000,
-    responseMimeType: 'application/json',
-    timeout: 30000,
+    maxTokens: 8192,
+    timeout: 90000,
     maxRetries: 1,
   },
+}));
+
+// Mock website analyzer to prevent real HTTP calls
+vi.mock('@/lib/website/analyzer', () => ({
+  extractDomainFromEmail: vi.fn().mockReturnValue(null),
+  scrapeWebsiteContent: vi.fn(),
 }));
 
 import { generateTasks } from '../task-generator';
@@ -36,7 +39,7 @@ import {
   fixLowEAPercentage,
   fixTaskCount,
 } from '../report-fixer';
-import { generateWithGemini, getApiKey, parseGeminiResponse } from '../gemini-client';
+import { generateWithClaude, getApiKey, parseClaudeResponse } from '../claude-client';
 import { buildUnifiedPromptJSON } from '../prompts';
 
 describe('Integration Tests: AI Task Generation Service', () => {
@@ -49,29 +52,29 @@ describe('Integration Tests: AI Task Generation Service', () => {
   });
 
   /**
-   * Test 1: End-to-end: Valid lead data -> 30 tasks with 40%+ EA ratio
+   * Test 1: End-to-end: Valid lead data -> 24 tasks with 50%+ EA ratio
    *
    * Verifies the complete pipeline from lead data input to valid task output
    */
   describe('End-to-end: Valid lead data generates valid report', () => {
-    it('generates exactly 30 tasks with 40%+ EA ratio from valid lead data', async () => {
+    it('generates exactly 24 tasks with 50%+ EA ratio from valid lead data', async () => {
       const mockLeadData = createFullLeadData('main');
       const mockResult = createValidReportWithCoreEATasks();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
       // Verify task counts
-      expect(result.total_task_count).toBe(30);
-      expect(result.tasks.daily).toHaveLength(10);
-      expect(result.tasks.weekly).toHaveLength(10);
-      expect(result.tasks.monthly).toHaveLength(10);
+      expect(result.total_task_count).toBe(24);
+      expect(result.tasks.daily).toHaveLength(8);
+      expect(result.tasks.weekly).toHaveLength(8);
+      expect(result.tasks.monthly).toHaveLength(8);
 
-      // Verify EA ratio is at least 40%
+      // Verify EA ratio is at least 50%
       const analysis = analyzeReport(result);
-      expect(analysis.eaPercentage).toBeGreaterThanOrEqual(40);
-      expect(result.ea_task_percent).toBeGreaterThanOrEqual(40);
+      expect(analysis.eaPercentage).toBeGreaterThanOrEqual(50);
+      expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
 
       // Verify validation passes
       const validation = validateReport(result);
@@ -102,9 +105,9 @@ describe('Integration Tests: AI Task Generation Service', () => {
       expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
 
       // Verify task count is still correct
-      expect(fixedReport.tasks.daily).toHaveLength(10);
-      expect(fixedReport.tasks.weekly).toHaveLength(10);
-      expect(fixedReport.tasks.monthly).toHaveLength(10);
+      expect(fixedReport.tasks.daily).toHaveLength(8);
+      expect(fixedReport.tasks.weekly).toHaveLength(8);
+      expect(fixedReport.tasks.monthly).toHaveLength(8);
     });
 
     it('fixes task count issues correctly', () => {
@@ -117,16 +120,16 @@ describe('Integration Tests: AI Task Generation Service', () => {
         ...wrongCountReport.tasks.weekly,
         ...wrongCountReport.tasks.monthly,
       ];
-      expect(allTasksBefore.length).not.toBe(30);
+      expect(allTasksBefore.length).not.toBe(24);
 
       // Run the task count fixer
       const fixedReport = fixTaskCount(wrongCountReport);
 
-      // Verify task counts are now correct (10 per frequency)
-      expect(fixedReport.tasks.daily).toHaveLength(10);
-      expect(fixedReport.tasks.weekly).toHaveLength(10);
-      expect(fixedReport.tasks.monthly).toHaveLength(10);
-      expect(fixedReport.total_task_count).toBe(30);
+      // Verify task counts are now correct (8 per frequency)
+      expect(fixedReport.tasks.daily).toHaveLength(8);
+      expect(fixedReport.tasks.weekly).toHaveLength(8);
+      expect(fixedReport.tasks.monthly).toHaveLength(8);
+      expect(fixedReport.total_task_count).toBe(24);
     });
   });
 
@@ -157,13 +160,13 @@ describe('Integration Tests: AI Task Generation Service', () => {
       expect(finalAnalysis.coreTasksPresent.personalLifeManagement).toBe(true);
       expect(finalAnalysis.coreTasksPresent.businessProcessManagement).toBe(true);
 
-      // Verify task count is still 30
+      // Verify task count is still 24
       const allTasks = [
         ...fixedReport.tasks.daily,
         ...fixedReport.tasks.weekly,
         ...fixedReport.tasks.monthly,
       ];
-      expect(allTasks.length).toBe(30);
+      expect(allTasks.length).toBe(24);
     });
   });
 
@@ -177,7 +180,7 @@ describe('Integration Tests: AI Task Generation Service', () => {
       const mockLeadData = createFullLeadData('main');
       const mockResult = createReportWithMinorIssues();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       // Step 1: Generate tasks
       const generatedResult = await generateTasks(mockLeadData);
@@ -199,9 +202,9 @@ describe('Integration Tests: AI Task Generation Service', () => {
       expect(finalValidation.isValid).toBe(true);
 
       // Verify structure
-      expect(finalResult.tasks.daily).toHaveLength(10);
-      expect(finalResult.tasks.weekly).toHaveLength(10);
-      expect(finalResult.tasks.monthly).toHaveLength(10);
+      expect(finalResult.tasks.daily).toHaveLength(8);
+      expect(finalResult.tasks.weekly).toHaveLength(8);
+      expect(finalResult.tasks.monthly).toHaveLength(8);
     });
   });
 
@@ -220,13 +223,13 @@ describe('Integration Tests: AI Task Generation Service', () => {
       };
 
       const mockResult = createValidReportWithCoreEATasks();
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(minimalLead);
 
       // Verify we still get a valid result
-      expect(result.total_task_count).toBe(30);
-      expect(result.ea_task_percent).toBeGreaterThanOrEqual(40);
+      expect(result.total_task_count).toBe(24);
+      expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
 
       const validation = validateReport(result);
       expect(validation.isValid).toBe(true);
@@ -236,7 +239,7 @@ describe('Integration Tests: AI Task Generation Service', () => {
   /**
    * Test 6: Edge case: Markdown code block stripping in JSON parsing
    *
-   * Verifies the parseGeminiResponse function handles code blocks correctly
+   * Verifies the parseClaudeResponse function handles code blocks correctly
    */
   describe('Edge case: Markdown code block stripping', () => {
     it('strips ```json and ``` from response and parses correctly', () => {
@@ -244,7 +247,7 @@ describe('Integration Tests: AI Task Generation Service', () => {
       const wrappedJson = '```json\n' + JSON.stringify(mockResult) + '\n```';
 
       // Mock the actual parsing behavior
-      vi.mocked(parseGeminiResponse).mockImplementation((text: string) => {
+      vi.mocked(parseClaudeResponse).mockImplementation((text: string) => {
         let cleanedText = text.trim();
 
         // Strip markdown code blocks
@@ -262,17 +265,17 @@ describe('Integration Tests: AI Task Generation Service', () => {
         return JSON.parse(cleanedText) as TaskGenerationResult;
       });
 
-      const parsed = parseGeminiResponse(wrappedJson);
+      const parsed = parseClaudeResponse(wrappedJson);
 
-      expect(parsed.total_task_count).toBe(30);
-      expect(parsed.tasks.daily).toHaveLength(10);
+      expect(parsed.total_task_count).toBe(24);
+      expect(parsed.tasks.daily).toHaveLength(8);
     });
 
     it('handles json prefix without backticks', () => {
       const mockResult = createValidReportWithCoreEATasks();
       const prefixedJson = 'json\n' + JSON.stringify(mockResult);
 
-      vi.mocked(parseGeminiResponse).mockImplementation((text: string) => {
+      vi.mocked(parseClaudeResponse).mockImplementation((text: string) => {
         let cleanedText = text.trim();
 
         if (cleanedText.startsWith('json\n')) {
@@ -283,9 +286,9 @@ describe('Integration Tests: AI Task Generation Service', () => {
         return JSON.parse(cleanedText) as TaskGenerationResult;
       });
 
-      const parsed = parseGeminiResponse(prefixedJson);
+      const parsed = parseClaudeResponse(prefixedJson);
 
-      expect(parsed.total_task_count).toBe(30);
+      expect(parsed.total_task_count).toBe(24);
     });
   });
 
@@ -298,8 +301,8 @@ describe('Integration Tests: AI Task Generation Service', () => {
     it('throws error with proper message when API key is missing', async () => {
       const mockLeadData = createFullLeadData('main');
 
-      vi.mocked(generateWithGemini).mockRejectedValueOnce(
-        new Error('Missing API key: Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable')
+      vi.mocked(generateWithClaude).mockRejectedValueOnce(
+        new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable')
       );
 
       await expect(generateTasks(mockLeadData)).rejects.toThrow(/Missing API key/);
@@ -308,12 +311,12 @@ describe('Integration Tests: AI Task Generation Service', () => {
     it('getApiKey throws descriptive error when no keys are set', () => {
       vi.mocked(getApiKey).mockImplementation(() => {
         throw new Error(
-          'Missing API key: Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable'
+          'Missing API key: Set ANTHROPIC_API_KEY environment variable'
         );
       });
 
       expect(() => getApiKey()).toThrow(
-        'Missing API key: Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable'
+        'Missing API key: Set ANTHROPIC_API_KEY environment variable'
       );
     });
   });
@@ -338,7 +341,6 @@ describe('Integration Tests: AI Task Generation Service', () => {
 
       // Verify prompt structure is intact
       expect(prompt).toContain('OUTPUT JSON');
-      expect(prompt).toContain('DAILY TASKS MIX');
     });
   });
 });
@@ -399,10 +401,10 @@ function createValidReportWithCoreEATasks(): TaskGenerationResult {
       priority: 'high' as const,
     }));
 
-  // 5 EA + 5 Founder per frequency = 50% EA
-  const daily = [...createEATasks(5, 'daily'), ...createFounderTasks(5, 'daily')];
-  const weekly = [...createEATasks(5, 'weekly'), ...createFounderTasks(5, 'weekly')];
-  const monthly = [...createEATasks(5, 'monthly'), ...createFounderTasks(5, 'monthly')];
+  // 5 EA + 3 Founder per frequency = ~63% EA
+  const daily = [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')];
+  const weekly = [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')];
+  const monthly = [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')];
 
   // Add core EA tasks
   daily[0] = {
@@ -457,10 +459,10 @@ function createValidReportWithCoreEATasks(): TaskGenerationResult {
 
   return {
     tasks: { daily, weekly, monthly },
-    ea_task_percent: 50,
+    ea_task_percent: 63,
     ea_task_count: 15,
-    total_task_count: 30,
-    summary: 'Around 50% of tasks can be delegated to your EA.',
+    total_task_count: 24,
+    summary: 'Around 63% of tasks can be delegated to your EA.',
   };
 }
 
@@ -485,13 +487,13 @@ function createReportWithLowEAPercentage(): TaskGenerationResult {
   // All founder tasks = 0% EA, but with delegatable keywords
   return {
     tasks: {
-      daily: createFounderTasksWithKeywords(10, 'daily'),
-      weekly: createFounderTasksWithKeywords(10, 'weekly'),
-      monthly: createFounderTasksWithKeywords(10, 'monthly'),
+      daily: createFounderTasksWithKeywords(8, 'daily'),
+      weekly: createFounderTasksWithKeywords(8, 'weekly'),
+      monthly: createFounderTasksWithKeywords(8, 'monthly'),
     },
     ea_task_percent: 0,
     ea_task_count: 0,
-    total_task_count: 30,
+    total_task_count: 24,
     summary: '0% of tasks delegated.',
   };
 }
@@ -528,17 +530,17 @@ function createReportWithoutCoreEATasks(): TaskGenerationResult {
       priority: 'high' as const,
     }));
 
-  // 5 EA + 5 Founder per frequency = 50% EA, but no core tasks
+  // 5 EA + 3 Founder per frequency = ~63% EA, but no core tasks
   return {
     tasks: {
-      daily: [...createGenericEATasks(5, 'daily'), ...createFounderTasks(5, 'daily')],
-      weekly: [...createGenericEATasks(5, 'weekly'), ...createFounderTasks(5, 'weekly')],
-      monthly: [...createGenericEATasks(5, 'monthly'), ...createFounderTasks(5, 'monthly')],
+      daily: [...createGenericEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
+      weekly: [...createGenericEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
+      monthly: [...createGenericEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
     },
-    ea_task_percent: 50,
+    ea_task_percent: 63,
     ea_task_count: 15,
-    total_task_count: 30,
-    summary: '50% of tasks delegated.',
+    total_task_count: 24,
+    summary: '63% of tasks delegated.',
   };
 }
 
@@ -557,17 +559,17 @@ function createReportWithWrongTaskCount(): TaskGenerationResult {
       priority: 'medium' as const,
     }));
 
-  // 8 daily + 8 weekly + 9 monthly = 25 tasks (wrong count)
+  // 6 daily + 7 weekly + 9 monthly = 22 tasks (wrong count, not 24)
   // Has EA tasks so EA percentage is already high
   return {
     tasks: {
-      daily: createEATasks(8, 'daily'),
-      weekly: createEATasks(8, 'weekly'),
+      daily: createEATasks(6, 'daily'),
+      weekly: createEATasks(7, 'weekly'),
       monthly: createEATasks(9, 'monthly'),
     },
     ea_task_percent: 100,
-    ea_task_count: 25,
-    total_task_count: 25,
+    ea_task_count: 22,
+    total_task_count: 22,
     summary: '100% of tasks delegated.',
   };
 }
@@ -576,17 +578,42 @@ function createReportWithWrongTaskCount(): TaskGenerationResult {
  * Create a report with minor issues that needs fixing
  */
 function createReportWithMinorIssues(): TaskGenerationResult {
-  const report = createValidReportWithCoreEATasks();
+  const createEATasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
+    Array.from({ length: count }, (_, i) => ({
+      title: `Generic EA Task ${i + 1}`,
+      description: `A generic task without core EA keywords for ${frequency} frequency.`,
+      owner: 'EA' as const,
+      isEA: true,
+      category: 'General',
+      frequency,
+      priority: 'medium' as const,
+    }));
 
-  // Lower the EA percentage slightly below threshold
-  // Convert 4 EA tasks to founder tasks to get 37% EA
-  report.tasks.daily[2].isEA = false;
-  report.tasks.daily[2].owner = 'You';
-  report.tasks.weekly[2].isEA = false;
-  report.tasks.weekly[2].owner = 'You';
+  const createFounderTasks = (
+    count: number,
+    frequency: 'daily' | 'weekly' | 'monthly'
+  ): Task[] =>
+    Array.from({ length: count }, (_, i) => ({
+      title: `Founder Task ${i + 1}`,
+      description: `A strategic task for the founder in ${frequency} frequency.`,
+      owner: 'You' as const,
+      isEA: false,
+      category: 'Strategy',
+      frequency,
+      priority: 'high' as const,
+    }));
 
-  report.ea_task_percent = 37;
-  report.ea_task_count = 11;
-
-  return report;
+  // 5 EA + 3 Founder per frequency = 63% EA, but NO core EA task keywords
+  // Validation will fail due to missing core EA tasks, which ensureCoreEATasks will fix
+  return {
+    tasks: {
+      daily: [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
+      weekly: [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
+      monthly: [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
+    },
+    ea_task_percent: 63,
+    ea_task_count: 15,
+    total_task_count: 24,
+    summary: '63% of tasks delegated but missing core EA task types.',
+  };
 }

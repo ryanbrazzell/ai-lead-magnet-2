@@ -11,9 +11,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
 
-// Mock the Gemini client module
-vi.mock('../gemini-client', () => ({
-  generateWithGemini: vi.fn(),
+// Mock the Claude client module
+vi.mock('../claude-client', () => ({
+  generateWithClaude: vi.fn(),
+}));
+
+// Mock website analyzer to prevent real HTTP calls
+vi.mock('@/lib/website/analyzer', () => ({
+  extractDomainFromEmail: vi.fn().mockReturnValue(null),
+  scrapeWebsiteContent: vi.fn(),
 }));
 
 // Mock the prompts module
@@ -25,7 +31,7 @@ vi.mock('../prompts', () => ({
 }));
 
 import { generateTasks } from '../task-generator';
-import { generateWithGemini } from '../gemini-client';
+import { generateWithClaude } from '../claude-client';
 import {
   buildUnifiedPromptJSON,
   buildStreamlinedPrompt,
@@ -50,32 +56,32 @@ describe('Task Generator Service', () => {
   /**
    * Test 1: generateTasks returns TaskGenerationResult with 30 tasks
    */
-  describe('generateTasks returns TaskGenerationResult with 30 tasks', () => {
-    it('returns a TaskGenerationResult with exactly 30 tasks', async () => {
+  describe('generateTasks returns TaskGenerationResult with 24 tasks', () => {
+    it('returns a TaskGenerationResult with exactly 24 tasks', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
       expect(result).toBeDefined();
-      expect(result.total_task_count).toBe(30);
-      expect(result.tasks.daily).toHaveLength(10);
-      expect(result.tasks.weekly).toHaveLength(10);
-      expect(result.tasks.monthly).toHaveLength(10);
+      expect(result.total_task_count).toBe(24);
+      expect(result.tasks.daily).toHaveLength(8);
+      expect(result.tasks.weekly).toHaveLength(8);
+      expect(result.tasks.monthly).toHaveLength(8);
     });
 
     it('returns valid EA percentage and counts', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      expect(result.ea_task_percent).toBeGreaterThanOrEqual(40);
-      expect(result.ea_task_percent).toBeLessThanOrEqual(60);
+      expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
+      expect(result.ea_task_percent).toBeLessThanOrEqual(70);
       expect(result.ea_task_count).toBeGreaterThan(0);
       expect(result.summary).toBeDefined();
     });
@@ -84,7 +90,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
@@ -113,7 +119,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
@@ -125,7 +131,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('simple');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
@@ -137,7 +143,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('standard');
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
@@ -150,11 +156,11 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       vi.mocked(buildUnifiedPromptJSON).mockReturnValue('custom-unified-prompt');
-      vi.mocked(generateWithGemini).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
-      expect(generateWithGemini).toHaveBeenCalledWith('custom-unified-prompt');
+      expect(generateWithClaude).toHaveBeenCalledWith('custom-unified-prompt');
     });
   });
 
@@ -162,44 +168,52 @@ describe('Task Generator Service', () => {
    * Test 3: Error handling returns structured error response
    */
   describe('Error handling', () => {
-    it('throws structured error on Gemini API failure', async () => {
+    it('throws structured error on Claude API failure', async () => {
       const mockLeadData = createMockLeadData('main');
+      const apiError = new Error('Claude API error: rate limit exceeded');
 
-      vi.mocked(generateWithGemini).mockRejectedValue(
-        new Error('Gemini API error: rate limit exceeded')
-      );
+      vi.mocked(generateWithClaude)
+        .mockRejectedValueOnce(apiError)
+        .mockRejectedValueOnce(apiError)
+        .mockRejectedValueOnce(apiError);
 
       await expect(generateTasks(mockLeadData)).rejects.toThrow(
-        /Gemini API error/
+        /All task generation attempts failed/
       );
     });
 
     it('throws error with context on missing API key', async () => {
       const mockLeadData = createMockLeadData('main');
+      const apiKeyError = new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable');
 
-      vi.mocked(generateWithGemini).mockRejectedValue(
-        new Error('Missing API key: Set GEMINI_API_KEY or GOOGLE_API_KEY')
-      );
+      vi.mocked(generateWithClaude)
+        .mockRejectedValueOnce(apiKeyError)
+        .mockRejectedValueOnce(apiKeyError)
+        .mockRejectedValueOnce(apiKeyError);
 
       await expect(generateTasks(mockLeadData)).rejects.toThrow(/Missing API key/);
     });
 
     it('throws error with context on timeout', async () => {
       const mockLeadData = createMockLeadData('main');
+      const timeoutError = new Error('Claude API request timed out after 90000ms');
 
-      vi.mocked(generateWithGemini).mockRejectedValue(
-        new Error('Gemini API request timed out after 30000ms')
-      );
+      vi.mocked(generateWithClaude)
+        .mockRejectedValueOnce(timeoutError)
+        .mockRejectedValueOnce(timeoutError)
+        .mockRejectedValueOnce(timeoutError);
 
       await expect(generateTasks(mockLeadData)).rejects.toThrow(/timed out/);
     });
 
     it('includes lead type in error context', async () => {
       const mockLeadData = createMockLeadData('simple');
+      const networkError = new Error('Network error');
 
-      vi.mocked(generateWithGemini).mockRejectedValue(
-        new Error('Network error')
-      );
+      vi.mocked(generateWithClaude)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError);
 
       try {
         await generateTasks(mockLeadData);
@@ -207,7 +221,7 @@ describe('Task Generator Service', () => {
         expect(true).toBe(false);
       } catch (error) {
         const err = error as Error;
-        // Error is logged with lead type context (verified via console spy)
+        // Error wraps all attempt errors including the network error
         expect(err.message).toContain('Network error');
       }
     });
@@ -222,14 +236,14 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       // First call fails, second succeeds with simplified prompt
-      vi.mocked(generateWithGemini)
+      vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('First attempt failed'))
         .mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      expect(buildSimplifiedPrompt).toHaveBeenCalledWith(mockLeadData);
-      expect(result.total_task_count).toBe(30);
+      expect(buildSimplifiedPrompt).toHaveBeenCalledWith(expect.objectContaining({ leadType: 'main' }));
+      expect(result.total_task_count).toBe(24);
     });
 
     it('escalates to emergency prompt when simplified also fails', async () => {
@@ -237,7 +251,7 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       // First and second calls fail, third succeeds with emergency prompt
-      vi.mocked(generateWithGemini)
+      vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('First attempt failed'))
         .mockRejectedValueOnce(new Error('Simplified attempt failed'))
         .mockResolvedValueOnce(mockResult);
@@ -245,14 +259,14 @@ describe('Task Generator Service', () => {
       const result = await generateTasks(mockLeadData);
 
       expect(buildEmergencyPrompt).toHaveBeenCalled();
-      expect(result.total_task_count).toBe(30);
+      expect(result.total_task_count).toBe(24);
     });
 
     it('throws error after all fallback attempts exhausted', async () => {
       const mockLeadData = createMockLeadData('main');
 
       // All attempts fail
-      vi.mocked(generateWithGemini)
+      vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('First attempt failed'))
         .mockRejectedValueOnce(new Error('Simplified attempt failed'))
         .mockRejectedValueOnce(new Error('Emergency attempt failed'));
@@ -285,7 +299,7 @@ describe('Task Generator Service', () => {
       });
 
       // First two fail, third succeeds
-      vi.mocked(generateWithGemini)
+      vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('First attempt failed'))
         .mockRejectedValueOnce(new Error('Simplified attempt failed'))
         .mockResolvedValueOnce(mockResult);
@@ -330,21 +344,21 @@ function createMockTaskResult(): TaskGenerationResult {
       title: `Task ${i + 1}`,
       description:
         'A detailed task description that explains what needs to be done for this specific task.',
-      owner: i % 2 === 0 ? ('EA' as const) : ('You' as const),
-      isEA: i % 2 === 0,
+      owner: i < 5 ? ('EA' as const) : ('You' as const),
+      isEA: i < 5,
       category: 'General',
     }));
 
   return {
     tasks: {
-      daily: createTasks(10),
-      weekly: createTasks(10),
-      monthly: createTasks(10),
+      daily: createTasks(8),
+      weekly: createTasks(8),
+      monthly: createTasks(8),
     },
-    ea_task_percent: 50,
+    ea_task_percent: 63,
     ea_task_count: 15,
-    total_task_count: 30,
+    total_task_count: 24,
     summary:
-      'Based on what I can see, around 50 percent of these tasks could be in the hands of your EA.',
+      'Based on what I can see, around 63 percent of these tasks could be in the hands of your EA.',
   };
 }
