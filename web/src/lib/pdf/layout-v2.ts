@@ -1383,71 +1383,11 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
   // Page 2: Three Pillars + Core Four Framework
   buildFrameworkPage(doc);
 
-  // Page 3+: Daily EA Tasks
-  if (data.daily_tasks.length > 0) {
-    buildTasksPage(
-      doc,
-      data.daily_tasks,
-      'Top 5 Daily Tasks to Delegate to Your EA',
-      'High-frequency tasks eating your time every single day',
-      userData
-    );
-  }
+  // Pages 3+: Core Four Task Roadmap (flowing, multi-page)
+  buildCoreFourTaskPages(doc, data, userData);
 
-  // Daily Founder Tasks (what delegation frees you up for)
-  if (data.daily_founder_tasks && data.daily_founder_tasks.length > 0) {
-    buildFounderTasksPage(
-      doc,
-      data.daily_founder_tasks,
-      'Delegating Daily Tasks Frees You Up To...',
-      'Strategic activities that only YOU can do'
-    );
-  }
-
-  // Weekly EA Tasks
-  if (data.weekly_tasks.length > 0) {
-    buildTasksPage(
-      doc,
-      data.weekly_tasks,
-      'Top 5 Weekly Tasks to Delegate to Your EA',
-      'Recurring tasks that stack up week after week',
-      userData
-    );
-  }
-
-  // Weekly Founder Tasks
-  if (data.weekly_founder_tasks && data.weekly_founder_tasks.length > 0) {
-    buildFounderTasksPage(
-      doc,
-      data.weekly_founder_tasks,
-      'Delegating Weekly Tasks Frees You Up To...',
-      'High-value work that drives your business forward'
-    );
-  }
-
-  // Monthly EA Tasks
-  if (data.monthly_tasks.length > 0) {
-    buildTasksPage(
-      doc,
-      data.monthly_tasks,
-      'Top 5 Monthly Tasks to Delegate to Your EA',
-      'Administrative work that drains strategic thinking time',
-      userData
-    );
-  }
-
-  // Monthly Founder Tasks
-  if (data.monthly_founder_tasks && data.monthly_founder_tasks.length > 0) {
-    buildFounderTasksPage(
-      doc,
-      data.monthly_founder_tasks,
-      'Delegating Monthly Tasks Frees You Up To...',
-      'Big-picture initiatives that grow your business'
-    );
-  }
-
-  // Final Page: CTA
-  buildCTAPage(doc, userData);
+  // Final Page: Full-page CTA
+  buildCTAPageV2(doc, userData);
 
   // Add footers to all pages
   addFootersToAllPages(doc);
