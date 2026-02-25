@@ -20,15 +20,36 @@ import type { jsPDF } from 'jspdf';
 // DESIGN TOKENS
 // =============================================================================
 
-export const COLORS = {
-  white: '#FFFFFF',
-  ink: '#111827',
-  inkSecondary: '#4B5563',
-  inkMuted: '#9CA3AF',
-  accent: '#0D7377',
-  accentLight: '#E6F4F4',
-  divider: '#E5E7EB',
-  background: '#F9FAFB',
+/** RGB color tuple type for jsPDF direct calls */
+type RGB = readonly [number, number, number];
+
+/** Pre-computed RGB color constants — no runtime hex parsing */
+export const C = {
+  // Core V2 design system
+  white:        [255, 255, 255] as const satisfies RGB,
+  ink:          [17, 24, 39]    as const satisfies RGB,  // #111827
+  inkSecondary: [75, 85, 99]    as const satisfies RGB,  // #4B5563
+  inkMuted:     [156, 163, 175] as const satisfies RGB,  // #9CA3AF
+  accent:       [13, 115, 119]  as const satisfies RGB,  // #0D7377
+  accentLight:  [230, 244, 244] as const satisfies RGB,  // #E6F4F4
+  divider:      [229, 231, 235] as const satisfies RGB,  // #E5E7EB
+  background:   [249, 250, 251] as const satisfies RGB,  // #F9FAFB
+
+  // Cover page
+  coverBg:     [13, 115, 119]   as const satisfies RGB,  // Teal (same as accent)
+
+  // Framework page
+  frameworkBg: [17, 24, 39]     as const satisfies RGB,  // Dark ink
+
+  // Core Four area accents (placeholder — confirm with design before Phase 3)
+  emailAccent:    [59, 130, 246]  as const satisfies RGB,  // Blue #3B82F6
+  calendarAccent: [168, 85, 247]  as const satisfies RGB,  // Purple #A855F7
+  personalAccent: [234, 179, 8]   as const satisfies RGB,  // Amber #EAB308
+  businessAccent: [34, 197, 94]   as const satisfies RGB,  // Green #22C55E
+
+  // CTA page
+  ctaBg:   [13, 115, 119]  as const satisfies RGB,  // Teal
+  ctaText: [255, 255, 255] as const satisfies RGB,  // White
 } as const;
 
 // Layout constants (in mm for jsPDF)
@@ -40,22 +61,6 @@ const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
-/**
- * Convert hex color to RGB and set on document
- */
-function setColor(doc: jsPDF, hex: string, type: 'fill' | 'text' | 'draw'): void {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return;
-
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-
-  if (type === 'fill') doc.setFillColor(r, g, b);
-  else if (type === 'text') doc.setTextColor(r, g, b);
-  else if (type === 'draw') doc.setDrawColor(r, g, b);
-}
 
 /**
  * Draw a rounded rectangle (jsPDF doesn't have built-in support)
@@ -144,24 +149,24 @@ export interface PDFReportData {
  */
 export function renderHeader(doc: jsPDF, y: number): number {
   // Website URL at top right
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text('www.assistantlaunch.com', PAGE_WIDTH - MARGIN, y, { align: 'right' });
 
   // Brand name
-  setColor(doc, COLORS.accent, 'text');
+  doc.setTextColor(...C.accent);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('ASSISTANT LAUNCH', MARGIN, y);
 
   // Accent line
-  setColor(doc, COLORS.accent, 'draw');
+  doc.setDrawColor(...C.accent);
   doc.setLineWidth(0.5);
   doc.line(MARGIN, y + 3, MARGIN + 30, y + 3);
 
   // Title
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(26);
   doc.setFont('helvetica', 'bold');
   doc.text('Time Freedom Report', MARGIN, y + 18);
@@ -174,19 +179,19 @@ export function renderHeader(doc: jsPDF, y: number): number {
  */
 export function renderClientBlock(doc: jsPDF, name: string, date: string, y: number): number {
   // "Prepared for" label
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('Prepared for', MARGIN, y);
 
   // Client name
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text(name, MARGIN, y + 8);
 
   // Date
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(date, MARGIN, y + 15);
@@ -199,13 +204,13 @@ export function renderClientBlock(doc: jsPDF, name: string, date: string, y: num
  */
 export function renderHeroMetric(doc: jsPDF, value: string, label: string, y: number): number {
   // Large value
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(56);
   doc.setFont('helvetica', 'bold');
   doc.text(value, MARGIN, y + 20);
 
   // Label below
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text(label, MARGIN, y + 28);
@@ -228,17 +233,17 @@ export function renderMetricsRow(
     const x = MARGIN + index * (boxWidth + 8);
 
     // Box background
-    setColor(doc, COLORS.accentLight, 'fill');
+    doc.setFillColor(...C.accentLight);
     roundedRect(doc, x, y, boxWidth, boxHeight, 3, 'F');
 
     // Value (centered)
-    setColor(doc, COLORS.ink, 'text');
+    doc.setTextColor(...C.ink);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.text(metric.value, x + boxWidth / 2, y + 12, { align: 'center' });
 
     // Label (centered)
-    setColor(doc, COLORS.inkSecondary, 'text');
+    doc.setTextColor(...C.inkSecondary);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(metric.label, x + boxWidth / 2, y + 20, { align: 'center' });
@@ -260,17 +265,17 @@ export function renderAnalysisBlock(
   const blockHeight = lines.length * 5.5 + 18;
 
   // Left accent bar
-  setColor(doc, COLORS.accent, 'fill');
+  doc.setFillColor(...C.accent);
   doc.rect(MARGIN, y, 1.5, blockHeight, 'F');
 
   // Title
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text(title, MARGIN + 6, y + 6);
 
   // Text lines
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   let textY = y + 14;
@@ -296,42 +301,42 @@ export function renderInvestmentBlock(
   const blockHeight = 42;
 
   // Background
-  setColor(doc, COLORS.background, 'fill');
+  doc.setFillColor(...C.background);
   roundedRect(doc, MARGIN, y, CONTENT_WIDTH, blockHeight, 3, 'F');
 
   // Title
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text('THE INVESTMENT', MARGIN + 8, y + 8);
 
   // Row 1: Annual value unlocked
   let rowY = y + 16;
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text('Annual value you could unlock by delegating to your EA', MARGIN + 8, rowY);
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFont('helvetica', 'bold');
   doc.text(formatCurrency(annualValue), MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
 
   // Row 2: EA investment
   rowY += 8;
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFont('helvetica', 'normal');
   doc.text('EA investment (annual)', MARGIN + 8, rowY);
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFont('helvetica', 'bold');
   doc.text(`-${formatCurrency(eaCost)}`, MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
 
   // Divider line
-  setColor(doc, COLORS.divider, 'draw');
+  doc.setDrawColor(...C.divider);
   doc.setLineWidth(0.3);
   doc.line(MARGIN + 8, rowY + 4, MARGIN + CONTENT_WIDTH - 8, rowY + 4);
 
   // Row 3: Net return with ROI badge
   rowY += 10;
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Net annual return', MARGIN + 8, rowY);
@@ -339,14 +344,14 @@ export function renderInvestmentBlock(
   // ROI badge
   const badgeWidth = 22;
   const badgeX = MARGIN + CONTENT_WIDTH - 60;
-  setColor(doc, COLORS.accent, 'fill');
+  doc.setFillColor(...C.accent);
   roundedRect(doc, badgeX, rowY - 4, badgeWidth, 7, 3, 'F');
-  setColor(doc, COLORS.white, 'text');
+  doc.setTextColor(...C.white);
   doc.setFontSize(8);
   doc.text(`${roiMultiplier}x ROI`, badgeX + badgeWidth / 2, rowY, { align: 'center' });
 
   // Net return value
-  setColor(doc, COLORS.accent, 'text');
+  doc.setTextColor(...C.accent);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text(formatCurrency(netReturn), MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
@@ -364,14 +369,14 @@ export function renderSectionTitle(
   y: number
 ): number {
   // Title
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.text(title, MARGIN, y);
 
   // Subtitle
   if (subtitle) {
-    setColor(doc, COLORS.inkSecondary, 'text');
+    doc.setTextColor(...C.inkSecondary);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(subtitle, MARGIN, y + 8);
@@ -399,12 +404,12 @@ export function renderTaskCard(
   const circleY = y + circleRadius + 2;
 
   // Number circle - properly centered
-  setColor(doc, COLORS.accent, 'fill');
+  doc.setFillColor(...C.accent);
   doc.circle(circleX, circleY, circleRadius, 'F');
 
   // Number text - vertically centered in circle
   // jsPDF text baseline is at the bottom, so we need to offset by ~1/3 of font size
-  setColor(doc, COLORS.white, 'text');
+  doc.setTextColor(...C.white);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   const textYOffset = 1.2; // Adjust for visual centering
@@ -412,13 +417,13 @@ export function renderTaskCard(
 
   // Task name
   const textX = MARGIN + circleRadius * 2 + 6; // Start after circle with padding
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.text(name, textX, y + 7);
 
   // Description - full width, multi-line support
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
 
@@ -434,7 +439,7 @@ export function renderTaskCard(
   }
 
   // Time saved - below description
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(9);
   doc.text(`Time saved: ${timeSaved}`, textX, descY + 2);
 
@@ -442,7 +447,7 @@ export function renderTaskCard(
   const cardHeight = Math.max(35, 20 + descLines.length * 5 + 8);
 
   // Bottom divider line
-  setColor(doc, COLORS.divider, 'draw');
+  doc.setDrawColor(...C.divider);
   doc.setLineWidth(0.2);
   doc.line(MARGIN, y + cardHeight, MARGIN + CONTENT_WIDTH, y + cardHeight);
 
@@ -460,10 +465,10 @@ export function renderFounderTasksSection(
   if (!tasks || tasks.length === 0) return y;
 
   // Section header with accent background
-  setColor(doc, COLORS.accentLight, 'fill');
+  doc.setFillColor(...C.accentLight);
   roundedRect(doc, MARGIN, y, CONTENT_WIDTH, 10, 3, 'F');
 
-  setColor(doc, COLORS.accent, 'text');
+  doc.setTextColor(...C.accent);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Delegating this frees you up to:', MARGIN + 5, y + 7);
@@ -473,18 +478,18 @@ export function renderFounderTasksSection(
   // Render each founder task as a simple bullet item
   tasks.forEach((task) => {
     // Bullet point
-    setColor(doc, COLORS.accent, 'fill');
+    doc.setFillColor(...C.accent);
     doc.circle(MARGIN + 3, y + 2, 1.5, 'F');
 
     // Task name
-    setColor(doc, COLORS.ink, 'text');
+    doc.setTextColor(...C.ink);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text(task.name, MARGIN + 10, y + 4);
 
     // Description (if provided)
     if (task.description) {
-      setColor(doc, COLORS.inkSecondary, 'text');
+      doc.setTextColor(...C.inkSecondary);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const descLines = doc.splitTextToSize(task.description, CONTENT_WIDTH - 15);
@@ -544,11 +549,11 @@ export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): n
   const bookingUrl = buildBookingUrl(userData);
 
   // Background
-  setColor(doc, COLORS.accentLight, 'fill');
+  doc.setFillColor(...C.accentLight);
   roundedRect(doc, MARGIN, y, CONTENT_WIDTH, blockHeight, 4, 'F');
 
   // Title
-  setColor(doc, COLORS.ink, 'text');
+  doc.setTextColor(...C.ink);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text('Ready to Get Started?', PAGE_WIDTH / 2, y + 12, { align: 'center' });
@@ -558,9 +563,9 @@ export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): n
   const btnHeight = 13;
   const btnX = (PAGE_WIDTH - btnWidth) / 2;
   const btnY = y + 18;
-  setColor(doc, COLORS.accent, 'fill');
+  doc.setFillColor(...C.accent);
   roundedRect(doc, btnX, btnY, btnWidth, btnHeight, 6, 'F');
-  setColor(doc, COLORS.white, 'text');
+  doc.setTextColor(...C.white);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Schedule Free Consultation', PAGE_WIDTH / 2, btnY + 8, { align: 'center' });
@@ -569,7 +574,7 @@ export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): n
   doc.link(btnX, btnY, btnWidth, btnHeight, { url: bookingUrl });
 
   // URL display (also clickable) - show simple URL, actual link includes prefilled data
-  setColor(doc, COLORS.accent, 'text');
+  doc.setTextColor(...C.accent);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const urlText = 'assistantlaunch.com/book';
@@ -589,12 +594,12 @@ export function renderFooter(doc: jsPDF): void {
   const y = PAGE_HEIGHT - 15;
 
   // Divider line
-  setColor(doc, COLORS.divider, 'draw');
+  doc.setDrawColor(...C.divider);
   doc.setLineWidth(0.3);
   doc.line(MARGIN, y, MARGIN + CONTENT_WIDTH, y);
 
   // Footer text
-  setColor(doc, COLORS.inkMuted, 'text');
+  doc.setTextColor(...C.inkMuted);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text('Assistant Launch  •  assistantlaunch.com', PAGE_WIDTH / 2, y + 6, { align: 'center' });
@@ -667,17 +672,17 @@ export function buildFounderTasksPage(
   let y = 20;
 
   // Golden accent header for founder tasks
-  setColor(doc, COLORS.accentLight, 'fill');
+  doc.setFillColor(...C.accentLight);
   doc.rect(0, 0, PAGE_WIDTH, 50, 'F');
 
   // Title with accent color
-  setColor(doc, COLORS.accent, 'text');
+  doc.setTextColor(...C.accent);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.text(title, MARGIN, y + 15);
 
   // Subtitle
-  setColor(doc, COLORS.inkSecondary, 'text');
+  doc.setTextColor(...C.inkSecondary);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text(subtitle, MARGIN, y + 25);
@@ -687,26 +692,26 @@ export function buildFounderTasksPage(
   // Render each founder task with emphasis
   tasks.forEach((task, index) => {
     // Task card with accent border
-    setColor(doc, COLORS.accent, 'draw');
+    doc.setDrawColor(...C.accent);
     doc.setLineWidth(1);
     roundedRect(doc, MARGIN, y, CONTENT_WIDTH, 45, 4, 'S');
 
     // Number badge
-    setColor(doc, COLORS.accent, 'fill');
+    doc.setFillColor(...C.accent);
     doc.circle(MARGIN + 12, y + 12, 8, 'F');
-    setColor(doc, COLORS.white, 'text');
+    doc.setTextColor(...C.white);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(String(index + 1), MARGIN + 12, y + 14.5, { align: 'center' });
 
     // Task name
-    setColor(doc, COLORS.ink, 'text');
+    doc.setTextColor(...C.ink);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(task.name, MARGIN + 28, y + 14);
 
     // Description
-    setColor(doc, COLORS.inkSecondary, 'text');
+    doc.setTextColor(...C.inkSecondary);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const descLines = doc.splitTextToSize(task.description, CONTENT_WIDTH - 35);
