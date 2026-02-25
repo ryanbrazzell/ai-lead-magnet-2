@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** The PDF must make the reader think "I clearly need an assistant and I clearly can't do this alone"
-**Current focus:** Phase 3 — Core Four Task Pages + CTA
+**Current focus:** Phase 3 complete — ready for Phase 4
 
 ## Current Position
 
-Phase: 3 of 5 (Core Four Task Pages + CTA)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-25 — Completed 03-02-PLAN.md
+Phase: 3 of 5 (Core Four Task Pages + CTA) -- COMPLETE
+Plan: 3 of 3 in current phase
+Status: Phase Complete
+Last activity: 2026-02-25 — Completed 03-03-PLAN.md
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 2.5min
-- Total execution time: 0.25 hours
+- Total plans completed: 7
+- Average duration: 2.3min
+- Total execution time: 0.27 hours
 
 **By Phase:**
 
@@ -29,7 +29,7 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | 01-cleanup-foundation | 2 | 7min | 3.5min |
 | 02-cover-roi-framework | 2 | 4min | 2min |
-| 03-task-pages-cta | 2 | 4min | 2min |
+| 03-task-pages-cta | 3 | 6min | 2min |
 
 **Recent Trend:**
 - Last 5 plans: 2min, 2min, 2min, 2min, 2min
@@ -65,6 +65,10 @@ Recent decisions affecting current work:
 - [03-02]: FALLBACK_TASKS placed after inferCoreTaskType and before COMPONENT RENDERERS section
 - [03-02]: MIN_TASKS_PER_AREA set to 6 (matching 6 fallback tasks per area for overwhelm effect)
 - [03-02]: allEATasks collected from un-sliced eaTasks arrays (not the .slice(0,5) versions used by legacy frequency-based rendering)
+- [03-03]: buildCTAPageV2 is internal (not exported) -- called only by generateTimeFreedomReport
+- [03-03]: Removed Unicode checkmark from pillar bullets -- filled accent circles serve as reliable cross-viewer bullet indicators
+- [03-03]: Old buildTasksPage/buildFounderTasksPage/buildCTAPage retained (exported) but removed from orchestrator
+- [03-03]: total_tasks_ea still reflects old 15-task count -- should be updated in future refinement
 
 ### Pending Todos
 
@@ -78,5 +82,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 03-02-PLAN.md (Fallback content and Core Four data transform)
+Stopped at: Completed 03-03-PLAN.md (Full-page CTA and orchestrator rewire -- Phase 3 complete)
 Resume file: None
