@@ -689,6 +689,132 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
 }
 
 /**
+ * Build the framework page (page 2) — Three Pillars + Core Four
+ * All content is static / hardcoded (FRAME-04 requirement)
+ */
+function buildFrameworkPage(doc: jsPDF): void {
+  doc.addPage();
+  let y = 20;
+
+  // --- Static content constants ---
+  const THREE_PILLARS = [
+    {
+      title: 'Right Person',
+      description: 'Your EA must be trained in proven delegation frameworks, not just task execution. We place assistants skilled in email management, calendar optimization, personal life coordination, and business process ownership — so they can think ahead, not just follow instructions.',
+    },
+    {
+      title: 'Right Process & Systems',
+      description: 'Even a talented assistant will fail without the right systems. Our EAs deploy the Email GPS framework, calendar energy management, and documented playbooks for every recurring task — turning chaos into repeatable workflows.',
+    },
+    {
+      title: 'Right Support',
+      description: 'Delegation is not "set it and forget it." Assistant Launch provides active daily oversight, communication rhythm tracking, and ongoing integration support — so your EA relationship improves every week, not just the first.',
+    },
+  ] as const;
+
+  const CORE_FOUR = [
+    {
+      title: 'Email Ownership',
+      description: 'Your assistant triages everything using the Email GPS system — 7 folders, zero inbox for you. You review only what matters during a quick daily standup.',
+      accent: C.emailAccent,
+    },
+    {
+      title: 'Calendar Ownership',
+      description: 'Your assistant manages energy, not just time. They schedule two weeks ahead, protect your highest-value hours, and ensure your calendar reflects your priorities.',
+      accent: C.calendarAccent,
+    },
+    {
+      title: 'Personal Life Ownership',
+      description: 'Hotels, flights, Amazon returns, family logistics — all handled. Enabled by the Partnership Playbook, a detailed document that captures your preferences and routines.',
+      accent: C.personalAccent,
+    },
+    {
+      title: 'Recurring Business Processes',
+      description: 'Every repetitive task becomes a one-page playbook using the camcorder method: record yourself doing it once, and your assistant owns it forever.',
+      accent: C.businessAccent,
+    },
+  ] as const;
+
+  // --- Section 1: Three Pillars ---
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('The Three Pillars of Successful Delegation', MARGIN, y);
+  y += 10;
+
+  THREE_PILLARS.forEach((pillar, index) => {
+    // Number circle
+    doc.setFillColor(...C.accent);
+    doc.circle(MARGIN + 5, y + 5, 5, 'F');
+    doc.setTextColor(...C.white);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(index + 1), MARGIN + 5, y + 6.2, { align: 'center' });
+
+    // Title
+    doc.setTextColor(...C.ink);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(pillar.title, MARGIN + 16, y + 7);
+
+    // Description (wrapped using splitTextToSize for accurate measurement)
+    doc.setTextColor(...C.inkSecondary);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const lines = doc.splitTextToSize(pillar.description, CONTENT_WIDTH - 16);
+    let lineY = y + 14;
+    for (const line of lines) {
+      doc.text(line, MARGIN + 16, lineY);
+      lineY += 4.5;
+    }
+
+    // Advance y: minimum 25mm per item, or actual content height + padding
+    y += Math.max(25, 14 + lines.length * 4.5 + 6);
+  });
+
+  // --- Divider ---
+  doc.setDrawColor(...C.divider);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, y, MARGIN + CONTENT_WIDTH, y);
+  y += 8;
+
+  // --- Section 2: Core Four ---
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('The Core Four Ownership Areas', MARGIN, y);
+  y += 10;
+
+  CORE_FOUR.forEach((area) => {
+    const boxHeight = 25;
+
+    // Left accent bar
+    const accentColor: [number, number, number] = [...area.accent];
+    doc.setFillColor(...accentColor);
+    doc.rect(MARGIN, y, 2, boxHeight, 'F');
+
+    // Background box
+    doc.setFillColor(...C.background);
+    roundedRect(doc, MARGIN + 3, y, CONTENT_WIDTH - 3, boxHeight, 2, 'F');
+
+    // Title
+    doc.setTextColor(...C.ink);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(area.title, MARGIN + 8, y + 8);
+
+    // Description (wrapped, max 2 lines to stay within box)
+    doc.setTextColor(...C.inkSecondary);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const lines = doc.splitTextToSize(area.description, CONTENT_WIDTH - 12);
+    doc.text(lines.slice(0, 2), MARGIN + 8, y + 15);
+
+    y += boxHeight + 4;
+  });
+}
+
+/**
  * Build a tasks page (EA tasks only)
  */
 export function buildTasksPage(
