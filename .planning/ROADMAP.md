@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Cover & ROI + Framework Page** - Redesign page 1 cover/ROI, build page 2 Three Pillars + Core Four static educational content
 - [x] **Phase 3: Core Four Task Pages + CTA** - Build pages 3-4 with tasks organized by Core Four ownership areas, build final CTA page, wire orchestrator to new page sequence
 - [x] **Phase 4: AI Prompt Upgrade** - Update prompt for coreTaskType + richer descriptions, update validator/fixer pipeline
-- [ ] **Phase 5: PDF Visual Design** - Adversarial multi-perspective design process to finalize visual treatment across all pages
+- [x] **Phase 5: PDF Visual Design** - Adversarial multi-perspective design process to finalize visual treatment across all pages
 
 ## Phase Details
 
@@ -96,8 +96,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Adversarial multi-perspective design process (3 perspectives debate 8 dimensions), produce DESIGN-DECISIONS.md, user checkpoint for approval
-- [ ] 05-02-PLAN.md — Apply finalized design decisions to layout-v2.ts (color constants, per-page treatments, emotional differentiation)
+- [x] 05-01-PLAN.md — Adversarial multi-perspective design process (3 perspectives debate 8 dimensions), produce DESIGN-DECISIONS.md, user checkpoint for approval
+- [x] 05-02-PLAN.md — Apply finalized design decisions to layout-v2.ts (color constants, per-page treatments, emotional differentiation)
 
 ## Progress
 
@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Cover & ROI + Framework Page | 2/2 | Complete | 2026-02-25 |
 | 3. Core Four Task Pages + CTA | 3/3 | Complete | 2026-02-25 |
 | 4. AI Prompt Upgrade | 2/2 | Complete | 2026-02-25 |
-| 5. PDF Visual Design | 0/2 | Not started | - |
+| 5. PDF Visual Design | 2/2 | Complete | 2026-02-25 |
