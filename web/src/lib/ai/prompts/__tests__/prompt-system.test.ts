@@ -18,40 +18,45 @@ import type { UnifiedLeadData } from '@/types';
 
 describe('Prompt System', () => {
   describe('TIME_FREEDOM_PROMPT_JSON', () => {
-    it('contains the exact 240-line prompt with required sections', () => {
-      // Verify the prompt exists and has substantial content
+    it('contains required sections and coreTaskType classification', () => {
       expect(TIME_FREEDOM_PROMPT_JSON).toBeDefined();
       expect(typeof TIME_FREEDOM_PROMPT_JSON).toBe('string');
 
-      // Verify key sections are present (from original 240-line prompt)
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain(
-        'You are a professional Executive Assistant'
-      );
+      // Core structure sections
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('You are a professional Executive Assistant');
       expect(TIME_FREEDOM_PROMPT_JSON).toContain('{LEAD_CONTEXT}');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain(
-        'CRITICAL DISTRIBUTION REQUIREMENT'
-      );
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('DAILY TASKS MIX (10 total)');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('WEEKLY TASKS MIX (10 total)');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('MONTHLY TASKS MIX (10 total)');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('EA CAN HANDLE');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('FOUNDER MUST HANDLE');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('YOUR TASK');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('TASK GUIDELINES');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('PERSONALIZATION');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('TASK FORMAT');
       expect(TIME_FREEDOM_PROMPT_JSON).toContain('OUTPUT JSON');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('FINAL VALIDATION CHECKLIST');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain(
-        'Output ONLY valid JSON, no other text'
-      );
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('REQUIREMENTS');
 
-      // Verify core EA responsibilities section
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('EMAIL MANAGEMENT');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('CALENDAR MANAGEMENT');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('PERSONAL LIFE MANAGEMENT');
-      expect(TIME_FREEDOM_PROMPT_JSON).toContain('BUSINESS PROCESS MANAGEMENT');
+      // Task count requirements preserved
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('Exactly 24 tasks total');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('8 daily, 8 weekly, 8 monthly');
 
-      // Count lines - should be approximately 240 lines
+      // Phase 4: coreTaskType classification
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('CORE TASK CLASSIFICATION');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('coreTaskType');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('emailManagement');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('calendarManagement');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('personalLifeManagement');
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('businessProcessManagement');
+
+      // Phase 4: richer descriptions
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('2-3 sentences');
+
+      // Must NOT contain isCoreEATask (per research decision)
+      expect(TIME_FREEDOM_PROMPT_JSON).not.toContain('isCoreEATask');
+
+      // Output must be valid JSON only
+      expect(TIME_FREEDOM_PROMPT_JSON).toContain('Output ONLY valid JSON, no other text');
+
+      // Line count sanity check (prompt is ~100-150 lines after Phase 4)
       const lineCount = TIME_FREEDOM_PROMPT_JSON.split('\n').length;
-      expect(lineCount).toBeGreaterThanOrEqual(230);
-      expect(lineCount).toBeLessThanOrEqual(250);
+      expect(lineCount).toBeGreaterThanOrEqual(90);
+      expect(lineCount).toBeLessThanOrEqual(160);
     });
   });
 
@@ -123,17 +128,15 @@ describe('Prompt System', () => {
 
       const serialized = serializeLeadData(leadData);
 
-      expect(serialized).toContain('--- WEBSITE ANALYSIS ---');
-      expect(serialized).toContain('Industry: Software');
-      expect(serialized).toContain('Business Category: Technology');
+      expect(serialized).toContain('--- COMPANY WEBSITE CONTENT ---');
+      expect(serialized).toContain('Website URL: https://techstartup.com');
+      expect(serialized).toContain('Website Title: TechStartup Inc');
       expect(serialized).toContain(
-        'Key Services: Consulting, Development, Support'
+        'Website Description: Leading tech solutions provider'
       );
-      expect(serialized).toContain('Estimated Team Size: 50-100');
-      expect(serialized).toContain(
-        'Business Description: Leading tech solutions provider'
-      );
-      expect(serialized).toContain('Website Analysis Confidence: High');
+      expect(serialized).toContain('RAW WEBSITE CONTENT');
+      expect(serialized).toContain('innovation');
+      expect(serialized).toContain('END WEBSITE CONTENT');
     });
   });
 
