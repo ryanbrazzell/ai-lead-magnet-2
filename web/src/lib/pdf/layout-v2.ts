@@ -988,6 +988,106 @@ export function buildCTAPage(doc: jsPDF, userData?: CTAUserData): void {
 }
 
 /**
+ * Render one Core Four section: accent-colored header bar + task cards.
+ * Returns the y position after the last task.
+ *
+ * @param doc - jsPDF instance
+ * @param group - The Core Four task group to render
+ * @param startingTaskNumber - Global task number for first task in this section
+ * @param y - Current y position
+ * @returns Updated y position after rendering all tasks
+ */
+function renderCoreFourSection(
+  doc: jsPDF,
+  group: CoreFourTaskGroup,
+  startingTaskNumber: number,
+  y: number,
+): number {
+  const headerHeight = 14;
+  const minimumOneTaskHeight = 35; // Minimum task card height
+
+  // Section header with accent color bar — check page break for header + at least one task
+  y = checkPageBreak(doc, y, headerHeight + 6 + minimumOneTaskHeight);
+
+  // Draw accent-colored header bar
+  const accentColor: [number, number, number] = [...group.accent];
+  doc.setFillColor(...accentColor);
+  doc.rect(MARGIN, y, CONTENT_WIDTH, headerHeight, 'F');
+
+  // Header title text (white on colored bar)
+  doc.setTextColor(...C.white);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(group.title, MARGIN + 6, y + 9);
+
+  y += headerHeight + 6; // Gap below header bar
+
+  // Subtitle below header
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(group.subtitle, MARGIN + 6, y);
+  y += 8;
+
+  // Render each task card with page break protection
+  group.tasks.forEach((task, index) => {
+    // Pre-measure description to estimate card height (same formula as renderTaskCard)
+    const descMaxWidth = CONTENT_WIDTH - (5 * 2 + 6); // circleRadius*2 + padding
+    const descLines = doc.splitTextToSize(task.description || '', descMaxWidth);
+    const estimatedCardHeight = Math.max(35, 20 + descLines.length * 5 + 8);
+
+    y = checkPageBreak(doc, y, estimatedCardHeight);
+    y = renderTaskCard(doc, startingTaskNumber + index, task.name, task.description, task.time_saved, y);
+  });
+
+  return y + 8; // Spacing before next section
+}
+
+/**
+ * Build all Core Four task pages (flowing, multi-page).
+ * Renders each Core Four section sequentially with accent headers.
+ * Task numbering is continuous across all sections for overwhelm effect.
+ */
+function buildCoreFourTaskPages(
+  doc: jsPDF,
+  data: PDFReportData,
+  userData?: CTAUserData,
+): void {
+  if (!data.core_four_groups || data.core_four_groups.length === 0) return;
+
+  doc.addPage();
+  let y = 20;
+
+  // Page title for the first task page
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Your Personalized Task Roadmap', MARGIN, y);
+
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Everything an EA could own in your business — organized by the Core Four', MARGIN, y + 8);
+  y += 18;
+
+  // Render each Core Four section with continuous task numbering
+  let globalTaskNumber = 1;
+  for (const group of data.core_four_groups) {
+    y = renderCoreFourSection(doc, group, globalTaskNumber, y);
+    globalTaskNumber += group.tasks.length;
+  }
+
+  // Optional inline CTA if space remains on the last task page
+  if (userData) {
+    const ctaBlockHeight = 55;
+    if (y + ctaBlockHeight + 10 < 270) {
+      y += 5;
+      renderCTABlock(doc, y, userData);
+    }
+  }
+}
+
+/**
  * Add footers to all pages
  */
 export function addFootersToAllPages(doc: jsPDF): void {
