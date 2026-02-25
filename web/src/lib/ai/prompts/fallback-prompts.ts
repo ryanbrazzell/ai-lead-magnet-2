@@ -50,17 +50,19 @@ export function buildSimplifiedPrompt(leadData: UnifiedLeadData): string {
 
   return `Create a personalized EA Time Freedom Report for ${name}, a ${businessContext} owner.
 
-Generate exactly 30 tasks (10 daily, 10 weekly, 10 monthly) focusing on ${challengeContext}.
+Generate exactly 24 tasks (8 daily, 8 weekly, 8 monthly) focusing on ${challengeContext}.
 
 MANDATORY: Include these 4 core EA areas:
-1. Complete email management (daily EA task)
-2. Calendar and scheduling management (daily EA task)
-3. Personal life coordination (weekly EA task)
-4. Business process management (monthly EA task)
+1. Complete email management (daily EA task, coreTaskType: "emailManagement")
+2. Calendar and scheduling management (daily EA task, coreTaskType: "calendarManagement")
+3. Personal life coordination (weekly EA task, coreTaskType: "personalLifeManagement")
+4. Business process management (monthly EA task, coreTaskType: "businessProcessManagement")
+
+Every task must include a coreTaskType field: "emailManagement", "calendarManagement", "personalLifeManagement", or "businessProcessManagement".
 
 Requirements:
-- At least 12 tasks delegatable to EA (40% minimum)
-- Clear titles and detailed descriptions
+- At least 15 tasks delegatable to EA (63%)
+- Clear titles and 2-3 sentence descriptions with specific actions
 - Professional HTML format with sections
 - Executive summary and conclusion
 
@@ -78,14 +80,15 @@ Focus on practical, actionable tasks that save the most time when delegated.`;
 export function buildEmergencyPrompt(): string {
   log.warn('Using emergency fallback prompt - minimal context available');
 
-  return `Generate a standard EA Time Freedom Report with 30 tasks.
+  return `Generate a standard EA Time Freedom Report with 24 tasks.
 
 Structure:
-- 10 daily tasks (include email management, calendar management)
-- 10 weekly tasks (include personal life management)
-- 10 monthly tasks (include business process management)
+- 8 daily tasks (include email management, calendar management)
+- 8 weekly tasks (include personal life management)
+- 8 monthly tasks (include business process management)
 
-At least 12 tasks must be EA-delegatable (isEA: true).
+At least 15 tasks must be EA-delegatable (isEA: true).
+Every task must include coreTaskType: emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement.
 Include professional HTML formatting with executive summary.
 Focus on common business owner pain points and delegation opportunities.`;
 }
@@ -124,8 +127,9 @@ export function buildStreamlinedPrompt(leadData: UnifiedLeadData): string {
   if (isNewForm) {
     return `${name} EA Report - ${businessContext}:
 
-30 tasks (10 each: daily/weekly/monthly). 40%+ EA-owned.
+24 tasks (8 each: daily/weekly/monthly). 63%+ EA-owned.
 
+Include coreTaskType on each task: emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement.
 Include: Email Mgmt (daily EA), Calendar (daily EA), Personal Life (weekly EA), Process Mgmt (monthly EA).
 
 Focus: ${challengeContext}. HTML format.`;
