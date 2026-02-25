@@ -163,6 +163,11 @@ export interface PDFReportData {
   daily_founder_tasks?: PDFTask[];
   weekly_founder_tasks?: PDFTask[];
   monthly_founder_tasks?: PDFTask[];
+
+  // Cover page context (Phase 2: COVER-01, COVER-02)
+  company_name?: string;       // From UnifiedLeadData.businessType
+  revenue_range?: string;      // From ROICalculation.revenueRange (e.g., "$500k-$1M")
+  ceo_hourly_rate?: number;    // From ROICalculation.ceoHourlyRate (for "$X/hr work" messaging)
 }
 
 // =============================================================================

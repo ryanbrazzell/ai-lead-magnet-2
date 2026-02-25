@@ -165,6 +165,11 @@ function transformToPDFData(
     daily_founder_tasks: dailyFounderTasks,
     weekly_founder_tasks: weeklyFounderTasks,
     monthly_founder_tasks: monthlyFounderTasks,
+
+    // Cover page context (Phase 2)
+    company_name: leadData.businessType || undefined,
+    revenue_range: roi?.revenueRange || undefined,
+    ceo_hourly_rate: roi?.ceoHourlyRate || undefined,
   };
 }
 
