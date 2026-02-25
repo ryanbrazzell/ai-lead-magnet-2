@@ -948,10 +948,13 @@ export function addFootersToAllPages(doc: jsPDF): void {
  * Generate the complete Time Freedom Report PDF
  */
 export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userData?: CTAUserData): void {
-  // Page 1: Summary
+  // Page 1: Cover + ROI
   buildSummaryPage(doc, data);
 
-  // Page 2: Daily EA Tasks
+  // Page 2: Three Pillars + Core Four Framework
+  buildFrameworkPage(doc);
+
+  // Page 3+: Daily EA Tasks
   if (data.daily_tasks.length > 0) {
     buildTasksPage(
       doc,
@@ -962,7 +965,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
     );
   }
 
-  // Page 3: Daily Founder Tasks (what delegation frees you up for)
+  // Daily Founder Tasks (what delegation frees you up for)
   if (data.daily_founder_tasks && data.daily_founder_tasks.length > 0) {
     buildFounderTasksPage(
       doc,
@@ -972,7 +975,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
     );
   }
 
-  // Page 4: Weekly EA Tasks
+  // Weekly EA Tasks
   if (data.weekly_tasks.length > 0) {
     buildTasksPage(
       doc,
@@ -983,7 +986,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
     );
   }
 
-  // Page 5: Weekly Founder Tasks
+  // Weekly Founder Tasks
   if (data.weekly_founder_tasks && data.weekly_founder_tasks.length > 0) {
     buildFounderTasksPage(
       doc,
@@ -993,7 +996,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
     );
   }
 
-  // Page 6: Monthly EA Tasks
+  // Monthly EA Tasks
   if (data.monthly_tasks.length > 0) {
     buildTasksPage(
       doc,
@@ -1004,7 +1007,7 @@ export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userD
     );
   }
 
-  // Page 7: Monthly Founder Tasks
+  // Monthly Founder Tasks
   if (data.monthly_founder_tasks && data.monthly_founder_tasks.length > 0) {
     buildFounderTasksPage(
       doc,
