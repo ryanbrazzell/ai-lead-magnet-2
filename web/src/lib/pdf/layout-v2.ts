@@ -1225,6 +1225,140 @@ function buildCoreFourTaskPages(
 }
 
 /**
+ * Build the full-page CTA (final page of the PDF).
+ * Reinforces Three Pillars value proposition and drives Time Audit booking.
+ * CTA-01: Strong CTA for Time Audit call
+ * CTA-02: Clickable booking link
+ * CTA-03: Value proposition reinforcement
+ */
+function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
+  doc.addPage();
+  let y = 20;
+  const bookingUrl = buildBookingUrl(userData);
+
+  // --- Headline ---
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.text("You Don't Have to Do This Alone", PAGE_WIDTH / 2, y + 15, { align: 'center' });
+  y += 30;
+
+  // --- Subheadline ---
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  const subheadLines = doc.splitTextToSize(
+    'The tasks in this report are real — and they are consuming hours of your week that should be spent on strategy, relationships, and the work only you can do. But delegation done wrong wastes even more time.',
+    CONTENT_WIDTH - 20,
+  );
+  doc.text(subheadLines, MARGIN + 10, y);
+  y += subheadLines.length * 5.5 + 10;
+
+  // --- Three Pillars Reminder (compact) ---
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('What It Actually Takes', PAGE_WIDTH / 2, y, { align: 'center' });
+  y += 10;
+
+  const pillars = [
+    { label: 'Right Person', desc: 'An EA trained in delegation frameworks, not just task execution' },
+    { label: 'Right Process', desc: 'Proven systems like Email GPS, calendar energy management, and documented playbooks' },
+    { label: 'Right Support', desc: 'Active daily oversight and ongoing integration — not "set it and forget it"' },
+  ];
+
+  for (const pillar of pillars) {
+    // Accent bullet
+    doc.setFillColor(...C.accent);
+    doc.circle(MARGIN + 12, y + 3, 3, 'F');
+
+    // Pillar label
+    doc.setTextColor(...C.ink);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(pillar.label, MARGIN + 20, y + 5);
+
+    // Pillar description
+    doc.setTextColor(...C.inkSecondary);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(pillar.desc, MARGIN + 20, y + 11);
+
+    y += 18;
+  }
+
+  y += 8;
+
+  // --- What Happens on a Time Audit Call ---
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('What Happens on Your Free Time Audit', PAGE_WIDTH / 2, y, { align: 'center' });
+  y += 10;
+
+  const auditSteps = [
+    'We review your specific time drains and identify the highest-impact tasks to delegate first',
+    'We map your tasks to the Core Four framework so you can see exactly what an EA would own',
+    'We determine if Assistant Launch is the right fit — and if so, match you with a trained EA within days',
+  ];
+
+  auditSteps.forEach((step, index) => {
+    // Step number circle
+    doc.setFillColor(...C.accent);
+    doc.circle(MARGIN + 12, y + 3, 5, 'F');
+    doc.setTextColor(...C.white);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(index + 1), MARGIN + 12, y + 4.5, { align: 'center' });
+
+    // Step text
+    doc.setTextColor(...C.inkSecondary);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const stepLines = doc.splitTextToSize(step, CONTENT_WIDTH - 30);
+    doc.text(stepLines, MARGIN + 22, y + 5);
+    y += Math.max(16, stepLines.length * 5 + 8);
+  });
+
+  y += 12;
+
+  // --- Large CTA Button ---
+  const btnWidth = 120;
+  const btnHeight = 16;
+  const btnX = (PAGE_WIDTH - btnWidth) / 2;
+
+  doc.setFillColor(...C.accent);
+  doc.roundedRect(btnX, y, btnWidth, btnHeight, 6, 6, 'F');
+  doc.setTextColor(...C.white);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Book Your Free Time Audit', PAGE_WIDTH / 2, y + 10.5, { align: 'center' });
+
+  // Make button clickable
+  doc.link(btnX, y, btnWidth, btnHeight, { url: bookingUrl });
+
+  y += btnHeight + 6;
+
+  // Display URL (also clickable)
+  doc.setTextColor(...C.accent);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  const urlText = 'assistantlaunch.com/book';
+  doc.text(urlText, PAGE_WIDTH / 2, y + 2, { align: 'center' });
+
+  const urlWidth = doc.getTextWidth(urlText);
+  doc.link((PAGE_WIDTH - urlWidth) / 2, y - 1, urlWidth, 6, { url: bookingUrl });
+
+  y += 12;
+
+  // --- Reassurance line ---
+  doc.setTextColor(...C.inkMuted);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('No obligation. 30 minutes. We\'ll show you exactly where to start.', PAGE_WIDTH / 2, y, { align: 'center' });
+}
+
+/**
  * Add footers to all pages
  */
 export function addFootersToAllPages(doc: jsPDF): void {
