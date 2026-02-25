@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Cleanup & Foundation** - Delete dead V1 code, build RGB color system and checkPageBreak utility, extend PDFReportData for Core Four grouping
 - [x] **Phase 2: Cover & ROI + Framework Page** - Redesign page 1 cover/ROI, build page 2 Three Pillars + Core Four static educational content
-- [ ] **Phase 3: Core Four Task Pages + CTA** - Build pages 3-4 with tasks organized by Core Four ownership areas, build final CTA page, wire orchestrator to new page sequence
+- [x] **Phase 3: Core Four Task Pages + CTA** - Build pages 3-4 with tasks organized by Core Four ownership areas, build final CTA page, wire orchestrator to new page sequence
 - [ ] **Phase 4: AI Prompt Upgrade** - Update prompt for coreTaskType + richer descriptions, update validator/fixer pipeline
 - [ ] **Phase 5: PDF Visual Design** - Adversarial multi-perspective design process to finalize visual treatment across all pages
 
@@ -66,9 +66,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Add CoreFourArea types, inferCoreTaskType keyword classifier, and buildCoreFourTaskPages multi-page renderer with accent headers and continuous task numbering
-- [ ] 03-02-PLAN.md — Define 24 fallback PDFTask objects (6 per Core Four area), build groupTasksByCoreFour data transform, wire into transformToPDFData
-- [ ] 03-03-PLAN.md — Build buildCTAPageV2 full-page CTA with value proposition, rewire generateTimeFreedomReport to Core Four + CTA page sequence
+- [x] 03-01-PLAN.md — Add CoreFourArea types, inferCoreTaskType keyword classifier, and buildCoreFourTaskPages multi-page renderer with accent headers and continuous task numbering
+- [x] 03-02-PLAN.md — Define 24 fallback PDFTask objects (6 per Core Four area), build groupTasksByCoreFour data transform, wire into transformToPDFData
+- [x] 03-03-PLAN.md — Build buildCTAPageV2 full-page CTA with value proposition, rewire generateTimeFreedomReport to Core Four + CTA page sequence
 
 ### Phase 4: AI Prompt Upgrade
 **Goal**: The AI generates tasks with explicit Core Four classification and richer descriptions, improving grouping precision and content quality without breaking the existing validator/fixer pipeline
@@ -108,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Cleanup & Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. Cover & ROI + Framework Page | 2/2 | Complete | 2026-02-25 |
-| 3. Core Four Task Pages + CTA | 0/3 | Not started | - |
+| 3. Core Four Task Pages + CTA | 3/3 | Complete | 2026-02-25 |
 | 4. AI Prompt Upgrade | 0/2 | Not started | - |
 | 5. PDF Visual Design | 0/2 | Not started | - |
