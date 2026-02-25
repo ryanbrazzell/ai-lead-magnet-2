@@ -13,7 +13,7 @@ Transform the EA Time Freedom Report PDF from a flat ROI + task list into a stru
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Cleanup & Foundation** - Delete dead V1 code, build RGB color system and checkPageBreak utility, extend PDFReportData for Core Four grouping
-- [ ] **Phase 2: Cover & ROI + Framework Page** - Redesign page 1 cover/ROI, build page 2 Three Pillars + Core Four static educational content
+- [x] **Phase 2: Cover & ROI + Framework Page** - Redesign page 1 cover/ROI, build page 2 Three Pillars + Core Four static educational content
 - [ ] **Phase 3: Core Four Task Pages + CTA** - Build pages 3-4 with tasks organized by Core Four ownership areas, build final CTA page, wire orchestrator to new page sequence
 - [ ] **Phase 4: AI Prompt Upgrade** - Update prompt for coreTaskType + richer descriptions, update validator/fixer pipeline
 - [ ] **Phase 5: PDF Visual Design** - Adversarial multi-perspective design process to finalize visual treatment across all pages
@@ -48,8 +48,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Extend PDFReportData with company context fields, thread data from generator, redesign buildSummaryPage with company name and ROI pain messaging
-- [ ] 02-02-PLAN.md — Create buildFrameworkPage with hardcoded Three Pillars + Core Four content, wire into orchestrator as page 2
+- [x] 02-01-PLAN.md — Extend PDFReportData with company context fields, thread data from generator, redesign buildSummaryPage with company name and ROI pain messaging
+- [x] 02-02-PLAN.md — Create buildFrameworkPage with hardcoded Three Pillars + Core Four content, wire into orchestrator as page 2
 
 ### Phase 3: Core Four Task Pages + CTA
 **Goal**: The PDF's central conversion mechanism works — personalized tasks organized by Core Four areas create deliberate overwhelm, and a strong CTA page drives the reader to book a Time Audit call
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cleanup & Foundation | 2/2 | Complete | 2026-02-24 |
-| 2. Cover & ROI + Framework Page | 0/2 | Not started | - |
+| 2. Cover & ROI + Framework Page | 2/2 | Complete | 2026-02-25 |
 | 3. Core Four Task Pages + CTA | 0/3 | Not started | - |
 | 4. AI Prompt Upgrade | 0/2 | Not started | - |
 | 5. PDF Visual Design | 0/2 | Not started | - |
