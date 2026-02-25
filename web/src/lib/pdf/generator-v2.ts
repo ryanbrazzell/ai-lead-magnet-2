@@ -13,6 +13,11 @@ import {
   generateTimeFreedomReport,
   type PDFReportData,
   type PDFTask,
+  type CoreFourArea,
+  type CoreFourTaskGroup,
+  inferCoreTaskType,
+  FALLBACK_TASKS,
+  C,
 } from './layout-v2';
 import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
 
@@ -69,6 +74,79 @@ function transformTask(task: Task, frequency: 'daily' | 'weekly' | 'monthly'): P
     description: task.description,
     time_saved: timeSaved,
   };
+}
+
+/**
+ * Group all EA tasks by Core Four ownership area.
+ * Uses inferCoreTaskType for classification, then injects fallback
+ * tasks for any area with fewer than 6 personalized tasks.
+ *
+ * @param allEATasks - All EA tasks across all frequencies
+ * @returns Array of 4 CoreFourTaskGroup objects, one per area
+ */
+function groupTasksByCoreFour(allEATasks: Task[]): CoreFourTaskGroup[] {
+  // Initialize buckets
+  const groups: Record<CoreFourArea, PDFTask[]> = {
+    email: [],
+    calendar: [],
+    personal: [],
+    business: [],
+  };
+
+  // Classify each EA task and transform to PDFTask
+  for (const task of allEATasks) {
+    const area = inferCoreTaskType({
+      title: task.title,
+      description: task.description,
+      coreTaskType: task.coreTaskType,
+    });
+
+    // Determine time_saved based on task frequency
+    const frequency = task.frequency || 'weekly';
+    const pdfTask = transformTask(task, frequency);
+    groups[area].push(pdfTask);
+  }
+
+  // Inject fallback tasks for thin areas (minimum 6 tasks per area for overwhelm effect)
+  const MIN_TASKS_PER_AREA = 6;
+  for (const area of ['email', 'calendar', 'personal', 'business'] as CoreFourArea[]) {
+    if (groups[area].length < MIN_TASKS_PER_AREA) {
+      const needed = MIN_TASKS_PER_AREA - groups[area].length;
+      groups[area].push(...FALLBACK_TASKS[area].slice(0, needed));
+    }
+  }
+
+  // Build CoreFourTaskGroup objects with display metadata
+  const AREA_CONFIG: Record<CoreFourArea, { title: string; subtitle: string; accent: readonly [number, number, number] }> = {
+    email: {
+      title: 'Email Ownership',
+      subtitle: 'Your EA owns your inbox completely',
+      accent: C.emailAccent,
+    },
+    calendar: {
+      title: 'Calendar Ownership',
+      subtitle: 'Your EA manages energy, not just time',
+      accent: C.calendarAccent,
+    },
+    personal: {
+      title: 'Personal Life Ownership',
+      subtitle: 'Hotels, flights, Amazon, family logistics — all handled',
+      accent: C.personalAccent,
+    },
+    business: {
+      title: 'Recurring Business Processes',
+      subtitle: 'Every repetitive task becomes a permanent handoff',
+      accent: C.businessAccent,
+    },
+  };
+
+  return (['email', 'calendar', 'personal', 'business'] as CoreFourArea[]).map(area => ({
+    area,
+    title: AREA_CONFIG[area].title,
+    subtitle: AREA_CONFIG[area].subtitle,
+    accent: AREA_CONFIG[area].accent,
+    tasks: groups[area],
+  }));
 }
 
 /**
@@ -149,6 +227,16 @@ function transformToPDFData(
     .slice(0, 3)
     .map(t => transformTask(t, 'monthly'));
 
+  // Collect ALL EA tasks for Core Four grouping (no limit — show everything for overwhelm)
+  const allEATasks = [
+    ...dailySeparated.eaTasks,
+    ...weeklySeparated.eaTasks,
+    ...monthlySeparated.eaTasks,
+  ];
+
+  // Group by Core Four area with fallback injection
+  const coreFourGroups = groupTasksByCoreFour(allEATasks);
+
   return {
     client_name: clientName,
     date,
@@ -170,6 +258,9 @@ function transformToPDFData(
     company_name: leadData.businessType || undefined,
     revenue_range: roi?.revenueRange || undefined,
     ceo_hourly_rate: roi?.ceoHourlyRate || undefined,
+
+    // Core Four grouped tasks (Phase 3)
+    core_four_groups: coreFourGroups,
   };
 }
 
