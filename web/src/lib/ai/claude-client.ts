@@ -7,7 +7,7 @@
  * Configuration:
  * - Model: claude-sonnet-4-5-20250514 (high-quality responses)
  * - Temperature: 0.6
- * - Max Output Tokens: 4096
+ * - Max Output Tokens: 8192
  * - Timeout: 90 seconds
  * - Retries: 1
  */
@@ -54,7 +54,7 @@ async function callWithRetry<T>(
 export const CLAUDE_CONFIG = {
   model: 'claude-sonnet-4-5-20250929',
   temperature: 0.6,
-  maxTokens: 4096,
+  maxTokens: 8192,
   timeout: 90000, // 90 seconds for Sonnet
   maxRetries: 1,
 } as const;
