@@ -562,12 +562,12 @@ export function renderInvestmentBlock(
   doc.setFont('helvetica', 'bold');
   doc.text(formatCurrency(annualValue), MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
 
-  // Row 2: EA investment
+  // Row 2: EA investment (muted red per financial convention — Design Dimension 3)
   rowY += 8;
-  doc.setTextColor(...C.inkSecondary);
+  doc.setTextColor(...C.costMuted);
   doc.setFont('helvetica', 'normal');
   doc.text('EA investment (annual)', MARGIN + 8, rowY);
-  doc.setTextColor(...C.ink);
+  doc.setTextColor(...C.costMuted);
   doc.setFont('helvetica', 'bold');
   doc.text(`-${formatCurrency(eaCost)}`, MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
 
@@ -660,7 +660,7 @@ export function renderTaskCard(
   // Task name
   const textX = MARGIN + circleRadius * 2 + 6; // Start after circle with padding
   doc.setTextColor(...C.ink);
-  doc.setFontSize(13);
+  doc.setFontSize(12); // Design Dimension 7: reduced from 13pt for density
   doc.setFont('helvetica', 'bold');
   doc.text(name, textX, y + 7);
 
@@ -693,7 +693,7 @@ export function renderTaskCard(
   doc.setLineWidth(0.2);
   doc.line(MARGIN, y + cardHeight, MARGIN + CONTENT_WIDTH, y + cardHeight);
 
-  return y + cardHeight + 6;
+  return y + cardHeight + 4; // Design Dimension 5: reduced from 6mm for density/overwhelm
 }
 
 /**
@@ -876,7 +876,7 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
 
   y += 8;
   y = renderHeroMetric(doc, formatCurrency(data.annual_value), 'Annual value you could unlock by delegating to your EA', y);
-  y += 8;
+  y += 10; // Hero-to-metrics gap (Design Dimension 3: increased from 8 for breathing room)
   y = renderMetricsRow(doc, [
     { value: `${data.weekly_hours} hrs`, label: 'Reclaimed Weekly' },
     { value: String(data.total_tasks_ea), label: 'Tasks to Delegate' },
@@ -929,21 +929,25 @@ function buildFrameworkPage(doc: jsPDF): void {
       title: 'Email Ownership',
       description: 'Your assistant triages everything using the Email GPS system — 7 folders, zero inbox for you. You review only what matters during a quick daily standup.',
       accent: C.emailAccent,
+      accentLight: C.emailAccentLight,
     },
     {
       title: 'Calendar Ownership',
       description: 'Your assistant manages energy, not just time. They schedule two weeks ahead, protect your highest-value hours, and ensure your calendar reflects your priorities.',
       accent: C.calendarAccent,
+      accentLight: C.calendarAccentLight,
     },
     {
       title: 'Personal Life Ownership',
       description: 'Hotels, flights, Amazon returns, family logistics — all handled. Enabled by the Partnership Playbook, a detailed document that captures your preferences and routines.',
       accent: C.personalAccent,
+      accentLight: C.personalAccentLight,
     },
     {
       title: 'Recurring Business Processes',
       description: 'Every repetitive task becomes a one-page playbook using the camcorder method: record yourself doing it once, and your assistant owns it forever.',
       accent: C.businessAccent,
+      accentLight: C.businessAccentLight,
     },
   ] as const;
 
@@ -1000,27 +1004,28 @@ function buildFrameworkPage(doc: jsPDF): void {
   CORE_FOUR.forEach((area) => {
     const boxHeight = 25;
 
-    // Left accent bar
+    // Left accent bar (3mm wide — Design Dimension 4: widened from 2mm)
     const accentColor: [number, number, number] = [...area.accent];
     doc.setFillColor(...accentColor);
-    doc.rect(MARGIN, y, 2, boxHeight, 'F');
+    doc.rect(MARGIN, y, 3, boxHeight, 'F');
 
-    // Background box
-    doc.setFillColor(...C.background);
-    roundedRect(doc, MARGIN + 3, y, CONTENT_WIDTH - 3, boxHeight, 2, 'F');
+    // Background box (per-area light accent — Design Dimension 4)
+    const lightColor: [number, number, number] = [...area.accentLight];
+    doc.setFillColor(...lightColor);
+    roundedRect(doc, MARGIN + 4, y, CONTENT_WIDTH - 4, boxHeight, 2, 'F');
 
     // Title
     doc.setTextColor(...C.ink);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(area.title, MARGIN + 8, y + 8);
+    doc.text(area.title, MARGIN + 9, y + 8);
 
     // Description (wrapped, max 2 lines to stay within box)
     doc.setTextColor(...C.inkSecondary);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    const lines = doc.splitTextToSize(area.description, CONTENT_WIDTH - 12);
-    doc.text(lines.slice(0, 2), MARGIN + 8, y + 15);
+    const lines = doc.splitTextToSize(area.description, CONTENT_WIDTH - 13);
+    doc.text(lines.slice(0, 2), MARGIN + 9, y + 15);
 
     y += boxHeight + 4;
   });
@@ -1170,7 +1175,7 @@ function renderCoreFourSection(
 
   // Header title text (white on colored bar)
   doc.setTextColor(...C.white);
-  doc.setFontSize(14);
+  doc.setFontSize(13); // Design Dimension 7: reduced from 14pt for subtle density
   doc.setFont('helvetica', 'bold');
   doc.text(group.title, MARGIN + 6, y + 9);
 
@@ -1250,7 +1255,7 @@ function buildCoreFourTaskPages(
  */
 function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   doc.addPage();
-  let y = 20;
+  let y = 30; // Design Dimension 6: increased from 20mm for relief contrast with dense task pages
   const bookingUrl = buildBookingUrl(userData);
 
   // --- Headline ---
@@ -1344,9 +1349,9 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   const btnHeight = 16;
   const btnX = (PAGE_WIDTH - btnWidth) / 2;
 
-  doc.setFillColor(...C.accent);
+  doc.setFillColor(...C.ctaBgGold); // Design Dimension 2: Gold button for visual disruption
   doc.roundedRect(btnX, y, btnWidth, btnHeight, 6, 6, 'F');
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...C.ctaTextDark); // Design Dimension 2: Navy text on gold
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('Book Your Free Time Audit', PAGE_WIDTH / 2, y + 10.5, { align: 'center' });
