@@ -652,6 +652,16 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
   y = renderHeader(doc, y);
   y += 3;
   y = renderClientBlock(doc, data.client_name, data.date, y);
+
+  // Company context line (COVER-01)
+  if (data.company_name) {
+    doc.setTextColor(...C.inkSecondary);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.company_name, MARGIN, y + 2);
+    y += 7;
+  }
+
   y += 8;
   y = renderHeroMetric(doc, formatCurrency(data.annual_value), 'Annual value you could unlock by delegating to your EA', y);
   y += 8;
@@ -661,6 +671,18 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
     { value: `${data.roi_multiplier}x`, label: 'Projected ROI of an EA' },
   ], y);
   y += 5;
+
+  // ROI pain point messaging (COVER-02)
+  if (data.ceo_hourly_rate) {
+    const painText = `At your revenue level, your time is worth $${data.ceo_hourly_rate}/hr. Every hour spent on $15/hr tasks costs your business the difference.`;
+    doc.setTextColor(...C.accent);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    const painLines = doc.splitTextToSize(painText, CONTENT_WIDTH);
+    doc.text(painLines, MARGIN, y + 3);
+    y += painLines.length * 5 + 5;
+  }
+
   y = renderAnalysisBlock(doc, 'Summary Analysis', data.analysis_text, y);
   y += 3;
   renderInvestmentBlock(doc, data.annual_value, data.ea_investment, data.net_return, data.roi_multiplier, y);
