@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Cleanup & Foundation** - Delete dead V1 code, build RGB color system and checkPageBreak utility, extend PDFReportData for Core Four grouping
 - [x] **Phase 2: Cover & ROI + Framework Page** - Redesign page 1 cover/ROI, build page 2 Three Pillars + Core Four static educational content
 - [x] **Phase 3: Core Four Task Pages + CTA** - Build pages 3-4 with tasks organized by Core Four ownership areas, build final CTA page, wire orchestrator to new page sequence
-- [ ] **Phase 4: AI Prompt Upgrade** - Update prompt for coreTaskType + richer descriptions, update validator/fixer pipeline
+- [x] **Phase 4: AI Prompt Upgrade** - Update prompt for coreTaskType + richer descriptions, update validator/fixer pipeline
 - [ ] **Phase 5: PDF Visual Design** - Adversarial multi-perspective design process to finalize visual treatment across all pages
 
 ## Phase Details
@@ -83,7 +83,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Update main prompt with coreTaskType + richer descriptions, increase maxTokens to 8192
-- [ ] 04-02-PLAN.md — Update fallback prompts with coreTaskType + aligned task counts, fix stale prompt tests
+- [x] 04-02-PLAN.md — Update fallback prompts with coreTaskType + aligned task counts, fix stale prompt tests
 
 ### Phase 5: PDF Visual Design
 **Goal**: The PDF's visual design is finalized through an adversarial multi-perspective process — marketing, simplicity, and complexity perspectives argue to find the best outcome for this specific use case
@@ -109,5 +109,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Cleanup & Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. Cover & ROI + Framework Page | 2/2 | Complete | 2026-02-25 |
 | 3. Core Four Task Pages + CTA | 3/3 | Complete | 2026-02-25 |
-| 4. AI Prompt Upgrade | 1/2 | In progress | - |
+| 4. AI Prompt Upgrade | 2/2 | Complete | 2026-02-25 |
 | 5. PDF Visual Design | 0/2 | Not started | - |

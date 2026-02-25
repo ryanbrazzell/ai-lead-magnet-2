@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 4 of 5 (AI Prompt Upgrade)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-25 — Completed 04-01 (AI prompt + token budget)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-25 — Completed 04-02 (Fallback prompts coreTaskType + test updates)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 2.1min
-- Total execution time: 0.28 hours
+- Total execution time: 0.32 hours
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [████████░░] 80%
 | 01-cleanup-foundation | 2 | 7min | 3.5min |
 | 02-cover-roi-framework | 2 | 4min | 2min |
 | 03-task-pages-cta | 3 | 6min | 2min |
-| 04-ai-prompt | 1 | 1min | 1min |
+| 04-ai-prompt | 2 | 3min | 1.5min |
 
 **Recent Trend:**
-- Last 5 plans: 2min, 2min, 2min, 2min, 1min
+- Last 5 plans: 2min, 2min, 2min, 1min, 2min
 - Trend: stable (fast)
 
 *Updated after each plan completion*
@@ -74,6 +74,9 @@ Recent decisions affecting current work:
 - [04-01]: Description instruction upgraded from 15-25 words to 2-3 sentences (40-60 words)
 - [04-01]: maxTokens doubled from 4096 to 8192 to prevent JSON truncation with richer descriptions
 - [04-01]: isCoreEATask intentionally excluded from prompt per research findings
+- [04-02]: Fallback EA delegation minimum aligned to 15 (63%) matching main prompt ratio
+- [04-02]: Streamlined prompt gets coreTaskType instruction despite brevity optimization
+- [04-02]: Fixed pre-existing stale website analysis test assertions (Rule 1 deviation)
 
 ### Pending Todos
 
@@ -87,5 +90,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 04-01-PLAN.md (AI prompt coreTaskType + richer descriptions + maxTokens 8192)
+Stopped at: Completed 04-02-PLAN.md (Fallback prompts coreTaskType + test updates — Phase 4 complete)
 Resume file: None
