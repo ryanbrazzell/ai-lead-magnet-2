@@ -228,6 +228,143 @@ export function inferCoreTaskType(task: { title: string; description: string; co
   return 'business';
 }
 
+/**
+ * Fallback universal EA task examples per Core Four area.
+ * Injected when AI-personalized tasks are sparse for a given area.
+ * Written with same gerund-style language and rich descriptions
+ * as AI output — visually indistinguishable from personalized tasks.
+ */
+export const FALLBACK_TASKS: Record<CoreFourArea, PDFTask[]> = {
+  email: [
+    {
+      name: 'Triaging your inbox using the Email GPS system',
+      description: 'Processing all incoming messages into 7 priority folders, flagging urgent items, archiving noise, and ensuring you only review what truly needs your attention during the daily standup.',
+      time_saved: '2+ hrs/day',
+    },
+    {
+      name: 'Drafting and sending routine responses',
+      description: 'Handling vendor inquiries, scheduling confirmations, subscription management, and standard business correspondence using your voice and tone guidelines.',
+      time_saved: '1 hr/day',
+    },
+    {
+      name: 'Unsubscribing and filtering recurring noise',
+      description: 'Auditing your email subscriptions, setting up smart filters, and eliminating newsletters, notifications, and promotional emails that waste your attention.',
+      time_saved: '30 min/day',
+    },
+    {
+      name: 'Managing follow-up sequences and reminders',
+      description: 'Tracking open threads that need responses, setting follow-up reminders, and ensuring no important conversation falls through the cracks.',
+      time_saved: '45 min/day',
+    },
+    {
+      name: 'Organizing email into searchable archives',
+      description: 'Creating folder structures, tagging systems, and search-friendly labels so you can find any conversation in seconds when you need it.',
+      time_saved: '30 min/day',
+    },
+    {
+      name: 'Handling customer and client email inquiries',
+      description: 'Responding to common client questions, forwarding complex issues to the right team member, and maintaining professional communication standards.',
+      time_saved: '1 hr/day',
+    },
+  ],
+  calendar: [
+    {
+      name: 'Scheduling meetings and resolving time conflicts',
+      description: 'Coordinating across time zones, finding mutually available slots, sending calendar invites, and managing reschedules without bothering you.',
+      time_saved: '1 hr/day',
+    },
+    {
+      name: 'Protecting your high-energy blocks for deep work',
+      description: 'Blocking focus time on your calendar, declining low-priority meeting requests, and structuring your week around your peak performance hours.',
+      time_saved: '45 min/day',
+    },
+    {
+      name: 'Preparing meeting briefs and agendas',
+      description: 'Researching attendees, compiling relevant documents, creating agendas, and ensuring you walk into every meeting fully prepared.',
+      time_saved: '2 hrs/week',
+    },
+    {
+      name: 'Managing recurring appointment logistics',
+      description: 'Handling weekly team meetings, monthly reviews, quarterly planning sessions, and annual events so they run on autopilot.',
+      time_saved: '1.5 hrs/week',
+    },
+    {
+      name: 'Scheduling personal appointments during business hours',
+      description: 'Booking doctor visits, car service, home maintenance, and personal errands so they fit naturally into your calendar without disrupting work.',
+      time_saved: '1 hr/week',
+    },
+    {
+      name: 'Coordinating travel schedules with calendar commitments',
+      description: 'Aligning flight times, hotel check-ins, and ground transportation with your meeting schedule so travel days flow seamlessly.',
+      time_saved: '2 hrs/week',
+    },
+  ],
+  personal: [
+    {
+      name: 'Booking travel, hotels, and transportation',
+      description: 'Researching options, comparing prices, booking flights and accommodations that match your preferences, and managing loyalty programs and upgrades.',
+      time_saved: '3 hrs/week',
+    },
+    {
+      name: 'Handling Amazon orders, returns, and household purchases',
+      description: 'Managing your shopping lists, tracking deliveries, processing returns, and reordering household essentials before you run out.',
+      time_saved: '2 hrs/week',
+    },
+    {
+      name: 'Coordinating family logistics and activities',
+      description: 'Managing school schedules, kids\' activities, family events, doctor appointments, and ensuring nothing gets double-booked or forgotten.',
+      time_saved: '3 hrs/week',
+    },
+    {
+      name: 'Negotiating with service providers and vendors',
+      description: 'Calling insurance companies, utility providers, contractors, and subscription services to resolve issues, negotiate rates, and handle renewals.',
+      time_saved: '2 hrs/month',
+    },
+    {
+      name: 'Managing gift purchases and special occasions',
+      description: 'Tracking birthdays, anniversaries, and holidays, selecting appropriate gifts, and ensuring they arrive on time with personal touches.',
+      time_saved: '2 hrs/month',
+    },
+    {
+      name: 'Maintaining the Partnership Playbook with your preferences',
+      description: 'Documenting your preferences for food, travel, communication style, and daily routines so your assistant can anticipate your needs.',
+      time_saved: '1 hr/month',
+    },
+  ],
+  business: [
+    {
+      name: 'Documenting SOPs using the camcorder method',
+      description: 'Recording yourself doing a task once, transcribing it into a one-page playbook with non-negotiables, and handing it off permanently to your EA.',
+      time_saved: '3 hrs/month',
+    },
+    {
+      name: 'Tracking expenses and preparing financial summaries',
+      description: 'Categorizing receipts, reconciling credit card statements, preparing expense reports, and flagging unusual charges for your review.',
+      time_saved: '4 hrs/month',
+    },
+    {
+      name: 'Updating CRM records and pipeline tracking',
+      description: 'Entering new contacts, updating deal stages, logging meeting notes, and ensuring your sales pipeline data is always current and accurate.',
+      time_saved: '2 hrs/week',
+    },
+    {
+      name: 'Compiling weekly and monthly performance reports',
+      description: 'Gathering KPIs from various tools, creating summary dashboards, and highlighting trends that need your attention.',
+      time_saved: '3 hrs/week',
+    },
+    {
+      name: 'Coordinating vendor onboarding and contract renewals',
+      description: 'Managing new vendor setup, tracking contract expiration dates, collecting renewal quotes, and preparing comparison documents for your decision.',
+      time_saved: '3 hrs/month',
+    },
+    {
+      name: 'Managing recurring team communications and updates',
+      description: 'Sending weekly team updates, distributing meeting notes, tracking action items, and ensuring team members follow through on commitments.',
+      time_saved: '2 hrs/week',
+    },
+  ],
+};
+
 // =============================================================================
 // COMPONENT RENDERERS
 // =============================================================================
