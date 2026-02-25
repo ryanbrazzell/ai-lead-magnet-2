@@ -41,15 +41,32 @@ export const C = {
   // Framework page
   frameworkBg: [17, 24, 39]     as const satisfies RGB,  // Dark ink
 
-  // Core Four area accents (placeholder — confirm with design before Phase 3)
-  emailAccent:    [59, 130, 246]  as const satisfies RGB,  // Blue #3B82F6
-  calendarAccent: [168, 85, 247]  as const satisfies RGB,  // Purple #A855F7
-  personalAccent: [234, 179, 8]   as const satisfies RGB,  // Amber #EAB308
-  businessAccent: [34, 197, 94]   as const satisfies RGB,  // Green #22C55E
+  // Core Four area accents (finalized via adversarial design — Phase 5)
+  emailAccent:        [13, 115, 119]  as const satisfies RGB,  // Teal #0D7377 (brand anchor)
+  calendarAccent:     [37, 99, 235]   as const satisfies RGB,  // Blue #2563EB
+  personalAccent:     [217, 119, 6]   as const satisfies RGB,  // Deep Amber #D97706
+  businessAccent:     [5, 150, 105]   as const satisfies RGB,  // Emerald #059669
+
+  // Core Four light variants (card/box backgrounds)
+  emailAccentLight:    [230, 244, 244] as const satisfies RGB,  // #E6F4F4
+  calendarAccentLight: [235, 241, 254] as const satisfies RGB,  // #EBF1FE
+  personalAccentLight: [254, 243, 230] as const satisfies RGB,  // #FEF3E6
+  businessAccentLight: [230, 250, 243] as const satisfies RGB,  // #E6FAF3
+
+  // Core Four text variants (labels on light backgrounds)
+  emailAccentText:    [10, 90, 93]    as const satisfies RGB,  // #0A5A5D
+  calendarAccentText: [29, 78, 186]   as const satisfies RGB,  // #1D4EBA
+  personalAccentText: [178, 98, 5]    as const satisfies RGB,  // #B26205
+  businessAccentText: [4, 120, 84]    as const satisfies RGB,  // #047854
 
   // CTA page
-  ctaBg:   [13, 115, 119]  as const satisfies RGB,  // Teal
-  ctaText: [255, 255, 255] as const satisfies RGB,  // White
+  ctaBg:       [13, 115, 119]  as const satisfies RGB,  // Teal (inline CTA stays teal)
+  ctaText:     [255, 255, 255] as const satisfies RGB,  // White
+  ctaBgGold:   [245, 158, 11]  as const satisfies RGB,  // #F59E0B (final CTA page button)
+  ctaTextDark: [15, 23, 42]    as const satisfies RGB,  // #0F172A (Navy text on gold)
+
+  // Cover page financial convention
+  costMuted:   [186, 28, 28]   as const satisfies RGB,  // #BA1C1C (EA cost line)
 } as const;
 
 // Layout constants (in mm for jsPDF)
