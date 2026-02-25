@@ -111,6 +111,31 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * Check if the next content block would overflow the current page.
+ * If so, add a new page and return the starting y for the new page.
+ *
+ * @param doc - jsPDF document instance
+ * @param currentY - Current y position on the page (mm)
+ * @param contentHeight - Estimated height of the next content block (mm)
+ * @param safeBottomY - Maximum y before footer area (default: 270mm, leaving 27mm for footer on A4)
+ * @param newPageStartY - Y position to start content on a new page (default: 20mm)
+ * @returns The y position to use (either currentY unchanged, or newPageStartY after adding a page)
+ */
+function checkPageBreak(
+  doc: jsPDF,
+  currentY: number,
+  contentHeight: number,
+  safeBottomY: number = 270,
+  newPageStartY: number = 20,
+): number {
+  if (currentY + contentHeight > safeBottomY) {
+    doc.addPage();
+    return newPageStartY;
+  }
+  return currentY;
+}
+
 // =============================================================================
 // DATA TYPES
 // =============================================================================
@@ -477,6 +502,10 @@ export function renderFounderTasksSection(
 
   // Render each founder task as a simple bullet item
   tasks.forEach((task) => {
+    // Each bullet item is ~16mm with description, ~10mm without
+    const itemHeight = task.description ? 16 : 10;
+    y = checkPageBreak(doc, y, itemHeight);
+
     // Bullet point
     doc.setFillColor(...C.accent);
     doc.circle(MARGIN + 3, y + 2, 1.5, 'F');
@@ -649,12 +678,16 @@ export function buildTasksPage(
   y += 5;
 
   tasks.forEach((task, index) => {
+    // Estimate card height before rendering: measure description lines + padding
+    const descLines = doc.splitTextToSize(task.description || '', CONTENT_WIDTH - 30);
+    const estimatedCardHeight = Math.max(35, 20 + descLines.length * 5 + 8);
+    y = checkPageBreak(doc, y, estimatedCardHeight);
     y = renderTaskCard(doc, index + 1, task.name, task.description, task.time_saved, y);
   });
 
-  // Add CTA button at the end of each section if space permits
-  if (userData && y + 55 < PAGE_HEIGHT - 20) {
-    y += 5;
+  // Add CTA button at the end of each section (new page if needed)
+  if (userData) {
+    y = checkPageBreak(doc, y + 5, 55);
     renderCTABlock(doc, y, userData);
   }
 }
@@ -691,6 +724,9 @@ export function buildFounderTasksPage(
 
   // Render each founder task with emphasis
   tasks.forEach((task, index) => {
+    // Each founder task card is 45mm tall + 10mm spacing = 55mm total
+    y = checkPageBreak(doc, y, 55);
+
     // Task card with accent border
     doc.setDrawColor(...C.accent);
     doc.setLineWidth(1);
