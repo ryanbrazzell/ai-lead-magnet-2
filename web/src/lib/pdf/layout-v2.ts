@@ -146,6 +146,18 @@ export interface PDFTask {
   time_saved: string;
 }
 
+/** Core Four ownership areas for task grouping */
+export type CoreFourArea = 'email' | 'calendar' | 'personal' | 'business';
+
+/** Grouped tasks for one Core Four area */
+export interface CoreFourTaskGroup {
+  area: CoreFourArea;
+  title: string;               // Display name: "Email Ownership"
+  subtitle: string;            // Short description under header
+  accent: readonly [number, number, number];  // C.emailAccent, etc.
+  tasks: PDFTask[];
+}
+
 export interface PDFReportData {
   client_name: string;
   date: string;
@@ -168,6 +180,52 @@ export interface PDFReportData {
   company_name?: string;       // From UnifiedLeadData.businessType
   revenue_range?: string;      // From ROICalculation.revenueRange (e.g., "$500k-$1M")
   ceo_hourly_rate?: number;    // From ROICalculation.ceoHourlyRate (for "$X/hr work" messaging)
+
+  // Core Four grouped tasks (Phase 3) — populated by generator-v2.ts
+  core_four_groups?: CoreFourTaskGroup[];
+}
+
+/**
+ * Classify a task into a Core Four ownership area.
+ * Prefers explicit coreTaskType if present (Phase 4 compatibility).
+ * Falls back to keyword matching on title + description.
+ * Always returns a valid CoreFourArea — defaults to 'business'.
+ *
+ * Keyword lists sourced from report-validator.ts production functions:
+ * hasEmailManagementTask, hasCalendarManagementTask, etc.
+ */
+export function inferCoreTaskType(task: { title: string; description: string; coreTaskType?: string }): CoreFourArea {
+  // Prefer explicit coreTaskType if present (Phase 4 compatibility)
+  if (task.coreTaskType) {
+    const mapping: Record<string, CoreFourArea> = {
+      emailManagement: 'email',
+      calendarManagement: 'calendar',
+      personalLifeManagement: 'personal',
+      businessProcessManagement: 'business',
+    };
+    if (mapping[task.coreTaskType]) return mapping[task.coreTaskType];
+  }
+
+  // Inference fallback: keyword matching on title + description
+  const text = `${task.title} ${task.description}`.toLowerCase();
+
+  // Email keywords (from report-validator.ts hasEmailManagementTask)
+  if (text.includes('email') || text.includes('inbox') || text.includes('correspondence'))
+    return 'email';
+
+  // Calendar keywords (from report-validator.ts hasCalendarManagementTask)
+  if (text.includes('calendar') || text.includes('schedule') || text.includes('scheduling') ||
+      text.includes('appointment') || text.includes('meeting'))
+    return 'calendar';
+
+  // Personal life keywords (from report-validator.ts hasPersonalLifeManagementTask)
+  if (text.includes('personal') || text.includes('travel') || text.includes('booking') ||
+      text.includes('reservation') || text.includes('vendor') || text.includes('family') ||
+      text.includes('errand'))
+    return 'personal';
+
+  // Default to business processes (broadest category, catches everything else)
+  return 'business';
 }
 
 // =============================================================================
