@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** The PDF must make the reader think "I clearly need an assistant and I clearly can't do this alone"
-**Current focus:** Phase 2 — Cover & ROI + Framework Page
+**Current focus:** Phase 2 complete — ready for Phase 3
 
 ## Current Position
 
-Phase: 2 of 5 (Cover & ROI + Framework Page)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-25 — Completed 02-01 (cover ROI page)
+Phase: 2 of 5 (Cover & ROI + Framework Page) -- COMPLETE
+Plan: 2 of 2 in current phase (all plans done)
+Status: Phase Complete
+Last activity: 2026-02-25 — Completed 02-02 (framework page)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3min
-- Total execution time: 0.15 hours
+- Total plans completed: 4
+- Average duration: 2.75min
+- Total execution time: 0.18 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-cleanup-foundation | 2 | 7min | 3.5min |
-| 02-cover-roi-framework | 1 | 2min | 2min |
+| 02-cover-roi-framework | 2 | 4min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 2min, 2min
-- Trend: improving
+- Last 5 plans: 5min, 2min, 2min, 2min
+- Trend: stable (fast)
 
 *Updated after each plan completion*
 
@@ -55,6 +55,9 @@ Recent decisions affecting current work:
 - [02-01]: company_name sourced from leadData.businessType (not a separate company field)
 - [02-01]: revenue_range and ceo_hourly_rate sourced from ROI object -- no transformToPDFData signature change needed
 - [02-01]: ROI pain text uses C.accent bold for visual emphasis before analysis block
+- [02-02]: Core Four accent colors spread via mutable tuple copy to satisfy TypeScript readonly const constraints
+- [02-02]: No checkPageBreak in buildFrameworkPage -- content must fit single page (FRAME-03)
+- [02-02]: Page number comments simplified to "Page 3+" for task pages (dynamic content makes fixed numbers misleading)
 
 ### Pending Todos
 
@@ -68,5 +71,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 02-01-PLAN.md (cover page company context + ROI pain messaging)
+Stopped at: Completed 02-02-PLAN.md (framework page -- Phase 2 complete)
 Resume file: None
