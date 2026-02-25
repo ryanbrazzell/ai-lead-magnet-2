@@ -1,4 +1,4 @@
-import { generatePDF } from '../src/lib/pdf/generator';
+import { generatePDFV2 } from '../src/lib/pdf/generator-v2';
 import { sendEmailAsync } from '../src/lib/email/asyncNotifications';
 import { TaskGenerationResult, UnifiedLeadData } from '../src/types';
 import * as dotenv from 'dotenv';
@@ -100,7 +100,7 @@ const mockOptions = {
 async function run() {
   console.log('Generating PDF for email...');
   try {
-    const result = await generatePDF(mockReport, mockLeadData, mockOptions);
+    const result = await generatePDFV2(mockReport, mockLeadData, mockOptions);
     
     if (result.success && result.base64) {
       console.log('PDF generated. Sending email to:', mockLeadData.email);

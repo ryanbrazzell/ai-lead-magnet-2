@@ -1,4 +1,4 @@
-import { generatePDF } from '../src/lib/pdf/generator';
+import { generatePDFV2 } from '../src/lib/pdf/generator-v2';
 import { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '../src/types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -97,7 +97,7 @@ const mockOptions = {
 async function run() {
   console.log('Generating sample PDF...');
   try {
-    const result = await generatePDF(mockReport, mockLeadData, mockOptions);
+    const result = await generatePDFV2(mockReport, mockLeadData, mockOptions);
     
     if (result.success && result.base64) {
       const outputPath = path.join(process.cwd(), 'public', 'sample-report.pdf');

@@ -9,8 +9,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Mock the PDF generator and S3 service
-vi.mock('@/lib/pdf/generator', () => ({
-  generatePDF: vi.fn(),
+vi.mock('@/lib/pdf/generator-v2', () => ({
+  generatePDFV2: vi.fn(),
 }));
 
 vi.mock('@/lib/pdf/s3Service', () => ({
@@ -19,12 +19,12 @@ vi.mock('@/lib/pdf/s3Service', () => ({
 }));
 
 // Import mocked modules
-import { generatePDF } from '@/lib/pdf/generator';
+import { generatePDFV2 } from '@/lib/pdf/generator-v2';
 import { uploadToS3, generateSafeFilename } from '@/lib/pdf/s3Service';
 import { POST } from '../route';
 
 // Type the mocks
-const mockGeneratePDF = vi.mocked(generatePDF);
+const mockGeneratePDF = vi.mocked(generatePDFV2);
 const mockUploadToS3 = vi.mocked(uploadToS3);
 const mockGenerateSafeFilename = vi.mocked(generateSafeFilename);
 
