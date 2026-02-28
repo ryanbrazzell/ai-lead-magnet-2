@@ -65,7 +65,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
       pdfBuffer,
       html: providedHtml,
       subject,
-    } = body as EmailSendOptions & { phone?: string };
+      downloadUrl,
+    } = body as EmailSendOptions & { phone?: string; downloadUrl?: string };
 
     console.log('Email request data:', {
       to,
@@ -85,9 +86,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<EmailSend
       );
     }
 
-    // Generate email content with pre-filled booking URL
+    // Generate email content with pre-filled booking URL and download link
     const userData = { firstName, lastName, email: to, phone };
-    const htmlContent = providedHtml || generateEmailHtml(firstName, userData);
+    const htmlContent = providedHtml || generateEmailHtml(firstName, userData, downloadUrl);
 
     // Build email subject
     const emailSubject = subject || `${firstName || 'Hi'}, Your Time Freedom Report is Ready`;

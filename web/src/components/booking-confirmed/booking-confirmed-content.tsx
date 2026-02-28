@@ -51,10 +51,12 @@ export function BookingConfirmedContent() {
 
     updateCloseCRM();
 
-    // Clean up localStorage
+    // Clean up localStorage (including Meta tracking values)
     localStorage.removeItem('assistantlaunch_leadId');
     localStorage.removeItem('assistantlaunch_email');
     localStorage.removeItem('assistantlaunch_phone');
+    localStorage.removeItem('assistantlaunch_fbc');
+    localStorage.removeItem('assistantlaunch_fbp');
   }, [email]);
 
   return (

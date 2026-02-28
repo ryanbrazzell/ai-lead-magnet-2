@@ -60,163 +60,43 @@ export interface EmailUserData {
  * const html = generateEmailHtml('John', { firstName: 'John', email: 'john@example.com', phone: '+15551234567' });
  * // Returns HTML with "Hi John," greeting and pre-filled booking URL
  */
-export function generateEmailHtml(firstName?: string, userData?: EmailUserData): string {
+export function generateEmailHtml(firstName?: string, userData?: EmailUserData, downloadUrl?: string): string {
   const greeting = firstName || 'there';
-  const currentYear = new Date().getFullYear();
   const bookingUrl = buildBookingUrl(userData);
+  const downloadLink = downloadUrl
+    ? `<p style="margin: 0 0 20px 0;"><a href="${downloadUrl}" style="color: #0D7377; font-weight: bold;">View and download your report here</a></p>`
+    : '';
 
   return `<!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>Your Time Freedom Report</title>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
-      
-      body {
-        font-family: 'DM Sans', Arial, sans-serif;
-        line-height: 1.6;
-        color: #334155;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 0;
-        background-color: #f1f5f9;
-      }
-      .wrapper {
-        background-color: #f1f5f9;
-        padding: 20px;
-      }
-      .header {
-        background-color: #0f172a;
-        color: white;
-        padding: 40px 30px;
-        text-align: center;
-        border-radius: 12px 12px 0 0;
-      }
-      .header h1 {
-        font-family: 'DM Serif Display', Georgia, serif;
-        font-size: 28px;
-        margin: 0 0 8px 0;
-        color: #ffffff;
-      }
-      .header-accent {
-        color: #f59e0b;
-        font-weight: 600;
-      }
-      .success-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 50px;
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 16px;
-      }
-      .content {
-        background: white;
-        padding: 40px 30px;
-        border-radius: 0 0 12px 12px;
-      }
-      .content p {
-        margin: 0 0 16px 0;
-        color: #475569;
-      }
-      .content h3 {
-        font-family: 'DM Serif Display', Georgia, serif;
-        color: #0f172a;
-        font-size: 20px;
-        margin: 24px 0 12px 0;
-      }
-      .highlight-box {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border: 2px solid #f59e0b;
-        border-radius: 12px;
-        padding: 24px;
-        text-align: center;
-        margin: 24px 0;
-      }
-      .highlight-box p {
-        margin: 0;
-        color: #0f172a;
-        font-weight: 500;
-      }
-      .button {
-        display: inline-block;
-        background-color: #f59e0b;
-        color: #0f172a !important;
-        padding: 16px 32px;
-        text-decoration: none;
-        border-radius: 8px;
-        margin: 20px 0;
-        font-weight: 700;
-        font-size: 16px;
-      }
-      .button:hover {
-        background-color: #d97706;
-      }
-      ul {
-        padding-left: 20px;
-        margin: 16px 0;
-      }
-      ul li {
-        color: #475569;
-        margin-bottom: 8px;
-      }
-      .footer {
-        text-align: center;
-        color: #94a3b8;
-        font-size: 13px;
-        margin-top: 24px;
-        padding: 20px;
-      }
-      .footer a {
-        color: #f59e0b;
-        text-decoration: none;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrapper">
-      <div class="header">
-        <div class="success-badge">✓ Report Ready</div>
-        <h1>Your <span class="header-accent">Time Freedom Report</span> is Ready!</h1>
-      </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #333333;">
+  <div style="max-width: 600px;">
+    <p style="margin: 0 0 16px 0;">Hey ${greeting},</p>
 
-      <div class="content">
-        <p>Hi ${greeting},</p>
+    <p style="margin: 0 0 16px 0;">Your Time Freedom Report is ready. It's also attached to this email as a PDF.</p>
 
-        <p>Thank you for taking the first step toward reclaiming your time and productivity. Your personalized <strong>Time Freedom Report</strong> is attached to this email.</p>
+    ${downloadLink}<p style="margin: 0 0 16px 0;">This report was built specifically for you based on the information you shared. Inside you'll find a breakdown of tasks in your business and personal life that could be handed off to an Executive Assistant, organized by the four core areas where delegation creates the most leverage:</p>
 
-        <div class="highlight-box">
-          <p>📊 This report shows you exactly which tasks could be delegated to an Executive Assistant, potentially saving you <strong>hours each week</strong>.</p>
-        </div>
+    <p style="margin: 0 0 4px 0;">1. Email ownership</p>
+    <p style="margin: 0 0 4px 0;">2. Calendar ownership</p>
+    <p style="margin: 0 0 4px 0;">3. Personal life ownership</p>
+    <p style="margin: 0 0 16px 0;">4. Recurring business processes</p>
 
-        <h3>What's Next?</h3>
-        <p>Ready to chat with our team about all the areas where an assistant can help you buy back time? Schedule a free consultation below.</p>
+    <p style="margin: 0 0 16px 0;">The report also covers what it actually takes to succeed with an assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support behind them.</p>
 
-        <p style="text-align: center;">
-          <a href="${bookingUrl}" class="button">Book Your Free Consultation</a>
-        </p>
+    <p style="margin: 0 0 16px 0;">If any of it resonates and you want to talk through what this could look like for you, book a time with me here:</p>
 
-        <p><strong>During your consultation, we'll:</strong></p>
-        <ul>
-          <li>Review your Time Freedom Report together</li>
-          <li>Discuss your specific needs and preferences</li>
-          <li>Show you how our EA matching process works</li>
-          <li>Answer any questions you have</li>
-        </ul>
+    <p style="margin: 0 0 24px 0;"><a href="${bookingUrl}" style="color: #0D7377; font-weight: bold;">Book your free time audit call</a></p>
 
-        <p>Best regards,<br>
-        <strong>The Assistant Launch Team</strong> 🚀</p>
-      </div>
-
-      <div class="footer">
-        <p>&copy; ${currentYear} Assistant Launch. All rights reserved.</p>
-        <p>Questions? Reply to this email or visit <a href="${COMPANY_URL}">assistantlaunch.com</a></p>
-      </div>
-    </div>
-  </body>
+    <p style="margin: 0 0 4px 0;">Talk soon,</p>
+    <p style="margin: 0 0 4px 0;"><strong>Ryan Brazzell</strong></p>
+    <p style="margin: 0 0 0 0; color: #666666; font-size: 14px;">Founder, Assistant Launch</p>
+  </div>
+</body>
 </html>`;
 }
 
@@ -234,32 +114,29 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData):
  * const text = generateEmailText('Jane', { firstName: 'Jane', email: 'jane@example.com', phone: '+15551234567' });
  * // Returns plain text with "Hi Jane," greeting and pre-filled booking URL
  */
-export function generateEmailText(firstName?: string, userData?: EmailUserData): string {
+export function generateEmailText(firstName?: string, userData?: EmailUserData, downloadUrl?: string): string {
   const greeting = firstName || 'there';
-  const currentYear = new Date().getFullYear();
   const bookingUrl = buildBookingUrl(userData);
+  const downloadLine = downloadUrl ? `\nView and download your report here: ${downloadUrl}\n` : '';
 
-  return `Hi ${greeting},
+  return `Hey ${greeting},
 
-Thank you for taking the first step toward reclaiming your time and productivity. Your personalized Time Freedom Report is attached to this email.
+Your Time Freedom Report is ready. It's also attached to this email as a PDF.
+${downloadLine}
+This report was built specifically for you based on the information you shared. Inside you'll find a breakdown of tasks in your business and personal life that could be handed off to an Executive Assistant, organized by the four core areas where delegation creates the most leverage:
 
-This report shows you exactly which tasks in your daily, weekly, and monthly routine could be delegated to an Executive Assistant, potentially saving you hours each week.
+1. Email ownership
+2. Calendar ownership
+3. Personal life ownership
+4. Recurring business processes
 
-What's Next?
-If you're ready to chat with our team about all the areas where an assistant can help you buy back time, schedule using the link below or email me here directly.
+The report also covers what it actually takes to succeed with an assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support behind them.
 
-Schedule Your Consultation: ${bookingUrl}
+If any of it resonates and you want to talk through what this could look like for you, book a time with me here:
 
-During your consultation, we'll:
-- Review your Time Freedom Report together
-- Discuss your specific needs and preferences
-- Show you how our EA matching process works
-- Answer any questions you have
+${bookingUrl}
 
-Best regards,
-The Assistant Launch Team
-
----
-© ${currentYear} Assistant Launch. All rights reserved.
-Questions? Reply to this email or visit assistantlaunch.com`;
+Talk soon,
+Ryan Brazzell
+Founder, Assistant Launch`;
 }

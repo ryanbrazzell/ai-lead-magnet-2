@@ -49,14 +49,18 @@ FOUNDER TASKS (3 per category) - Strategic work to focus on:
 - Hiring decisions
 - Business model refinement
 
-===== PERSONALIZATION =====
+===== PERSONALIZATION (CRITICAL) =====
 Use the revenue level to adjust task complexity:
 - Under $500k: Focus on getting organized, basic delegation
 - $500k-$1M: Growing pains, need systems and processes
 - $1M-$3M: Scaling challenges, team coordination
 - $3M+: Strategic focus, executive-level delegation
 
-If the founder provided notes/challenges, incorporate those specific pain points into the tasks.
+IMPORTANT - SPECIFICITY RULES:
+- If the founder provided notes, challenges, business type, or website info, you MUST reference their SPECIFIC industry, services, clients, and pain points BY NAME in task titles and descriptions.
+- For example, if they run a "digital marketing agency serving e-commerce brands," do NOT write "Managing client communications." Instead write "Keeping your e-commerce clients updated on campaign performance."
+- At least 12 of the 24 tasks must contain specific references to the founder's actual business, industry, or stated challenges. Generic tasks like "Reviewing daily priorities" are lazy - make them specific.
+- Every task must be UNIQUE. No two tasks should cover the same activity. Do not repeat similar tasks across daily/weekly/monthly categories.
 
 ===== CORE TASK CLASSIFICATION =====
 Every task MUST include a coreTaskType field indicating which Core Four area it belongs to:
@@ -70,12 +74,16 @@ Tasks are grouped by frequency (daily/weekly/monthly), NOT by coreTaskType.
 
 ===== TASK FORMAT =====
 Each task needs:
-- title: 3-6 engaging words (not generic like "Email Management")
+- title: Write like you're talking to the founder. Personal, relatable, easy to understand. Examples: "Getting your inbox to zero every day", "Keeping up with your family's schedule", "Booking your meetings without the back-and-forth". NOT corporate-speak like "Priority Inbox Zero Maintenance" or "Calendar Optimization and Scheduling". Use "your" and "you" - make it feel like their life, not a job description.
 - description: 2-3 sentences (40-60 words) explaining what this involves, with specific actions and business outcomes. Be detailed and reference the founder's context.
 - owner: "EA" or "You"
 - isEA: true (EA task) or false (Founder task)
 - category: One of Communication|Scheduling|Operations|Strategy|Marketing|Finance|Personal|Management
 - coreTaskType: One of emailManagement|calendarManagement|personalLifeManagement|businessProcessManagement
+
+===== FORMATTING RULES =====
+- NEVER use em-dashes. Only use regular hyphens (-). Em-dashes make the output look AI-generated.
+- Write in natural, conversational language. No corporate jargon.
 
 ===== OUTPUT JSON =====
 {
@@ -83,8 +91,8 @@ Each task needs:
     "daily": [
       // 5 EA tasks + 3 Founder tasks = 8 total
       {
-        "title": "Priority Inbox Zero Maintenance",
-        "description": "Processing and organizing all incoming emails, triaging into priority folders, and drafting responses using your voice. Your inbox stays at zero so you never waste time sorting through messages yourself.",
+        "title": "Getting your inbox to zero every day",
+        "description": "Your EA processes every incoming message, sorts them into priority folders, and drafts responses in your voice. You only see what actually needs your attention - everything else is handled.",
         "owner": "EA",
         "isEA": true,
         "category": "Communication",
@@ -104,8 +112,10 @@ Each task needs:
 REQUIREMENTS:
 - Exactly 24 tasks total (8 daily, 8 weekly, 8 monthly)
 - Each category: exactly 5 EA tasks + 3 Founder tasks
-- ea_task_count must equal 15 (5 EA tasks × 3 categories)
-- ea_task_percent must equal 63 (15/24 × 100, rounded)
+- ea_task_count must equal 15 (5 EA tasks x 3 categories)
+- ea_task_percent must equal 63 (15/24 x 100, rounded)
 - Tasks must be personalized based on their revenue level and notes
 - Every task must include a coreTaskType field (emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement)
+- NEVER use em-dashes. Use regular hyphens only.
+- Every task must be unique - no duplicates or near-duplicates across categories.
 - Output ONLY valid JSON, no other text.`;

@@ -62,7 +62,10 @@ Every task must include a coreTaskType field: "emailManagement", "calendarManage
 
 Requirements:
 - At least 15 tasks delegatable to EA (63%)
-- Clear titles and 2-3 sentence descriptions with specific actions
+- Task titles should be personal and relatable (e.g. "Getting your inbox to zero every day", not "Priority Inbox Zero Maintenance"). Use "your" and "you" - write like you're talking to the founder.
+- NEVER use em-dashes. Use regular hyphens only.
+- Every task must be unique - no duplicates or near-duplicates.
+- 2-3 sentence descriptions with specific actions
 - Professional HTML format with sections
 - Executive summary and conclusion
 

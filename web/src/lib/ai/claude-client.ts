@@ -50,12 +50,12 @@ async function callWithRetry<T>(
 }
 
 // Claude model configuration
-// Using Claude Sonnet 4.5 for high-quality, in-depth responses
+// Using Claude Sonnet 4.6 for high-quality, fast responses
 export const CLAUDE_CONFIG = {
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'claude-sonnet-4-6',
   temperature: 0.6,
   maxTokens: 8192,
-  timeout: 90000, // 90 seconds for Sonnet
+  timeout: 90000, // 90 seconds (maxDuration is 120s, leaves room for PDF+email)
   maxRetries: 1,
 } as const;
 
@@ -109,6 +109,9 @@ export function parseClaudeResponse(responseText: string): TaskGenerationResult 
   }
 
   cleanedText = cleanedText.trim();
+
+  // Strip em-dashes from all text content (AI tends to produce these)
+  cleanedText = cleanedText.replace(/—/g, '-');
 
   try {
     const parsed = JSON.parse(cleanedText) as TaskGenerationResult;

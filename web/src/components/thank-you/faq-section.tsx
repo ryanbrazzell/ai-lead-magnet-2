@@ -9,22 +9,22 @@ const faqs = [
   {
     question: "What's the difference between a VA and an EA?",
     answer:
-      "VAs handle tasks you assign. EAs own outcomes. Our EAs are trained to think like operators — they anticipate what needs to happen, not just execute what you tell them.",
+      "VAs handle tasks you assign. EAs own outcomes. Our EAs are trained to think like operators - they anticipate what needs to happen, not just execute what you tell them.",
   },
   {
     question: "How is this different from Upwork or hiring myself?",
     answer:
-      "When you hire yourself, you're also training, managing, and fixing mistakes yourself. We handle vetting, training, and ongoing support. If something's not working, we fix it — you don't have to start over.",
+      "When you hire yourself, you're also training, managing, and fixing mistakes yourself. We handle vetting, training, and ongoing support. If something's not working, we fix it - you don't have to start over.",
   },
   {
     question: "I've tried VAs before and they didn't work out.",
     answer:
-      "That's exactly why we exist. Most assistants fail because they lack systems and support. Our client success team oversees your relationship every single day — proactively pointing out issues before they become problems and helping expand your EA's scope over time.",
+      "That's exactly why we exist. Most assistants fail because they lack systems and support. Our client success team oversees your relationship every single day - proactively pointing out issues before they become problems and helping expand your EA's scope over time.",
   },
   {
     question: "What if it doesn't work out?",
     answer:
-      "Nobody gets to week 4 without being successful — or we refund you. No contracts, cancel anytime. But our daily oversight means problems get solved before they grow. We don't let people fail.",
+      "Nobody gets to week 4 without being successful - or we refund you. No contracts, cancel anytime. But our daily oversight means problems get solved before they grow. We don't let people fail.",
   },
   {
     question: "How long until I see results?",
@@ -33,7 +33,20 @@ const faqs = [
   },
 ];
 
-export function FAQSection() {
+interface FAQSectionProps {
+  onCTAClick?: () => void;
+}
+
+export function FAQSection({ onCTAClick }: FAQSectionProps) {
+  const handleCTAClick = () => {
+    if (onCTAClick) {
+      onCTAClick();
+    } else {
+      // Default: scroll to the schedule call section
+      document.getElementById('schedule-call-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <section
       style={{

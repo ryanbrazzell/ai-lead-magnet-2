@@ -23,7 +23,7 @@ import type { jsPDF } from 'jspdf';
 /** RGB color tuple type for jsPDF direct calls */
 type RGB = readonly [number, number, number];
 
-/** Pre-computed RGB color constants — no runtime hex parsing */
+/** Pre-computed RGB color constants - no runtime hex parsing */
 export const C = {
   // Core V2 design system
   white:        [255, 255, 255] as const satisfies RGB,
@@ -41,7 +41,7 @@ export const C = {
   // Framework page
   frameworkBg: [17, 24, 39]     as const satisfies RGB,  // Dark ink
 
-  // Core Four area accents (finalized via adversarial design — Phase 5)
+  // Core Four area accents (finalized via adversarial design -Phase 5)
   emailAccent:        [13, 115, 119]  as const satisfies RGB,  // Teal #0D7377 (brand anchor)
   calendarAccent:     [37, 99, 235]   as const satisfies RGB,  // Blue #2563EB
   personalAccent:     [217, 119, 6]   as const satisfies RGB,  // Deep Amber #D97706
@@ -198,7 +198,7 @@ export interface PDFReportData {
   revenue_range?: string;      // From ROICalculation.revenueRange (e.g., "$500k-$1M")
   ceo_hourly_rate?: number;    // From ROICalculation.ceoHourlyRate (for "$X/hr work" messaging)
 
-  // Core Four grouped tasks (Phase 3) — populated by generator-v2.ts
+  // Core Four grouped tasks (Phase 3) - populated by generator-v2.ts
   core_four_groups?: CoreFourTaskGroup[];
 }
 
@@ -206,7 +206,7 @@ export interface PDFReportData {
  * Classify a task into a Core Four ownership area.
  * Prefers explicit coreTaskType if present (Phase 4 compatibility).
  * Falls back to keyword matching on title + description.
- * Always returns a valid CoreFourArea — defaults to 'business'.
+ * Always returns a valid CoreFourArea - defaults to 'business'.
  *
  * Keyword lists sourced from report-validator.ts production functions:
  * hasEmailManagementTask, hasCalendarManagementTask, etc.
@@ -246,137 +246,170 @@ export function inferCoreTaskType(task: { title: string; description: string; co
 }
 
 /**
+ * Parse a time_saved string (e.g. "2+ hrs/day", "45 min/week") into weekly hours.
+ */
+function parseTimeSavedToWeeklyHours(timeSaved: string): number {
+  const lower = timeSaved.toLowerCase().replace('+', '').trim();
+  // Extract numeric value
+  const numMatch = lower.match(/([\d.]+)/);
+  if (!numMatch) return 0;
+  let value = parseFloat(numMatch[1]);
+
+  // Convert minutes to hours
+  if (lower.includes('min')) {
+    value = value / 60;
+  }
+
+  // Normalize to weekly
+  if (lower.includes('/day') || lower.includes('day')) {
+    value = value * 5; // 5 business days
+  } else if (lower.includes('/month') || lower.includes('month')) {
+    value = value / 4; // ~4 weeks per month
+  }
+  // /week is already weekly, no conversion needed
+
+  return value;
+}
+
+/**
+ * Sum total weekly hours for a group of tasks.
+ */
+function sumWeeklyHours(tasks: PDFTask[]): number {
+  return tasks.reduce((sum, t) => sum + parseTimeSavedToWeeklyHours(t.time_saved), 0);
+}
+
+/**
  * Fallback universal EA task examples per Core Four area.
  * Injected when AI-personalized tasks are sparse for a given area.
  * Written with same gerund-style language and rich descriptions
- * as AI output — visually indistinguishable from personalized tasks.
+ * as AI output - visually indistinguishable from personalized tasks.
  */
 export const FALLBACK_TASKS: Record<CoreFourArea, PDFTask[]> = {
   email: [
     {
-      name: 'Triaging your inbox using the Email GPS system',
-      description: 'Processing all incoming messages into 7 priority folders, flagging urgent items, archiving noise, and ensuring you only review what truly needs your attention during the daily standup.',
+      name: 'Getting your inbox to zero every single day',
+      description: 'Your EA processes every incoming message, sorts them into priority folders, flags what actually needs you, and archives the rest so you only see what matters.',
       time_saved: '2+ hrs/day',
     },
     {
-      name: 'Drafting and sending routine responses',
-      description: 'Handling vendor inquiries, scheduling confirmations, subscription management, and standard business correspondence using your voice and tone guidelines.',
+      name: 'Replying to emails that don\'t need your brain',
+      description: 'Vendor questions, scheduling confirmations, subscription stuff, standard business replies, all handled in your voice so nobody knows the difference.',
       time_saved: '1 hr/day',
     },
     {
-      name: 'Unsubscribing and filtering recurring noise',
-      description: 'Auditing your email subscriptions, setting up smart filters, and eliminating newsletters, notifications, and promotional emails that waste your attention.',
+      name: 'Killing the inbox noise you keep ignoring',
+      description: 'Unsubscribing from newsletters you never read, setting up smart filters, and eliminating the promotional junk that eats your attention every morning.',
       time_saved: '30 min/day',
     },
     {
-      name: 'Managing follow-up sequences and reminders',
-      description: 'Tracking open threads that need responses, setting follow-up reminders, and ensuring no important conversation falls through the cracks.',
+      name: 'Making sure nothing falls through the cracks',
+      description: 'Tracking every open thread that needs a response, setting follow-up reminders, and nudging people so important conversations don\'t go cold.',
       time_saved: '45 min/day',
     },
     {
-      name: 'Organizing email into searchable archives',
-      description: 'Creating folder structures, tagging systems, and search-friendly labels so you can find any conversation in seconds when you need it.',
+      name: 'Finding any email in seconds when you need it',
+      description: 'Building folder structures, tagging systems, and search-friendly labels so you never waste time hunting for that one conversation again.',
       time_saved: '30 min/day',
     },
     {
-      name: 'Handling customer and client email inquiries',
-      description: 'Responding to common client questions, forwarding complex issues to the right team member, and maintaining professional communication standards.',
+      name: 'Fielding client emails so you stay focused',
+      description: 'Answering common client questions, routing complex issues to the right person, and keeping communication professional without you touching it.',
       time_saved: '1 hr/day',
     },
   ],
   calendar: [
     {
-      name: 'Scheduling meetings and resolving time conflicts',
-      description: 'Coordinating across time zones, finding mutually available slots, sending calendar invites, and managing reschedules without bothering you.',
+      name: 'Booking your meetings without the back-and-forth',
+      description: 'Coordinating across time zones, finding open slots, sending invites, and handling reschedules, without a single "does 3pm work?" email from you.',
       time_saved: '1 hr/day',
     },
     {
-      name: 'Protecting your high-energy blocks for deep work',
-      description: 'Blocking focus time on your calendar, declining low-priority meeting requests, and structuring your week around your peak performance hours.',
+      name: 'Guarding your calendar so you can actually think',
+      description: 'Blocking focus time, declining low-priority meeting requests, and structuring your week around when you do your best work.',
       time_saved: '45 min/day',
     },
     {
-      name: 'Preparing meeting briefs and agendas',
-      description: 'Researching attendees, compiling relevant documents, creating agendas, and ensuring you walk into every meeting fully prepared.',
+      name: 'Walking into every meeting fully prepped',
+      description: 'Researching attendees, pulling together relevant docs, creating agendas, and making sure you\'re never caught off guard.',
       time_saved: '2 hrs/week',
     },
     {
-      name: 'Managing recurring appointment logistics',
-      description: 'Handling weekly team meetings, monthly reviews, quarterly planning sessions, and annual events so they run on autopilot.',
+      name: 'Running your recurring meetings on autopilot',
+      description: 'Weekly team syncs, monthly reviews, quarterly planning, all scheduled, reminded, and organized so they just happen.',
       time_saved: '1.5 hrs/week',
     },
     {
-      name: 'Scheduling personal appointments during business hours',
-      description: 'Booking doctor visits, car service, home maintenance, and personal errands so they fit naturally into your calendar without disrupting work.',
+      name: 'Squeezing in personal appointments without the hassle',
+      description: 'Doctor visits, car service, haircuts, home repairs, booked and fitted into your calendar without disrupting your workday.',
       time_saved: '1 hr/week',
     },
     {
-      name: 'Coordinating travel schedules with calendar commitments',
-      description: 'Aligning flight times, hotel check-ins, and ground transportation with your meeting schedule so travel days flow seamlessly.',
+      name: 'Making sure travel days don\'t wreck your schedule',
+      description: 'Aligning flights, hotel check-ins, and ground transportation with your meetings so travel days actually flow.',
       time_saved: '2 hrs/week',
     },
   ],
   personal: [
     {
-      name: 'Booking travel, hotels, and transportation',
-      description: 'Researching options, comparing prices, booking flights and accommodations that match your preferences, and managing loyalty programs and upgrades.',
+      name: 'Booking your flights, hotels, and rides',
+      description: 'Researching options, comparing prices, booking what matches your preferences, and managing loyalty programs so you always get the best deal.',
       time_saved: '3 hrs/week',
     },
     {
-      name: 'Handling Amazon orders, returns, and household purchases',
-      description: 'Managing your shopping lists, tracking deliveries, processing returns, and reordering household essentials before you run out.',
+      name: 'Handling your Amazon orders and returns',
+      description: 'Managing shopping lists, tracking deliveries, processing returns, and reordering household stuff before you run out.',
       time_saved: '2 hrs/week',
     },
     {
-      name: 'Coordinating family logistics and activities',
-      description: 'Managing school schedules, kids\' activities, family events, doctor appointments, and ensuring nothing gets double-booked or forgotten.',
+      name: 'Keeping up with your family\'s schedule',
+      description: 'School pickups, kids\' activities, family events, doctor appointments, all tracked so nothing gets double-booked or forgotten.',
       time_saved: '3 hrs/week',
     },
     {
-      name: 'Negotiating with service providers and vendors',
-      description: 'Calling insurance companies, utility providers, contractors, and subscription services to resolve issues, negotiate rates, and handle renewals.',
+      name: 'Dealing with insurance, utilities, and contractors',
+      description: 'Those annoying phone calls to service providers, negotiating rates, handling renewals, and resolving issues, all off your plate.',
       time_saved: '2 hrs/month',
     },
     {
-      name: 'Managing gift purchases and special occasions',
-      description: 'Tracking birthdays, anniversaries, and holidays, selecting appropriate gifts, and ensuring they arrive on time with personal touches.',
+      name: 'Never missing a birthday or anniversary again',
+      description: 'Tracking every important date, picking out thoughtful gifts, and making sure they arrive on time with a personal touch.',
       time_saved: '2 hrs/month',
     },
     {
-      name: 'Maintaining the Partnership Playbook with your preferences',
-      description: 'Documenting your preferences for food, travel, communication style, and daily routines so your assistant can anticipate your needs.',
+      name: 'Keeping your preferences documented so nothing gets missed',
+      description: 'Your food preferences, travel style, communication habits, daily routines, all captured so your EA can anticipate what you need.',
       time_saved: '1 hr/month',
     },
   ],
   business: [
     {
-      name: 'Documenting SOPs using the camcorder method',
-      description: 'Recording yourself doing a task once, transcribing it into a one-page playbook with non-negotiables, and handing it off permanently to your EA.',
+      name: 'Turning your recurring tasks into permanent hand-offs',
+      description: 'Record yourself doing it once, your EA transcribes it into a simple playbook, and that task is off your plate forever.',
       time_saved: '3 hrs/month',
     },
     {
-      name: 'Tracking expenses and preparing financial summaries',
-      description: 'Categorizing receipts, reconciling credit card statements, preparing expense reports, and flagging unusual charges for your review.',
+      name: 'Staying on top of receipts and expense reports',
+      description: 'Categorizing receipts, reconciling credit card statements, preparing expense reports, and flagging anything that looks off.',
       time_saved: '4 hrs/month',
     },
     {
-      name: 'Updating CRM records and pipeline tracking',
-      description: 'Entering new contacts, updating deal stages, logging meeting notes, and ensuring your sales pipeline data is always current and accurate.',
+      name: 'Keeping your CRM and pipeline up to date',
+      description: 'New contacts entered, deal stages updated, meeting notes logged so your sales data is always accurate and ready when you need it.',
       time_saved: '2 hrs/week',
     },
     {
-      name: 'Compiling weekly and monthly performance reports',
-      description: 'Gathering KPIs from various tools, creating summary dashboards, and highlighting trends that need your attention.',
+      name: 'Pulling together your weekly numbers and KPIs',
+      description: 'Gathering data from your tools, building summary dashboards, and highlighting the trends you actually need to pay attention to.',
       time_saved: '3 hrs/week',
     },
     {
-      name: 'Coordinating vendor onboarding and contract renewals',
-      description: 'Managing new vendor setup, tracking contract expiration dates, collecting renewal quotes, and preparing comparison documents for your decision.',
+      name: 'Managing vendor contracts and renewals',
+      description: 'Tracking expiration dates, collecting renewal quotes, onboarding new vendors, and preparing comparison docs so you just make the call.',
       time_saved: '3 hrs/month',
     },
     {
-      name: 'Managing recurring team communications and updates',
-      description: 'Sending weekly team updates, distributing meeting notes, tracking action items, and ensuring team members follow through on commitments.',
+      name: 'Keeping your team in the loop without you doing it',
+      description: 'Weekly updates sent, meeting notes distributed, action items tracked, and follow-ups handled so your team stays aligned.',
       time_saved: '2 hrs/week',
     },
   ],
@@ -562,7 +595,7 @@ export function renderInvestmentBlock(
   doc.setFont('helvetica', 'bold');
   doc.text(formatCurrency(annualValue), MARGIN + CONTENT_WIDTH - 8, rowY, { align: 'right' });
 
-  // Row 2: EA investment (muted red per financial convention — Design Dimension 3)
+  // Row 2: EA investment (muted red per financial convention -Design Dimension 3)
   rowY += 8;
   doc.setTextColor(...C.costMuted);
   doc.setFont('helvetica', 'normal');
@@ -694,6 +727,58 @@ export function renderTaskCard(
   doc.line(MARGIN, y + cardHeight, MARGIN + CONTENT_WIDTH, y + cardHeight);
 
   return y + cardHeight + 4; // Design Dimension 5: reduced from 6mm for density/overwhelm
+}
+
+/**
+ * Compact Task Row - condensed format for Core Four task pages.
+ * Line 1: number (accent) + task name (bold) + time saved (right, muted)
+ * Line 2: description (secondary, one line, truncated)
+ * Height: ~10mm per row for maximum density/overwhelm.
+ */
+function renderCompactTaskRow(
+  doc: jsPDF,
+  num: number,
+  name: string,
+  description: string,
+  timeSaved: string,
+  accentColor: readonly [number, number, number],
+  y: number,
+): number {
+  // Task number in accent color
+  const numColor: [number, number, number] = [...accentColor];
+  doc.setTextColor(...numColor);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(num), MARGIN + 1, y + 3);
+
+  // Task name (bold)
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  const nameMaxWidth = CONTENT_WIDTH - 40;
+  const truncatedName = doc.splitTextToSize(name, nameMaxWidth)[0];
+  doc.text(truncatedName, MARGIN + 8, y + 3);
+
+  // Time saved (right-aligned, muted)
+  doc.setTextColor(...C.inkMuted);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text(timeSaved, MARGIN + CONTENT_WIDTH, y + 3, { align: 'right' });
+
+  // Description (one line, truncated, smaller)
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  const descMaxWidth = CONTENT_WIDTH - 8;
+  const truncatedDesc = doc.splitTextToSize(description, descMaxWidth)[0];
+  doc.text(truncatedDesc, MARGIN + 8, y + 6.5);
+
+  // Thin divider
+  doc.setDrawColor(...C.divider);
+  doc.setLineWidth(0.15);
+  doc.line(MARGIN + 8, y + 7.8, MARGIN + CONTENT_WIDTH, y + 7.8);
+
+  return y + 8;
 }
 
 /**
@@ -859,30 +944,82 @@ export function renderFooter(doc: jsPDF): void {
  * Build the summary page (page 1)
  */
 export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
-  let y = 20;
+  // === TEAL HEADER BANNER ===
+  const bannerHeight = 58;
+  doc.setFillColor(...C.accent);
+  doc.rect(0, 0, PAGE_WIDTH, bannerHeight, 'F');
 
-  y = renderHeader(doc, y);
-  y += 3;
-  y = renderClientBlock(doc, data.client_name, data.date, y);
+  // Subtle darker strip at top for depth
+  doc.setFillColor(10, 95, 98);
+  doc.rect(0, 0, PAGE_WIDTH, 1.5, 'F');
 
-  // Company context line (COVER-01)
-  if (data.company_name) {
-    doc.setTextColor(...C.inkSecondary);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(data.company_name, MARGIN, y + 2);
-    y += 7;
-  }
+  let y = 12;
 
-  y += 8;
-  y = renderHeroMetric(doc, formatCurrency(data.annual_value), 'Annual value you could unlock by delegating to your EA', y);
-  y += 10; // Hero-to-metrics gap (Design Dimension 3: increased from 8 for breathing room)
+  // Brand name (white on teal)
+  doc.setTextColor(...C.white);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ASSISTANT LAUNCH', MARGIN, y);
+
+  // Brand underline
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, y + 2.5, MARGIN + 30, y + 2.5);
+
+  // Website URL
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('www.assistantlaunch.com', PAGE_WIDTH - MARGIN, y, { align: 'right' });
+
+  y += 14;
+
+  // Report title
+  doc.setFontSize(26);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Time Freedom Report', MARGIN, y);
+
+  y += 10;
+
+  // Client info
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Prepared for ${data.client_name}`, MARGIN, y);
+
+  y += 7;
+
+  // Date + company context
+  doc.setFontSize(9);
+  const metaText = data.company_name
+    ? `${data.company_name}  •  ${data.date}`
+    : data.date;
+  doc.text(metaText, MARGIN, y);
+
+  // === WHITE SECTION (below banner) ===
+  y = bannerHeight + 12;
+
+  // Hero metric - large dollar value in accent color
+  doc.setTextColor(...C.accent);
+  doc.setFontSize(48);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(data.annual_value), MARGIN, y + 14);
+
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Annual value you could unlock by delegating to your EA', MARGIN, y + 22);
+
+  y += 32;
+
+  // Metrics row - use actual Core Four task count if available
+  const displayedTaskCount = data.core_four_groups
+    ? data.core_four_groups.reduce((sum, g) => sum + g.tasks.length, 0)
+    : data.total_tasks_ea;
   y = renderMetricsRow(doc, [
     { value: `${data.weekly_hours} hrs`, label: 'Reclaimed Weekly' },
-    { value: String(data.total_tasks_ea), label: 'Tasks to Delegate' },
+    { value: String(displayedTaskCount), label: 'Tasks to Delegate' },
     { value: `${data.roi_multiplier}x`, label: 'Projected ROI of an EA' },
   ], y);
-  y += 5;
+  y += 3;
 
   // ROI pain point messaging (COVER-02)
   if (data.ceo_hourly_rate) {
@@ -901,7 +1038,7 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
 }
 
 /**
- * Build the framework page (page 2) — Three Pillars + Core Four
+ * Build the framework page (page 2) -Three Pillars + Core Four
  * All content is static / hardcoded (FRAME-04 requirement)
  */
 function buildFrameworkPage(doc: jsPDF): void {
@@ -912,22 +1049,22 @@ function buildFrameworkPage(doc: jsPDF): void {
   const THREE_PILLARS = [
     {
       title: 'Right Person',
-      description: 'Your EA must be trained in proven delegation frameworks, not just task execution. We place assistants skilled in email management, calendar optimization, personal life coordination, and business process ownership — so they can think ahead, not just follow instructions.',
+      description: 'Your EA must be trained in proven delegation frameworks, not just task execution. We place assistants skilled in email management, calendar optimization, personal life coordination, and business process ownership so they can think ahead, not just follow instructions.',
     },
     {
       title: 'Right Process & Systems',
-      description: 'Even a talented assistant will fail without the right systems. Our EAs deploy the Email GPS framework, calendar energy management, and documented playbooks for every recurring task — turning chaos into repeatable workflows.',
+      description: 'Even a talented assistant will fail without the right systems. Our EAs deploy the Email GPS framework, calendar energy management, and documented playbooks for every recurring task, turning chaos into repeatable workflows.',
     },
     {
       title: 'Right Support',
-      description: 'Delegation is not "set it and forget it." Assistant Launch provides active daily oversight, communication rhythm tracking, and ongoing integration support — so your EA relationship improves every week, not just the first.',
+      description: 'Delegation is not "set it and forget it." Assistant Launch provides active daily oversight, communication rhythm tracking, and ongoing integration support so your EA relationship improves every week, not just the first.',
     },
   ] as const;
 
   const CORE_FOUR = [
     {
       title: 'Email Ownership',
-      description: 'Your assistant triages everything using the Email GPS system — 7 folders, zero inbox for you. You review only what matters during a quick daily standup.',
+      description: 'Your assistant triages everything using the Email GPS system -7 folders, zero inbox for you. You review only what matters during a quick daily standup.',
       accent: C.emailAccent,
       accentLight: C.emailAccentLight,
     },
@@ -939,7 +1076,7 @@ function buildFrameworkPage(doc: jsPDF): void {
     },
     {
       title: 'Personal Life Ownership',
-      description: 'Hotels, flights, Amazon returns, family logistics — all handled. Enabled by the Partnership Playbook, a detailed document that captures your preferences and routines.',
+      description: 'Hotels, flights, Amazon returns, family logistics, all handled. Enabled by the Partnership Playbook, a detailed document that captures your preferences and routines.',
       accent: C.personalAccent,
       accentLight: C.personalAccentLight,
     },
@@ -955,7 +1092,7 @@ function buildFrameworkPage(doc: jsPDF): void {
   doc.setTextColor(...C.ink);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('The Three Pillars of Successful Delegation', MARGIN, y);
+  doc.text('What It Takes to Actually Succeed with an EA', MARGIN, y);
   y += 10;
 
   THREE_PILLARS.forEach((pillar, index) => {
@@ -998,18 +1135,18 @@ function buildFrameworkPage(doc: jsPDF): void {
   doc.setTextColor(...C.ink);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('The Core Four Ownership Areas', MARGIN, y);
+  doc.text('The Core Four EA Ownership Areas', MARGIN, y);
   y += 10;
 
   CORE_FOUR.forEach((area) => {
     const boxHeight = 25;
 
-    // Left accent bar (3mm wide — Design Dimension 4: widened from 2mm)
+    // Left accent bar (3mm wide -Design Dimension 4: widened from 2mm)
     const accentColor: [number, number, number] = [...area.accent];
     doc.setFillColor(...accentColor);
     doc.rect(MARGIN, y, 3, boxHeight, 'F');
 
-    // Background box (per-area light accent — Design Dimension 4)
+    // Background box (per-area light accent -Design Dimension 4)
     const lightColor: [number, number, number] = [...area.accentLight];
     doc.setFillColor(...lightColor);
     roundedRect(doc, MARGIN + 4, y, CONTENT_WIDTH - 4, boxHeight, 2, 'F');
@@ -1139,7 +1276,7 @@ export function buildCTAPage(doc: jsPDF, userData?: CTAUserData): void {
   y = renderAnalysisBlock(
     doc,
     'Where to Start',
-    "Begin with daily tasks like email and calendar management — they'll give you immediate time back while you build trust with your EA. Then expand to weekly and monthly tasks as you develop systems together.",
+    "Begin with daily tasks like email and calendar management. They'll give you immediate time back while you build trust with your EA. Then expand to weekly and monthly tasks as you develop systems together.",
     y
   );
   y += 15;
@@ -1162,44 +1299,38 @@ function renderCoreFourSection(
   startingTaskNumber: number,
   y: number,
 ): number {
-  const headerHeight = 14;
-  const minimumOneTaskHeight = 35; // Minimum task card height
+  const headerHeight = 7;
 
-  // Section header with accent color bar — check page break for header + at least one task
-  y = checkPageBreak(doc, y, headerHeight + 6 + minimumOneTaskHeight);
+  // Check page break for header + at least 2 compact task rows
+  y = checkPageBreak(doc, y, headerHeight + 16);
 
-  // Draw accent-colored header bar
+  // Compact accent-colored header bar
   const accentColor: [number, number, number] = [...group.accent];
   doc.setFillColor(...accentColor);
-  doc.rect(MARGIN, y, CONTENT_WIDTH, headerHeight, 'F');
+  roundedRect(doc, MARGIN, y, CONTENT_WIDTH, headerHeight, 1.5, 'F');
 
-  // Header title text (white on colored bar)
+  // Section title (white on accent)
   doc.setTextColor(...C.white);
-  doc.setFontSize(13); // Design Dimension 7: reduced from 14pt for subtle density
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(group.title, MARGIN + 6, y + 9);
+  doc.text(group.title, MARGIN + 4, y + 4.8);
 
-  y += headerHeight + 6; // Gap below header bar
-
-  // Subtitle below header
-  doc.setTextColor(...C.inkSecondary);
-  doc.setFontSize(10);
+  // Task count + total hours (white on accent, right-aligned)
+  const totalHours = sumWeeklyHours(group.tasks);
+  const hoursLabel = totalHours % 1 === 0 ? `${totalHours}` : `${totalHours.toFixed(1)}`;
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(group.subtitle, MARGIN + 6, y);
-  y += 8;
+  doc.text(`${group.tasks.length} tasks - ${hoursLabel} hrs/week of admin`, MARGIN + CONTENT_WIDTH - 4, y + 4.8, { align: 'right' });
 
-  // Render each task card with page break protection
+  y += headerHeight + 1.5;
+
+  // Render compact task rows
   group.tasks.forEach((task, index) => {
-    // Pre-measure description to estimate card height (same formula as renderTaskCard)
-    const descMaxWidth = CONTENT_WIDTH - (5 * 2 + 6); // circleRadius*2 + padding
-    const descLines = doc.splitTextToSize(task.description || '', descMaxWidth);
-    const estimatedCardHeight = Math.max(35, 20 + descLines.length * 5 + 8);
-
-    y = checkPageBreak(doc, y, estimatedCardHeight);
-    y = renderTaskCard(doc, startingTaskNumber + index, task.name, task.description, task.time_saved, y);
+    y = checkPageBreak(doc, y, 8);
+    y = renderCompactTaskRow(doc, startingTaskNumber + index, task.name, task.description, task.time_saved, group.accent, y);
   });
 
-  return y + 8; // Spacing before next section
+  return y + 2; // Tight gap before next section
 }
 
 /**
@@ -1217,17 +1348,21 @@ function buildCoreFourTaskPages(
   doc.addPage();
   let y = 20;
 
-  // Page title for the first task page
-  doc.setTextColor(...C.ink);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Your Personalized Task Roadmap', MARGIN, y);
+  // Compute total task count for overwhelm messaging
+  const totalTasks = data.core_four_groups.reduce((sum, g) => sum + g.tasks.length, 0);
 
+  // Page title - compact to maximize task space
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Your Personalized EA Task Roadmap', MARGIN, y + 5);
+
+  // Task count for overwhelm effect
   doc.setTextColor(...C.inkSecondary);
-  doc.setFontSize(11);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Everything an EA could own in your business — organized by the Core Four', MARGIN, y + 8);
-  y += 18;
+  doc.text(`${totalTasks} tasks your EA could own, organized by the Core Four`, MARGIN, y + 10);
+  y += 13;
 
   // Render each Core Four section with continuous task numbering
   let globalTaskNumber = 1;
@@ -1236,14 +1371,6 @@ function buildCoreFourTaskPages(
     globalTaskNumber += group.tasks.length;
   }
 
-  // Optional inline CTA if space remains on the last task page
-  if (userData) {
-    const ctaBlockHeight = 55;
-    if (y + ctaBlockHeight + 10 < 270) {
-      y += 5;
-      renderCTABlock(doc, y, userData);
-    }
-  }
 }
 
 /**
@@ -1262,7 +1389,7 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   doc.setTextColor(...C.ink);
   doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
-  doc.text("You Don't Have to Do This Alone", PAGE_WIDTH / 2, y + 15, { align: 'center' });
+  doc.text("It's Time to Buy Back Your Time", PAGE_WIDTH / 2, y + 15, { align: 'center' });
   y += 30;
 
   // --- Subheadline ---
@@ -1270,7 +1397,7 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   const subheadLines = doc.splitTextToSize(
-    'The tasks in this report are real — and they are consuming hours of your week that should be spent on strategy, relationships, and the work only you can do. But delegation done wrong wastes even more time.',
+    'The tasks in this report are real, and they are consuming hours of your week that should be spent on strategy, relationships, and the work only you can do. But delegation done wrong wastes even more time.',
     CONTENT_WIDTH - 20,
   );
   doc.text(subheadLines, MARGIN + 10, y);
@@ -1280,13 +1407,13 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   doc.setTextColor(...C.ink);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('What It Actually Takes', PAGE_WIDTH / 2, y, { align: 'center' });
+  doc.text('What It Actually Takes to Buy Back Your Time', PAGE_WIDTH / 2, y, { align: 'center' });
   y += 10;
 
   const pillars = [
     { label: 'Right Person', desc: 'An EA trained in delegation frameworks, not just task execution' },
     { label: 'Right Process', desc: 'Proven systems like Email GPS, calendar energy management, and documented playbooks' },
-    { label: 'Right Support', desc: 'Active daily oversight and ongoing integration — not "set it and forget it"' },
+    { label: 'Right Support', desc: 'Active daily oversight and ongoing integration, not "set it and forget it"' },
   ];
 
   for (const pillar of pillars) {
@@ -1321,7 +1448,7 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   const auditSteps = [
     'We review your specific time drains and identify the highest-impact tasks to delegate first',
     'We map your tasks to the Core Four framework so you can see exactly what an EA would own',
-    'We determine if Assistant Launch is the right fit — and if so, match you with a trained EA within days',
+    'We determine if Assistant Launch is the right fit, and if so, match you with a trained EA within days',
   ];
 
   auditSteps.forEach((step, index) => {

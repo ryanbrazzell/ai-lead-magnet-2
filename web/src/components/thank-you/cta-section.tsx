@@ -35,7 +35,7 @@ export function CTASection({
   // Prevent iClosed widget from auto-scrolling the page.
   // The widget can use scrollIntoView, window.scrollTo, window.scroll, or element.focus()
   // to hijack scroll position. We patch all of them during initialization.
-  // User scrolling (wheel, touch, keyboard) is unaffected — those don't call these APIs.
+  // User scrolling (wheel, touch, keyboard) is unaffected - those don't call these APIs.
   // The CTA "Book Your Time Audit" button uses scrollIntoView (not scrollTo), so we
   // allow scrollIntoView for elements OUTSIDE the widget container.
   React.useEffect(() => {
@@ -101,7 +101,7 @@ export function CTASection({
     }
   }, [leadId, email, phone, meta_fbc, meta_fbp]);
 
-  // No-op callback — scroll prevention is handled by the useEffect above
+  // No-op callback - scroll prevention is handled by the useEffect above
   const handleScriptLoad = React.useCallback(() => {
     console.log('[iClosed] Widget script loaded');
   }, []);
@@ -149,8 +149,8 @@ export function CTASection({
   const queryString = params.toString().replace(/\+/g, '%20');
   const iClosedUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
-  // Debug logging
-  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, painPoints, revenue, isTriageCall, meta_fbc, meta_fbp, iClosedUrl });
+  // Debug logging (sanitized - no PII)
+  console.log('[iClosed] Widget configured:', { isTriageCall, hasName: !!fullName, hasEmail: !!email, hasPhone: !!phone });
 
   return (
     <section
@@ -177,7 +177,9 @@ export function CTASection({
             color: '#0f172a',
           }}
         >
-          Ready to focus <span style={{ textDecoration: 'underline' }}>only</span> on your zone of genius?
+          Ready to focus <span style={{ textDecoration: 'underline' }}>only</span>
+          <br />
+          your zone of <span style={{ textDecoration: 'underline' }}>genius</span>?
         </h2>
         <p
           style={{
@@ -189,7 +191,7 @@ export function CTASection({
             marginRight: 'auto',
           }}
         >
-          In 30 minutes, we&apos;ll show you exactly which tasks to hand off first — and how to do it without the training headache.
+          In under 30 minutes, we&apos;re going to show you how the top-performing founders and executives are operating differently.
         </p>
 
         {/* What We'll Cover */}
@@ -198,7 +200,7 @@ export function CTASection({
             background: '#f8fafc',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
-            padding: '20px 24px',
+            padding: '10px 24px',
             marginBottom: '24px',
             textAlign: 'left',
             maxWidth: '400px',
@@ -213,6 +215,7 @@ export function CTASection({
               fontWeight: 600,
               color: '#0f172a',
               marginBottom: '12px',
+              textAlign: 'center',
             }}
           >
             On this call, we&apos;ll cover:
@@ -223,31 +226,75 @@ export function CTASection({
               fontSize: '14px',
               color: '#475569',
               margin: 0,
-              paddingLeft: '20px',
+              padding: 0,
+              listStyle: 'none',
               lineHeight: 1.8,
             }}
           >
-            <li>Your top 5 tasks to delegate immediately</li>
-            <li>Which EA profile matches your business</li>
-            <li>Your 30-day delegation roadmap</li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  minWidth: '20px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  marginTop: '3px',
+                }}
+              >
+                &#10003;
+              </span>
+              <span>Your top 5 tasks to delegate immediately</span>
+            </li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  minWidth: '20px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  marginTop: '3px',
+                }}
+              >
+                &#10003;
+              </span>
+              <span>Which EA profile matches your business</span>
+            </li>
+            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  minWidth: '20px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  marginTop: '3px',
+                }}
+              >
+                &#10003;
+              </span>
+              <span>Your 30-day delegation map to get you performing at the highest level</span>
+            </li>
           </ul>
-        </div>
-
-        {/* Speed Badge */}
-        <div
-          style={{
-            display: 'inline-block',
-            background: '#0f172a',
-            color: '#f59e0b',
-            padding: '8px 16px',
-            borderRadius: '50px',
-            fontSize: '14px',
-            fontWeight: 600,
-            marginBottom: '24px',
-            fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-          }}
-        >
-          3-7 days to EA Kickoff
         </div>
 
         {/* CTA text above calendar */}
@@ -256,11 +303,26 @@ export function CTASection({
             fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
             fontSize: 'clamp(20px, 5vw, 24px)',
             color: '#0f172a',
-            marginBottom: '16px',
+            marginBottom: '8px',
           }}
         >
-          Book Your Time Audit
+          Schedule your Free Time Strategy Call
         </h3>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          style={{ color: '#f59e0b', margin: '0 auto 8px', display: 'block' }}
+        >
+          <path
+            d="M12 4v16m0 0l-6-6m6 6l6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
 
         {/* iClosed Calendar - Using inline widget (same as services page) */}
         <div
@@ -286,7 +348,7 @@ export function CTASection({
           />
           <Script
             src="https://app.iclosed.io/assets/widget.js"
-            strategy="lazyOnload"
+            strategy="afterInteractive"
             onLoad={handleScriptLoad}
           />
         </div>
@@ -295,4 +357,3 @@ export function CTASection({
     </section>
   );
 }
-

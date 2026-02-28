@@ -130,7 +130,7 @@ function groupTasksByCoreFour(allEATasks: Task[]): CoreFourTaskGroup[] {
     },
     personal: {
       title: 'Personal Life Ownership',
-      subtitle: 'Hotels, flights, Amazon, family logistics — all handled',
+      subtitle: 'Hotels, flights, Amazon, family logistics, all handled',
       accent: C.personalAccent,
     },
     business: {
@@ -188,7 +188,7 @@ function transformToPDFData(
   const roiMultiplier = Number((roi?.roiMultiplier || (annualValue / eaInvestment)).toFixed(1));
 
   // Generate analysis text
-  const analysisText = `Based on your revenue level and the workload you described, you are spending roughly ${weeklyHours} hours per week on tasks that do not require your expertise. That is over ${Math.round(weeklyHours * 52)} hours per year — time that could go toward closing deals, building relationships, or being present with your family.`;
+  const analysisText = `Based on your revenue level and the workload you described, you are spending roughly ${weeklyHours} hours per week on tasks that do not require your expertise. That is over ${Math.round(weeklyHours * 52)} hours per year, time that could go toward closing deals, building relationships, or being present with your family.`;
 
   // Separate EA tasks (isEA=true or owner="EA") vs Founder tasks (isEA=false or owner="You")
   const separateTasks = (tasks: Task[]) => {
@@ -227,7 +227,7 @@ function transformToPDFData(
     .slice(0, 3)
     .map(t => transformTask(t, 'monthly'));
 
-  // Collect ALL EA tasks for Core Four grouping (no limit — show everything for overwhelm)
+  // Collect ALL EA tasks for Core Four grouping (no limit - show everything for overwhelm)
   const allEATasks = [
     ...dailySeparated.eaTasks,
     ...weeklySeparated.eaTasks,

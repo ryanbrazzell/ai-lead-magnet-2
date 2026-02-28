@@ -2,22 +2,25 @@
  * ThankYouContent Component
  * Main report page composition
  *
+ * Page reveals after 8s analyzing animation. Report generates in background
+ * and arrives via email — page focuses user on booking the strategy call.
+ *
  * Sections in order:
  * 1. Navigation Header (navy bar with logo)
- * 2. Success Banner (green gradient) - with email status (sending/sent/error)
- * 3. Hero Pain (navy, "highest-paid assistant")
- * 4. Cost Card (time lost + ROI breakdown + video)
- * 5. How It Works (Right Person, Right Process, Right Support)
- * 6. CTA Section with Calendar (iClosed widget)
- * 7. Social Proof (testimonials)
+ * 2. Hero Pain (navy, "highest-paid assistant", booking CTA)
+ * 3. Cost Card (time lost + ROI breakdown)
+ * 4. How It Works (Right Person, Right Process, Right Support)
+ * 5. CTA Section with Calendar (iClosed widget)
+ * 6. Social Proof (testimonials)
+ * 7. FAQ
  * 8. Final CTA
+ * + Floating toast: "Your report will arrive at {email} in about 60 seconds"
  */
 
 "use client";
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Header } from '@/components/layout/header';
 import { HeroPain } from './hero-pain';
 import { CostCard } from './cost-card';
 import { CTASection } from './cta-section';
@@ -48,7 +51,8 @@ export function ThankYouContent() {
   const [showAnalyzing, setShowAnalyzing] = React.useState(true);
   const [emailSent, setEmailSent] = React.useState(false);
   const [emailError, setEmailError] = React.useState<string | null>(null);
-  const [blobUrl, setBlobUrl] = React.useState<string | null>(null);
+  const [showEmailToast, setShowEmailToast] = React.useState(true);
+  const generationStarted = React.useRef(false);
 
   // Parse form data from URL params (base64 encoded with Unicode-safe decoding)
   const formData = React.useMemo<FormDataFromURL | null>(() => {
@@ -115,16 +119,15 @@ export function ThankYouContent() {
     }, 100);
   }, []);
 
-  // Generate PDF and send email when analysis completes
+  // Generate PDF and send email - runs entirely in background, decoupled from page reveal
   const generateAndSendReport = React.useCallback(async () => {
     if (!formData?.email) return;
 
-    // Reset states for safe re-calling (retry support)
     setEmailSent(false);
     setEmailError(null);
 
     try {
-      // First, generate the tasks via AI
+      // Step 1: Generate tasks via AI
       const tasksResponse = await fetch('/api/generate-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +151,7 @@ export function ThankYouContent() {
         return;
       }
 
-      // Generate PDF (include all user data for pre-filled booking URL)
+      // Step 2: Generate PDF
       const pdfResponse = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,34 +179,34 @@ export function ThankYouContent() {
         return;
       }
 
-      // Store blob URL if available (for download fallback)
-      if (pdfResult.blobUrl) {
-        setBlobUrl(pdfResult.blobUrl);
+      // Step 3: Send email with PDF attached
+      try {
+        const emailResponse = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone,
+            pdfBuffer: pdfResult.pdf,
+            downloadUrl: pdfResult.blobUrl || undefined,
+          }),
+        });
+
+        const emailResult = await emailResponse.json();
+
+        if (emailResult.success) {
+          setEmailSent(true);
+        } else {
+          console.error('Failed to send email:', emailResult.error);
+          setEmailError(emailResult.error || 'Failed to send email');
+        }
+      } catch (emailErr) {
+        console.error('Email send error:', emailErr);
       }
 
-      // Send email with PDF (include phone for pre-filled booking URL)
-      const emailResponse = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          pdfBuffer: pdfResult.pdf,
-        }),
-      });
-
-      const emailResult = await emailResponse.json();
-
-      if (emailResult.success) {
-        setEmailSent(true);
-      } else {
-        console.error('Failed to send email:', emailResult.error);
-        setEmailError(emailResult.error || 'Failed to send email');
-      }
-
-      // Update Close CRM with report URL (if we have leadId and blobUrl)
+      // Step 4: Update Close CRM
       if (formData.leadId && pdfResult.blobUrl) {
         try {
           await fetch('/api/close/update-lead', {
@@ -214,174 +217,85 @@ export function ThankYouContent() {
               reportUrl: pdfResult.blobUrl,
             }),
           });
-          console.log('Close CRM updated with report URL:', pdfResult.blobUrl);
         } catch (err) {
-          console.error('Failed to update Close CRM with report URL:', err);
-          // Non-blocking - don't fail the whole flow
+          console.error('Failed to update Close CRM:', err);
         }
       }
     } catch (err) {
       console.error('Error generating/sending report:', err);
       setEmailError('Failed to generate report');
     }
-  }, [formData, taskHours, roi]);
+  }, [formData, taskHours, revenueRange]);
 
-  // Handle analysis complete
-  const handleAnalysisComplete = React.useCallback(() => {
-    setShowAnalyzing(false);
-    generateAndSendReport();
+  // Start report generation immediately on mount (runs in parallel with animation)
+  React.useEffect(() => {
+    if (!generationStarted.current) {
+      generationStarted.current = true;
+      generateAndSendReport();
+    }
   }, [generateAndSendReport]);
 
-  // Show analyzing animation first
+  // Auto-dismiss email toast 5s after page reveals
+  React.useEffect(() => {
+    if (!showAnalyzing && showEmailToast) {
+      const timer = setTimeout(() => setShowEmailToast(false), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [showAnalyzing, showEmailToast]);
+
+  // Animation done = page reveals (report generates independently in background)
+  const handleAnimationComplete = React.useCallback(() => {
+    setShowAnalyzing(false);
+  }, []);
+
+  // Show analyzing animation for 8 seconds (report generates in background)
   if (showAnalyzing) {
     return (
       <AnalyzingAnimation
         firstName={formData?.firstName || 'there'}
-        onComplete={handleAnalysisComplete}
-        duration={3500}
+        onComplete={handleAnimationComplete}
+        duration={8000}
       />
     );
   }
 
   return (
-    <div className="min-h-screen w-full" style={{ background: '#f1f5f9' }}>
-      {/* 1. Navigation Header */}
-      <Header 
-        logo={<span style={{ fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif', fontSize: '24px', color: '#f59e0b' }}>Assistant Launch 🚀</span>} 
-        href="https://www.assistantlaunch.com" 
-        showNav={true}
-        className="bg-[#0f172a]"
-      />
-
-      {/* 2. Success Banner with email delivery status */}
+    <div className="w-full" style={{ background: '#f1f5f9' }}>
+      {/* 1. Navigation Header - centered logo, no nav */}
       <div
-        className="text-center text-white"
         style={{
-          fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-          background: emailError
-            ? 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)'
-            : 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-          padding: '20px 16px',
-          fontWeight: 500,
+          background: '#0f172a',
+          padding: '12px 20px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
-        {emailError ? (
-          <>
-            <div style={{ marginBottom: '4px' }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }}
-              >
-                <path
-                  d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm1 15H9v-2h2v2zm0-4H9V5h2v6z"
-                  fill="currentColor"
-                />
-              </svg>
-              <strong>We had trouble sending your report. Don&apos;t worry — your report is ready.</strong>
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '10px' }}>
-              {blobUrl
-                ? 'You can download it directly below, or try sending it again.'
-                : 'Click below to try sending it again.'}
-            </div>
-            <button
-              onClick={() => generateAndSendReport()}
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                color: 'white',
-                padding: '6px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 600,
-              }}
-            >
-              Resend Report
-            </button>
-          </>
-        ) : emailSent ? (
-          <>
-            <div style={{ marginBottom: '4px' }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }}
-              >
-                <path
-                  d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm-2 15l-5-5 1.41-1.41L8 12.17l7.59-7.59L17 6l-9 9z"
-                  fill="currentColor"
-                />
-              </svg>
-              <strong>Your personalized Time Freedom Report has been sent to {formData?.email || 'your inbox'}.</strong>
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>
-              While you wait, scroll down to see exactly how much doing $15/hr admin work is really costing you.
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ marginBottom: '4px' }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', animation: 'spin 2s linear infinite' }}
-              >
-                <path
-                  d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm-2 15l-5-5 1.41-1.41L8 12.17l7.59-7.59L17 6l-9 9z"
-                  fill="currentColor"
-                />
-              </svg>
-              <strong>Your personalized Time Freedom Report is heading to {formData?.email || 'your inbox'}.</strong>
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>
-              While you wait, scroll down to see exactly how much doing $15/hr admin work is really costing you.
-            </div>
-          </>
-        )}
-
-        {/* PDF download fallback link - shown whenever blobUrl is available */}
-        {blobUrl && (
-          <div style={{ marginTop: '8px', fontSize: '13px', opacity: 0.85 }}>
-            <a
-              href={blobUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'white',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px',
-              }}
-            >
-              Download your report (PDF)
-            </a>
-          </div>
-        )}
+        <a
+          href="https://www.assistantlaunch.com"
+          style={{ textDecoration: 'none', display: 'inline-block' }}
+        >
+          <span style={{ fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif', fontSize: '24px', color: '#f59e0b' }}>Assistant Launch 🚀</span>
+        </a>
       </div>
 
-      {/* 3. Hero Pain Section */}
+      {/* 2. Hero Pain Section */}
       <HeroPain firstName={formData?.firstName || 'there'} onCTAClick={handleCTAClick} />
 
-      {/* 4. Cost Card (overlaps hero) */}
+      {/* 3. Cost Card (overlaps hero) */}
       <CostCard
         taskHours={taskHours}
         revenueRange={revenueRange}
+        onCTAClick={handleCTAClick}
       />
 
-      {/* 5. Overwhelm Section - Shows everything they're still doing + client proof */}
-      <OverwhelmSection />
+      {/* 4. Overwhelm Section (checklist on white + client proof on navy) */}
+      <OverwhelmSection onCTAClick={handleCTAClick} />
 
-      {/* 6. How It Works + Future Pacing */}
-      <HowItWorksSection />
+      {/* 5. How It Works (pain points white → 3 steps gray → guarantee white) */}
+      <HowItWorksSection onCTAClick={handleCTAClick} />
 
-      {/* 7. CTA Section with Calendar */}
+      {/* 6. CTA Section with Calendar */}
       <CTASection
         firstName={formData?.firstName || ''}
         lastName={formData?.lastName || ''}
@@ -395,13 +309,104 @@ export function ThankYouContent() {
       />
 
       {/* 7. Social Proof */}
-      <SocialProofSection />
+      <SocialProofSection onCTAClick={handleCTAClick} />
 
       {/* 8. FAQ Section */}
-      <FAQSection />
+      <FAQSection onCTAClick={handleCTAClick} />
 
       {/* 9. Final CTA */}
       <FinalCTASection annualHours={annualHours} onButtonClick={handleCTAClick} />
+
+      {/* Email toast notification - auto-dismisses after 5s */}
+      {showEmailToast && formData?.email && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '16px',
+            right: '24px',
+            background: 'white',
+            color: '#475569',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08)',
+            zIndex: 1000,
+            animation: 'toastSlideIn 0.4s ease-out',
+            maxWidth: '360px',
+            overflow: 'hidden',
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0 }}
+          >
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M22 4L12 13L2 4" />
+          </svg>
+          <span>
+            Your report will arrive at{' '}
+            <span style={{ color: '#0f172a', fontWeight: 600 }}>{formData.email}</span>
+            {' '}in about 60 seconds
+          </span>
+          <button
+            onClick={() => setShowEmailToast(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: '0 0 0 4px',
+              fontSize: '16px',
+              lineHeight: 1,
+            }}
+          >
+            &times;
+          </button>
+          {/* Countdown progress bar */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: '#e2e8f0',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                background: '#f59e0b',
+                animation: 'toastCountdown 8s linear forwards',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Page-level styles */}
+      <style>{`
+        body { background: #0f172a !important; }
+        @keyframes toastSlideIn {
+          from { opacity: 0; transform: translateY(-16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastCountdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 }

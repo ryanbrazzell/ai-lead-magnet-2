@@ -14,10 +14,9 @@ import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
 import { generateTasks } from '@/lib/ai/task-generator';
 import { validateReport } from '@/lib/ai/report-validator';
 import { fixReportIssues, ensureCoreEATasks } from '@/lib/ai/report-fixer';
-import { sendAsyncNotifications } from '@/lib/email/asyncNotifications';
 import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Generate a correlation ID for request tracking
