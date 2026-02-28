@@ -5,14 +5,16 @@
  * Ported from /tmp/ea-time-freedom-report/app/api/send-email/route.ts (lines 64-171)
  */
 
-/** Base iClosed booking URL for discovery call CTA */
-const BOOKING_BASE_URL = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+/** Base URL for the standalone booking page */
+const BOOKING_PAGE_URL = 'https://assistantlaunch.com/book-call';
 
 /** Company website URL */
 const COMPANY_URL = 'https://assistantlaunch.com';
 
 /**
- * Builds iClosed booking URL with pre-filled user data
+ * Builds booking page URL with pre-filled user data.
+ * Points to our /book-call page which renders the iClosed widget with the same
+ * pre-fill approach as the report page CTA section.
  */
 function buildBookingUrl(userData?: {
   firstName?: string;
@@ -20,26 +22,16 @@ function buildBookingUrl(userData?: {
   email?: string;
   phone?: string;
 }): string {
-  if (!userData) return BOOKING_BASE_URL;
+  if (!userData) return BOOKING_PAGE_URL;
 
   const params = new URLSearchParams();
-  const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ');
 
-  if (fullName) params.set('iclosedName', fullName);
-  if (userData.email) params.set('iclosedEmail', userData.email);
+  if (userData.firstName) params.set('firstName', userData.firstName);
+  if (userData.lastName) params.set('lastName', userData.lastName);
+  if (userData.email) params.set('email', userData.email);
+  if (userData.phone) params.set('phone', userData.phone);
 
-  // Format phone for iClosed - strip the +1 prefix if present, keep just digits
-  if (userData.phone) {
-    const phoneDigits = userData.phone.replace(/\D/g, '');
-    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
-      ? phoneDigits.slice(1)
-      : phoneDigits;
-    params.set('iclosedPhone', formattedPhone);
-  }
-
-  params.set('timeFormat', '12h');
-
-  return params.toString() ? `${BOOKING_BASE_URL}?${params.toString()}` : BOOKING_BASE_URL;
+  return params.toString() ? `${BOOKING_PAGE_URL}?${params.toString()}` : BOOKING_PAGE_URL;
 }
 
 export interface EmailUserData {
@@ -64,7 +56,7 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData, 
   const greeting = firstName || 'there';
   const bookingUrl = buildBookingUrl(userData);
   const downloadLink = downloadUrl
-    ? `<p style="margin: 0 0 20px 0;"><a href="${downloadUrl}" style="color: #0D7377; font-weight: bold;">View and download your report here</a></p>`
+    ? `<p style="margin: 0 0 20px 0;"><a href="${downloadUrl}" style="color: #f59e0b; font-weight: bold;">View and download your report here</a></p>`
     : '';
 
   return `<!DOCTYPE html>
@@ -86,11 +78,16 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData, 
     <p style="margin: 0 0 4px 0;">3. Personal life ownership</p>
     <p style="margin: 0 0 16px 0;">4. Recurring business processes</p>
 
-    <p style="margin: 0 0 16px 0;">The report also covers what it actually takes to succeed with an assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support behind them.</p>
+    <p style="margin: 0 0 16px 0;">The report also covers what it actually takes to succeed with an Executive Assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support to integrate them (and you).</p>
 
-    <p style="margin: 0 0 16px 0;">If any of it resonates and you want to talk through what this could look like for you, book a time with me here:</p>
+    <p style="margin: 0 0 16px 0;">If any of it resonates and you want to talk through what this could look like for you, I'll walk through the gaps in your report and show you how the top-performing founders and executives are operating differently. 3-4 weeks and your life can look completely different than it does right now.</p>
 
-    <p style="margin: 0 0 24px 0;"><a href="${bookingUrl}" style="color: #0D7377; font-weight: bold;">Book your free time audit call</a></p>
+    <p style="margin: 0 0 8px 0; font-weight: bold;">On this call, we'll cover:</p>
+    <p style="margin: 0 0 4px 0;">&#10003; Your top 5 tasks to delegate immediately</p>
+    <p style="margin: 0 0 4px 0;">&#10003; Which EA profile matches your business</p>
+    <p style="margin: 0 0 16px 0;">&#10003; Your 30-day delegation map to get you performing at the highest level</p>
+
+    <p style="margin: 0 0 24px 0;"><a href="${bookingUrl}" style="display: inline-block; background: #f59e0b; color: #0f172a; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">Book your free time strategy call</a></p>
 
     <p style="margin: 0 0 4px 0;">Talk soon,</p>
     <p style="margin: 0 0 4px 0;"><strong>Ryan Brazzell</strong></p>
@@ -130,11 +127,16 @@ This report was built specifically for you based on the information you shared. 
 3. Personal life ownership
 4. Recurring business processes
 
-The report also covers what it actually takes to succeed with an assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support behind them.
+The report also covers what it actually takes to succeed with an Executive Assistant - it's not just about finding someone, it's about having the right person, the right systems, and the right support to integrate them (and you).
 
-If any of it resonates and you want to talk through what this could look like for you, book a time with me here:
+If any of it resonates and you want to talk through what this could look like for you, I'll walk through the gaps in your report and show you how the top-performing founders and executives are operating differently. 3-4 weeks and your life can look completely different than it does right now.
 
-${bookingUrl}
+On this call, we'll cover:
+✓ Your top 5 tasks to delegate immediately
+✓ Which EA profile matches your business
+✓ Your 30-day delegation map to get you performing at the highest level
+
+Book your free time strategy call: ${bookingUrl}
 
 Talk soon,
 Ryan Brazzell

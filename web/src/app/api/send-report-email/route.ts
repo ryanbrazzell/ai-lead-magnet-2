@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
                 Assistant Launch | Time Freedom Starts Here
               </p>
               <p style="color: #64748b; font-size: 12px; margin: 0;">
-                Questions? Text us at (619) 952-4992
+                Questions? Text us at (442) 416-3020
               </p>
             </td>
           </tr>

@@ -835,7 +835,8 @@ export function renderFounderTasksSection(
 }
 
 /**
- * Builds iClosed booking URL with pre-filled user data
+ * Builds booking page URL with pre-filled user data.
+ * Points to our /book-call page which renders iClosed with the same pre-fill approach.
  */
 function buildBookingUrl(userData?: {
   firstName?: string;
@@ -843,25 +844,15 @@ function buildBookingUrl(userData?: {
   email?: string;
   phone?: string;
 }): string {
-  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  const baseUrl = 'https://assistantlaunch.com/book-call';
   if (!userData) return baseUrl;
 
   const params = new URLSearchParams();
-  const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ');
+  if (userData.firstName) params.set('firstName', userData.firstName);
+  if (userData.lastName) params.set('lastName', userData.lastName);
+  if (userData.email) params.set('email', userData.email);
+  if (userData.phone) params.set('phone', userData.phone);
 
-  if (fullName) params.set('iclosedName', fullName);
-  if (userData.email) params.set('iclosedEmail', userData.email);
-
-  // Format phone for iClosed - strip +1 prefix if present
-  if (userData.phone) {
-    const phoneDigits = userData.phone.replace(/\D/g, '');
-    const formattedPhone = phoneDigits.startsWith('1') && phoneDigits.length === 11
-      ? phoneDigits.slice(1)
-      : phoneDigits;
-    params.set('iclosedPhone', formattedPhone);
-  }
-
-  params.set('timeFormat', '12h');
   return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
 }
 
@@ -899,7 +890,7 @@ export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): n
   doc.setTextColor(...C.white);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Schedule Free Consultation', PAGE_WIDTH / 2, btnY + 8, { align: 'center' });
+  doc.text('Book Your FREE Time Strategy Call', PAGE_WIDTH / 2, btnY + 8, { align: 'center' });
 
   // Add clickable link to the button area
   doc.link(btnX, btnY, btnWidth, btnHeight, { url: bookingUrl });
@@ -908,7 +899,7 @@ export function renderCTABlock(doc: jsPDF, y: number, userData?: CTAUserData): n
   doc.setTextColor(...C.accent);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  const urlText = 'assistantlaunch.com/book';
+  const urlText = 'assistantlaunch.com/book-call';
   doc.text(urlText, PAGE_WIDTH / 2, y + 40, { align: 'center' });
 
   // Make the URL text clickable too
@@ -943,7 +934,7 @@ export function renderFooter(doc: jsPDF): void {
 /**
  * Build the summary page (page 1)
  */
-export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
+export function buildSummaryPage(doc: jsPDF, data: PDFReportData, userData?: CTAUserData): void {
   // === TEAL HEADER BANNER ===
   const bannerHeight = 58;
   doc.setFillColor(...C.accent);
@@ -1034,7 +1025,22 @@ export function buildSummaryPage(doc: jsPDF, data: PDFReportData): void {
 
   y = renderAnalysisBlock(doc, 'Summary Analysis', data.analysis_text, y);
   y += 3;
-  renderInvestmentBlock(doc, data.annual_value, data.ea_investment, data.net_return, data.roi_multiplier, y);
+  y = renderInvestmentBlock(doc, data.annual_value, data.ea_investment, data.net_return, data.roi_multiplier, y);
+
+  // Cover page booking CTA
+  y += 8;
+  const bookingUrl = buildBookingUrl(userData);
+  const coverBtnWidth = 100;
+  const coverBtnHeight = 12;
+  const coverBtnX = (PAGE_WIDTH - coverBtnWidth) / 2;
+
+  doc.setFillColor(...C.ctaBgGold);
+  doc.roundedRect(coverBtnX, y, coverBtnWidth, coverBtnHeight, 5, 5, 'F');
+  doc.setTextColor(...C.ctaTextDark);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Book Your FREE Time Strategy Call', PAGE_WIDTH / 2, y + 8, { align: 'center' });
+  doc.link(coverBtnX, y, coverBtnWidth, coverBtnHeight, { url: bookingUrl });
 }
 
 /**
@@ -1442,57 +1448,70 @@ function buildCTAPageV2(doc: jsPDF, userData?: CTAUserData): void {
   doc.setTextColor(...C.ink);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('What Happens on Your Free Time Audit', PAGE_WIDTH / 2, y, { align: 'center' });
+  doc.text('What Happens on Your Free Time Strategy Call', PAGE_WIDTH / 2, y, { align: 'center' });
+  y += 12;
+
+  // --- Subtext ---
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text("On this call, we'll cover:", MARGIN + 10, y);
   y += 10;
 
-  const auditSteps = [
-    'We review your specific time drains and identify the highest-impact tasks to delegate first',
-    'We map your tasks to the Core Four framework so you can see exactly what an EA would own',
-    'We determine if Assistant Launch is the right fit, and if so, match you with a trained EA within days',
+  const callBullets = [
+    'Your top 5 tasks to delegate immediately',
+    'Which EA profile matches your business',
+    'Your 30-day delegation map to get you performing at the highest level',
   ];
 
-  auditSteps.forEach((step, index) => {
-    // Step number circle
-    doc.setFillColor(...C.accent);
-    doc.circle(MARGIN + 12, y + 3, 5, 'F');
+  callBullets.forEach((bullet) => {
+    // Checkmark circle
+    doc.setFillColor(16, 185, 129); // #10b981 green
+    doc.circle(MARGIN + 14, y + 2, 4, 'F');
     doc.setTextColor(...C.white);
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(String(index + 1), MARGIN + 12, y + 4.5, { align: 'center' });
+    doc.text('\u2713', MARGIN + 14, y + 3.5, { align: 'center' });
 
-    // Step text
+    // Bullet text
     doc.setTextColor(...C.inkSecondary);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const stepLines = doc.splitTextToSize(step, CONTENT_WIDTH - 30);
-    doc.text(stepLines, MARGIN + 22, y + 5);
-    y += Math.max(16, stepLines.length * 5 + 8);
+    doc.text(bullet, MARGIN + 24, y + 4);
+    y += 14;
   });
 
   y += 12;
 
   // --- Large CTA Button ---
-  const btnWidth = 120;
+  const btnWidth = 140;
   const btnHeight = 16;
   const btnX = (PAGE_WIDTH - btnWidth) / 2;
 
-  doc.setFillColor(...C.ctaBgGold); // Design Dimension 2: Gold button for visual disruption
+  doc.setFillColor(...C.ctaBgGold);
   doc.roundedRect(btnX, y, btnWidth, btnHeight, 6, 6, 'F');
-  doc.setTextColor(...C.ctaTextDark); // Design Dimension 2: Navy text on gold
+  doc.setTextColor(...C.ctaTextDark);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Book Your Free Time Audit', PAGE_WIDTH / 2, y + 10.5, { align: 'center' });
+  doc.text('Book Your FREE Time Strategy Call', PAGE_WIDTH / 2, y + 10.5, { align: 'center' });
 
   // Make button clickable
   doc.link(btnX, y, btnWidth, btnHeight, { url: bookingUrl });
 
   y += btnHeight + 6;
 
+  // --- Subtext ---
+  doc.setTextColor(...C.inkSecondary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Schedule your free time strategy call', PAGE_WIDTH / 2, y + 2, { align: 'center' });
+
   // Display URL (also clickable)
+  y += 10;
   doc.setTextColor(...C.accent);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  const urlText = 'assistantlaunch.com/book';
+  const urlText = 'assistantlaunch.com/book-call';
   doc.text(urlText, PAGE_WIDTH / 2, y + 2, { align: 'center' });
 
   const urlWidth = doc.getTextWidth(urlText);
@@ -1527,7 +1546,7 @@ export function addFootersToAllPages(doc: jsPDF): void {
  */
 export function generateTimeFreedomReport(doc: jsPDF, data: PDFReportData, userData?: CTAUserData): void {
   // Page 1: Cover + ROI
-  buildSummaryPage(doc, data);
+  buildSummaryPage(doc, data, userData);
 
   // Page 2: Three Pillars + Core Four Framework
   buildFrameworkPage(doc);

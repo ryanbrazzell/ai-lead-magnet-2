@@ -80,7 +80,7 @@ export function HeroPain({ firstName, onCTAClick }: HeroPainProps) {
             letterSpacing: '0.01em',
           }}
         >
-          Join <span style={{ color: 'white', fontWeight: 600 }}>1,300+</span> founders replacing 86+ hours of admin a month
+          Join <span style={{ color: 'white', fontWeight: 600 }}>1,300+</span> founders <span style={{ color: 'white' }}>replacing 86+ hours of admin a month</span>
         </p>
 
         {/* CTA */}
