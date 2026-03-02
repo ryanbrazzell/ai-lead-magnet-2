@@ -6,7 +6,7 @@
  */
 
 /** Base URL for the standalone booking page */
-const BOOKING_PAGE_URL = 'https://assistantlaunch.com/book-call';
+const BOOKING_PAGE_URL = 'https://report.assistantlaunch.com/book-call';
 
 /** Company website URL */
 const COMPANY_URL = 'https://assistantlaunch.com';

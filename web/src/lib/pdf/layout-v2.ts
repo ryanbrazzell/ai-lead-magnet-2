@@ -173,7 +173,7 @@ function sumWeeklyHours(tasks: PDFTask[]): number {
  * Builds booking page URL with pre-filled user data.
  */
 function buildBookingUrl(userData?: CTAUserData): string {
-  const baseUrl = 'https://assistantlaunch.com/book-call';
+  const baseUrl = 'https://report.assistantlaunch.com/book-call';
   if (!userData) return baseUrl;
 
   const params = new URLSearchParams();
@@ -328,7 +328,7 @@ function renderCTAButton(
   const urlY = y + btnHeight + SP.xs + 1;
   doc.setTextColor(...C.orange);
   setSans(doc, TYPE.caption);
-  const urlText = 'assistantlaunch.com/book-call';
+  const urlText = 'report.assistantlaunch.com/book-call';
   doc.text(urlText, PAGE_WIDTH / 2, urlY, { align: 'center' });
   const urlWidth = doc.getTextWidth(urlText);
   doc.link((PAGE_WIDTH - urlWidth) / 2, urlY - 3, urlWidth, 5, { url: bookingUrl });
