@@ -1,26 +1,46 @@
 /**
- * Integration Tests for AI Task Generation Service (Task Group 8)
+ * Integration Tests for AI Task Generation Service (Core Four Architecture)
  *
  * These tests verify end-to-end workflows and integration points between modules:
- * - Complete task generation pipeline
+ * - Complete task generation pipeline (two-prompt chain)
  * - Auto-fix behavior on invalid responses
  * - Core EA task presence verification
  * - Edge cases and error handling
+ *
+ * All data uses Core Four keys: businessProcesses, personalLife, calendar, email
+ * Target counts: businessProcesses ~8-10, personalLife ~5-6, calendar ~4-5, email ~3-4
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { UnifiedLeadData, TaskGenerationResult, Task } from '@/types';
+import type { UnifiedLeadData, TaskGenerationResult, Task, TasksByCoreFour } from '@/types';
 
 // Mock the Claude client for integration tests
 vi.mock('../claude-client', () => ({
   generateWithClaude: vi.fn(),
+  generateAnalysis: vi.fn(),
+  generateCoreFourTasks: vi.fn(),
   getApiKey: vi.fn(),
   parseClaudeResponse: vi.fn(),
+  parseGenerationResponse: vi.fn(),
   CLAUDE_CONFIG: {
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     temperature: 0.6,
     maxTokens: 8192,
-    timeout: 90000,
+    timeout: 60000,
+    maxRetries: 1,
+  },
+  ANALYSIS_CONFIG: {
+    model: 'claude-sonnet-4-6',
+    temperature: 0.5,
+    maxTokens: 2048,
+    timeout: 30000,
+    maxRetries: 1,
+  },
+  GENERATION_CONFIG: {
+    model: 'claude-sonnet-4-6',
+    temperature: 0.6,
+    maxTokens: 8192,
+    timeout: 60000,
     maxRetries: 1,
   },
 }));
@@ -36,13 +56,20 @@ import { validateReport, analyzeReport } from '../report-validator';
 import {
   fixReportIssues,
   ensureCoreEATasks,
-  fixLowEAPercentage,
-  fixTaskCount,
+  padThinAreas,
+  isGoodEACandidate,
 } from '../report-fixer';
-import { generateWithClaude, getApiKey, parseClaudeResponse } from '../claude-client';
+import {
+  generateWithClaude,
+  generateAnalysis,
+  generateCoreFourTasks,
+  getApiKey,
+  parseClaudeResponse,
+  parseGenerationResponse,
+} from '../claude-client';
 import { buildUnifiedPromptJSON } from '../prompts';
 
-describe('Integration Tests: AI Task Generation Service', () => {
+describe('Integration Tests: AI Task Generation Service (Core Four)', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -52,28 +79,38 @@ describe('Integration Tests: AI Task Generation Service', () => {
   });
 
   /**
-   * Test 1: End-to-end: Valid lead data -> 24 tasks with 50%+ EA ratio
+   * Test 1: End-to-end: Valid lead data -> ~22-25 tasks organized by Core Four
    *
    * Verifies the complete pipeline from lead data input to valid task output
    */
-  describe('End-to-end: Valid lead data generates valid report', () => {
-    it('generates exactly 24 tasks with 50%+ EA ratio from valid lead data', async () => {
+  describe('End-to-end: Valid lead data generates valid Core Four report', () => {
+    it('generates tasks organized by Core Four areas with correct counts', async () => {
       const mockLeadData = createFullLeadData('main');
-      const mockResult = createValidReportWithCoreEATasks();
+      const mockAnalysisBrief = createMockAnalysisBrief();
+      const mockResult = createValidCoreFourReport();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      // Verify task counts
-      expect(result.total_task_count).toBe(24);
-      expect(result.tasks.daily).toHaveLength(8);
-      expect(result.tasks.weekly).toHaveLength(8);
-      expect(result.tasks.monthly).toHaveLength(8);
+      // Verify Core Four structure exists
+      expect(result.tasks.businessProcesses).toBeDefined();
+      expect(result.tasks.personalLife).toBeDefined();
+      expect(result.tasks.calendar).toBeDefined();
+      expect(result.tasks.email).toBeDefined();
 
-      // Verify EA ratio is at least 50%
-      const analysis = analyzeReport(result);
-      expect(analysis.eaPercentage).toBeGreaterThanOrEqual(50);
+      // Verify total task count is in target range (~22-25)
+      expect(result.total_task_count).toBeGreaterThanOrEqual(20);
+      expect(result.total_task_count).toBeLessThanOrEqual(28);
+
+      // Verify per-area counts are reasonable
+      expect(result.tasks.businessProcesses.length).toBeGreaterThanOrEqual(5);
+      expect(result.tasks.personalLife.length).toBeGreaterThanOrEqual(3);
+      expect(result.tasks.calendar.length).toBeGreaterThanOrEqual(3);
+      expect(result.tasks.email.length).toBeGreaterThanOrEqual(2);
+
+      // Verify EA ratio is high (all tasks are EA in new architecture)
       expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
 
       // Verify validation passes
@@ -84,52 +121,30 @@ describe('Integration Tests: AI Task Generation Service', () => {
   });
 
   /**
-   * Test 2: End-to-end: Invalid response -> auto-fix -> valid output
+   * Test 2: Auto-fix: padThinAreas fills undersized Core Four areas
    *
-   * Verifies that the auto-fix pipeline corrects invalid AI responses
+   * Verifies that the pad function injects fallback tasks into thin areas
    */
-  describe('End-to-end: Invalid response triggers auto-fix', () => {
-    it('auto-fixes low EA percentage and produces valid output', async () => {
-      // Create a report with low EA percentage (0%)
-      const lowEAReport = createReportWithLowEAPercentage();
+  describe('Auto-fix: padThinAreas fills undersized Core Four areas', () => {
+    it('pads areas that are below minimum counts', () => {
+      // Create a report with thin areas (too few tasks in some areas)
+      const thinReport = createReportWithThinAreas();
 
-      // Verify the input has low EA percentage
-      expect(lowEAReport.ea_task_percent).toBeLessThan(40);
+      // Verify some areas are below minimums
+      expect(thinReport.tasks.email.length).toBeLessThan(2);
+      expect(thinReport.tasks.calendar.length).toBeLessThan(3);
 
-      // Run the fixer
-      const fixedReport = fixLowEAPercentage(lowEAReport);
+      // Run the padder
+      const paddedReport = padThinAreas(thinReport);
 
-      // Verify the EA percentage has been fixed
-      const analysis = analyzeReport(fixedReport);
-      expect(analysis.eaPercentage).toBeGreaterThanOrEqual(40);
-      expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
+      // Verify thin areas have been filled to minimums
+      expect(paddedReport.tasks.email.length).toBeGreaterThanOrEqual(2);
+      expect(paddedReport.tasks.calendar.length).toBeGreaterThanOrEqual(3);
+      expect(paddedReport.tasks.personalLife.length).toBeGreaterThanOrEqual(3);
+      expect(paddedReport.tasks.businessProcesses.length).toBeGreaterThanOrEqual(5);
 
-      // Verify task count is still correct
-      expect(fixedReport.tasks.daily).toHaveLength(8);
-      expect(fixedReport.tasks.weekly).toHaveLength(8);
-      expect(fixedReport.tasks.monthly).toHaveLength(8);
-    });
-
-    it('fixes task count issues correctly', () => {
-      // Create a report with wrong task count
-      const wrongCountReport = createReportWithWrongTaskCount();
-
-      // Verify the input has wrong task count
-      const allTasksBefore = [
-        ...wrongCountReport.tasks.daily,
-        ...wrongCountReport.tasks.weekly,
-        ...wrongCountReport.tasks.monthly,
-      ];
-      expect(allTasksBefore.length).not.toBe(24);
-
-      // Run the task count fixer
-      const fixedReport = fixTaskCount(wrongCountReport);
-
-      // Verify task counts are now correct (8 per frequency)
-      expect(fixedReport.tasks.daily).toHaveLength(8);
-      expect(fixedReport.tasks.weekly).toHaveLength(8);
-      expect(fixedReport.tasks.monthly).toHaveLength(8);
-      expect(fixedReport.total_task_count).toBe(24);
+      // Verify total count increased
+      expect(paddedReport.total_task_count).toBeGreaterThan(thinReport.total_task_count);
     });
   });
 
@@ -160,27 +175,30 @@ describe('Integration Tests: AI Task Generation Service', () => {
       expect(finalAnalysis.coreTasksPresent.personalLifeManagement).toBe(true);
       expect(finalAnalysis.coreTasksPresent.businessProcessManagement).toBe(true);
 
-      // Verify task count is still 24
+      // Verify total count includes injected tasks
       const allTasks = [
-        ...fixedReport.tasks.daily,
-        ...fixedReport.tasks.weekly,
-        ...fixedReport.tasks.monthly,
+        ...fixedReport.tasks.businessProcesses,
+        ...fixedReport.tasks.personalLife,
+        ...fixedReport.tasks.calendar,
+        ...fixedReport.tasks.email,
       ];
-      expect(allTasks.length).toBe(24);
+      expect(allTasks.length).toBe(fixedReport.total_task_count);
     });
   });
 
   /**
-   * Test 4: Integration: API route -> task generator -> validator -> fixer
+   * Test 4: Integration: task generator -> validator -> fixer pipeline
    *
    * Verifies the complete integration flow works correctly
    */
   describe('Integration: Full pipeline flow', () => {
     it('integrates task generator with validator and fixer correctly', async () => {
       const mockLeadData = createFullLeadData('main');
+      const mockAnalysisBrief = createMockAnalysisBrief();
       const mockResult = createReportWithMinorIssues();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       // Step 1: Generate tasks
       const generatedResult = await generateTasks(mockLeadData);
@@ -201,10 +219,11 @@ describe('Integration Tests: AI Task Generation Service', () => {
       const finalValidation = validateReport(finalResult);
       expect(finalValidation.isValid).toBe(true);
 
-      // Verify structure
-      expect(finalResult.tasks.daily).toHaveLength(8);
-      expect(finalResult.tasks.weekly).toHaveLength(8);
-      expect(finalResult.tasks.monthly).toHaveLength(8);
+      // Verify Core Four structure
+      expect(finalResult.tasks.businessProcesses).toBeDefined();
+      expect(finalResult.tasks.personalLife).toBeDefined();
+      expect(finalResult.tasks.calendar).toBeDefined();
+      expect(finalResult.tasks.email).toBeDefined();
     });
   });
 
@@ -222,14 +241,20 @@ describe('Integration Tests: AI Task Generation Service', () => {
         email: 'minimal@example.com',
       };
 
-      const mockResult = createValidReportWithCoreEATasks();
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      const mockAnalysisBrief = createMockAnalysisBrief();
+      const mockResult = createValidCoreFourReport();
+
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(minimalLead);
 
-      // Verify we still get a valid result
-      expect(result.total_task_count).toBe(24);
-      expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
+      // Verify we still get a valid result with Core Four structure
+      expect(result.total_task_count).toBeGreaterThanOrEqual(20);
+      expect(result.tasks.businessProcesses).toBeDefined();
+      expect(result.tasks.personalLife).toBeDefined();
+      expect(result.tasks.calendar).toBeDefined();
+      expect(result.tasks.email).toBeDefined();
 
       const validation = validateReport(result);
       expect(validation.isValid).toBe(true);
@@ -239,15 +264,15 @@ describe('Integration Tests: AI Task Generation Service', () => {
   /**
    * Test 6: Edge case: Markdown code block stripping in JSON parsing
    *
-   * Verifies the parseClaudeResponse function handles code blocks correctly
+   * Verifies the parseClaudeResponse/parseGenerationResponse handles code blocks
    */
   describe('Edge case: Markdown code block stripping', () => {
     it('strips ```json and ``` from response and parses correctly', () => {
-      const mockResult = createValidReportWithCoreEATasks();
+      const mockResult = createValidCoreFourReport();
       const wrappedJson = '```json\n' + JSON.stringify(mockResult) + '\n```';
 
       // Mock the actual parsing behavior
-      vi.mocked(parseClaudeResponse).mockImplementation((text: string) => {
+      vi.mocked(parseGenerationResponse).mockImplementation((text: string) => {
         let cleanedText = text.trim();
 
         // Strip markdown code blocks
@@ -265,17 +290,18 @@ describe('Integration Tests: AI Task Generation Service', () => {
         return JSON.parse(cleanedText) as TaskGenerationResult;
       });
 
-      const parsed = parseClaudeResponse(wrappedJson);
+      const parsed = parseGenerationResponse(wrappedJson);
 
-      expect(parsed.total_task_count).toBe(24);
-      expect(parsed.tasks.daily).toHaveLength(8);
+      expect(parsed.total_task_count).toBeGreaterThanOrEqual(20);
+      expect(parsed.tasks.businessProcesses).toBeDefined();
+      expect(parsed.tasks.email).toBeDefined();
     });
 
     it('handles json prefix without backticks', () => {
-      const mockResult = createValidReportWithCoreEATasks();
+      const mockResult = createValidCoreFourReport();
       const prefixedJson = 'json\n' + JSON.stringify(mockResult);
 
-      vi.mocked(parseClaudeResponse).mockImplementation((text: string) => {
+      vi.mocked(parseGenerationResponse).mockImplementation((text: string) => {
         let cleanedText = text.trim();
 
         if (cleanedText.startsWith('json\n')) {
@@ -286,9 +312,9 @@ describe('Integration Tests: AI Task Generation Service', () => {
         return JSON.parse(cleanedText) as TaskGenerationResult;
       });
 
-      const parsed = parseClaudeResponse(prefixedJson);
+      const parsed = parseGenerationResponse(prefixedJson);
 
-      expect(parsed.total_task_count).toBe(24);
+      expect(parsed.total_task_count).toBeGreaterThanOrEqual(20);
     });
   });
 
@@ -298,14 +324,24 @@ describe('Integration Tests: AI Task Generation Service', () => {
    * Verifies that missing API key is handled correctly
    */
   describe('Error handling: Missing API key', () => {
-    it('throws error with proper message when API key is missing', async () => {
+    it('throws error with proper message when all attempts fail', async () => {
       const mockLeadData = createFullLeadData('main');
 
+      // All three fallback levels must fail for generateTasks to throw
+      // Attempt 1: Two-prompt chain fails
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(
+        new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable')
+      );
+      // Attempt 2: Simplified fallback fails
+      vi.mocked(generateWithClaude).mockRejectedValueOnce(
+        new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable')
+      );
+      // Attempt 3: Emergency fallback fails
       vi.mocked(generateWithClaude).mockRejectedValueOnce(
         new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable')
       );
 
-      await expect(generateTasks(mockLeadData)).rejects.toThrow(/Missing API key/);
+      await expect(generateTasks(mockLeadData)).rejects.toThrow(/All task generation attempts failed/);
     });
 
     it('getApiKey throws descriptive error when no keys are set', () => {
@@ -340,7 +376,68 @@ describe('Integration Tests: AI Task Generation Service', () => {
       expect(prompt).toContain('Business Type:');
 
       // Verify prompt structure is intact
-      expect(prompt).toContain('OUTPUT JSON');
+      expect(prompt).toContain('Output ONLY valid JSON');
+    });
+  });
+
+  /**
+   * Test 9: isGoodEACandidate identifies delegatable tasks
+   *
+   * Verifies the EA candidate detection works on Core Four tasks
+   */
+  describe('EA candidate detection', () => {
+    it('identifies tasks with delegatable keywords as good EA candidates', () => {
+      const delegatableTask: Task = {
+        title: 'Schedule weekly team meetings',
+        description: 'Coordinate and book recurring meetings with the team.',
+        owner: 'EA',
+        isEA: true,
+        category: 'Scheduling',
+      };
+
+      expect(isGoodEACandidate(delegatableTask)).toBe(true);
+    });
+
+    it('rejects tasks without delegatable keywords', () => {
+      const nonDelegatableTask: Task = {
+        title: 'Build product strategy',
+        description: 'Define the long-term vision for the product line.',
+        owner: 'You',
+        isEA: false,
+        category: 'Strategy',
+      };
+
+      expect(isGoodEACandidate(nonDelegatableTask)).toBe(false);
+    });
+  });
+
+  /**
+   * Test 10: analyzeReport returns correct Core Four metrics
+   *
+   * Verifies report analysis produces correct counts from Core Four structure
+   */
+  describe('Report analysis with Core Four structure', () => {
+    it('analyzeReport returns correct task counts and core task presence', () => {
+      const report = createValidCoreFourReport();
+      const analysis = analyzeReport(report);
+
+      // Total should match sum of all Core Four areas
+      const expectedTotal =
+        report.tasks.businessProcesses.length +
+        report.tasks.personalLife.length +
+        report.tasks.calendar.length +
+        report.tasks.email.length;
+      expect(analysis.totalTasks).toBe(expectedTotal);
+
+      // EA counts
+      expect(analysis.eaTasks).toBeGreaterThan(0);
+      expect(analysis.eaPercentage).toBeGreaterThanOrEqual(50);
+
+      // Core tasks should be present (our valid report includes them)
+      expect(analysis.coreTasksPresent.emailManagement).toBe(true);
+      expect(analysis.coreTasksPresent.calendarManagement).toBe(true);
+      expect(analysis.coreTasksPresent.personalLifeManagement).toBe(true);
+      expect(analysis.coreTasksPresent.businessProcessManagement).toBe(true);
     });
   });
 });
@@ -373,128 +470,153 @@ function createFullLeadData(leadType: 'main' | 'standard' | 'simple'): UnifiedLe
 }
 
 /**
- * Create a valid report with all core EA tasks
+ * Create a mock business analysis brief (Call 1 response)
  */
-function createValidReportWithCoreEATasks(): TaskGenerationResult {
-  const createEATasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `EA Task ${i + 1} for ${frequency}`,
-      description: `A detailed task description explaining what the EA needs to do for this specific ${frequency} task.`,
-      owner: 'EA' as const,
-      isEA: true,
-      category: 'Operations',
-      frequency,
-      priority: 'medium' as const,
-    }));
-
-  const createFounderTasks = (
-    count: number,
-    frequency: 'daily' | 'weekly' | 'monthly'
-  ): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `Founder Task ${i + 1} for ${frequency}`,
-      description: `A detailed task description explaining what the founder needs to do for this specific ${frequency} task.`,
-      owner: 'You' as const,
-      isEA: false,
-      category: 'Strategy',
-      frequency,
-      priority: 'high' as const,
-    }));
-
-  // 5 EA + 3 Founder per frequency = ~63% EA
-  const daily = [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')];
-  const weekly = [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')];
-  const monthly = [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')];
-
-  // Add core EA tasks
-  daily[0] = {
-    title: 'Complete Email Management',
-    description:
-      'Manage inbox, filter emails, respond to correspondence on behalf of founder.',
-    owner: 'EA',
-    isEA: true,
-    category: 'Communication',
-    frequency: 'daily',
-    priority: 'high',
-    isCoreEATask: true,
-    coreTaskType: 'emailManagement',
-  };
-
-  daily[1] = {
-    title: 'Calendar and Schedule Management',
-    description: 'Manage calendar, schedule appointments, and optimize meeting times.',
-    owner: 'EA',
-    isEA: true,
-    category: 'Time Management',
-    frequency: 'daily',
-    priority: 'high',
-    isCoreEATask: true,
-    coreTaskType: 'calendarManagement',
-  };
-
-  weekly[0] = {
-    title: 'Personal Life Coordination',
-    description:
-      'Handle personal travel bookings, family logistics, and vendor communications.',
-    owner: 'EA',
-    isEA: true,
-    category: 'Personal Support',
-    frequency: 'weekly',
-    priority: 'medium',
-    isCoreEATask: true,
-    coreTaskType: 'personalLifeManagement',
-  };
-
-  monthly[0] = {
-    title: 'Business Process Management',
-    description: 'Document and optimize recurring workflow processes and automation systems.',
-    owner: 'EA',
-    isEA: true,
-    category: 'Operations',
-    frequency: 'monthly',
-    priority: 'medium',
-    isCoreEATask: true,
-    coreTaskType: 'businessProcessManagement',
-  };
-
+function createMockAnalysisBrief() {
   return {
-    tasks: { daily, weekly, monthly },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
-    summary: 'Around 63% of tasks can be delegated to your EA.',
+    business_description: 'SaaS company with 10-50 employees generating $1M-$5M in revenue',
+    recurring_processes: [
+      'Weekly team standups and sprint planning',
+      'Monthly client reporting and invoicing',
+      'Quarterly board meeting preparation',
+      'Daily customer support triage',
+    ],
+    calendar_patterns: [
+      'Back-to-back meetings with no focus blocks',
+      'Client calls scattered across the week',
+      'No dedicated time for strategic planning',
+    ],
+    personal_life_opportunities: [
+      'Travel booking for family vacations',
+      'Personal appointment scheduling',
+      'Home vendor coordination',
+    ],
+    pain_point_decomposition: [
+      'Email overload: 200+ emails/day, no triage system',
+      'Scheduling conflicts: double bookings weekly',
+      'Admin overhead: 20+ hours/week on non-strategic work',
+    ],
+    revenue_tier_context: 'Growing-stage company needing operational efficiency',
   };
 }
 
 /**
- * Create a report with low EA percentage (for testing auto-fix)
+ * Create a valid Core Four report with all core EA tasks present
  */
-function createReportWithLowEAPercentage(): TaskGenerationResult {
-  const createFounderTasksWithKeywords = (
-    count: number,
-    frequency: 'daily' | 'weekly' | 'monthly'
-  ): Task[] =>
+function createValidCoreFourReport(): TaskGenerationResult {
+  const createEATasks = (count: number, area: string): Task[] =>
     Array.from({ length: count }, (_, i) => ({
-      title: `Schedule meeting ${i + 1}`,
-      description: `Coordinate and book ${frequency} meetings with clients and team members.`,
-      owner: 'You' as const,
-      isEA: false,
+      title: `${area} EA Task ${i + 1}`,
+      description: `A detailed task description explaining what the EA needs to do for this specific ${area} task in the business.`,
+      owner: 'EA' as const,
+      isEA: true,
       category: 'Operations',
-      frequency,
-      priority: 'medium' as const,
     }));
 
-  // All founder tasks = 0% EA, but with delegatable keywords
-  return {
-    tasks: {
-      daily: createFounderTasksWithKeywords(8, 'daily'),
-      weekly: createFounderTasksWithKeywords(8, 'weekly'),
-      monthly: createFounderTasksWithKeywords(8, 'monthly'),
+  const businessProcesses: Task[] = [
+    {
+      title: 'Turning your recurring workflow tasks into permanent hand-offs',
+      description: 'Your EA identifies repetitive processes, documents them into simple playbooks, and takes them over completely.',
+      owner: 'EA',
+      isEA: true,
+      category: 'Operations',
+      isCoreEATask: true,
+      coreTaskType: 'businessProcessManagement',
     },
-    ea_task_percent: 0,
-    ea_task_count: 0,
-    total_task_count: 24,
-    summary: '0% of tasks delegated.',
+    ...createEATasks(8, 'Business Process'),
+  ];
+
+  const personalLife: Task[] = [
+    {
+      title: 'Handling your personal appointments, travel, and family logistics',
+      description: 'Your EA manages travel bookings, personal appointments, vendor communications, and family scheduling.',
+      owner: 'EA',
+      isEA: true,
+      category: 'Personal',
+      isCoreEATask: true,
+      coreTaskType: 'personalLifeManagement',
+    },
+    ...createEATasks(4, 'Personal Life'),
+  ];
+
+  const calendar: Task[] = [
+    {
+      title: 'Owning your entire calendar so you just show up',
+      description: 'Your EA manages all scheduling, coordinates across time zones, handles reschedules, and protects your focus time.',
+      owner: 'EA',
+      isEA: true,
+      category: 'Scheduling',
+      isCoreEATask: true,
+      coreTaskType: 'calendarManagement',
+    },
+    ...createEATasks(3, 'Calendar'),
+  ];
+
+  const email: Task[] = [
+    {
+      title: 'Getting your inbox to zero every single day',
+      description: 'Your EA processes every incoming email, sorts them into priority folders, flags what needs you, and archives the rest.',
+      owner: 'EA',
+      isEA: true,
+      category: 'Communication',
+      isCoreEATask: true,
+      coreTaskType: 'emailManagement',
+    },
+    ...createEATasks(2, 'Email'),
+  ];
+
+  const allTasks = [...businessProcesses, ...personalLife, ...calendar, ...email];
+  const eaCount = allTasks.filter(t => t.isEA).length;
+
+  return {
+    tasks: { businessProcesses, personalLife, calendar, email },
+    analysis_summary: 'SaaS CEO spending 20+ hours/week on admin tasks that can be delegated.',
+    total_task_count: allTasks.length,
+    ea_task_percent: Math.round((eaCount / allTasks.length) * 100),
+    ea_task_count: eaCount,
+    summary: 'Around 100% of tasks can be delegated to your EA.',
+  };
+}
+
+/**
+ * Create a report with thin areas (below minimum counts) for testing padThinAreas
+ */
+function createReportWithThinAreas(): TaskGenerationResult {
+  const makeTask = (title: string, area: string): Task => ({
+    title,
+    description: `A detailed ${area} task description with enough length to pass quality checks.`,
+    owner: 'EA' as const,
+    isEA: true,
+    category: 'Operations',
+  });
+
+  const businessProcesses = [
+    makeTask('Process task 1', 'business'),
+    makeTask('Process task 2', 'business'),
+    makeTask('Process task 3', 'business'),
+  ]; // 3 tasks, below min of 5
+
+  const personalLife = [
+    makeTask('Personal task 1', 'personal'),
+  ]; // 1 task, below min of 3
+
+  const calendar = [
+    makeTask('Calendar task 1', 'calendar'),
+  ]; // 1 task, below min of 3
+
+  const email = [
+    makeTask('Email task 1', 'email'),
+  ]; // 1 task, below min of 2
+
+  const allTasks = [...businessProcesses, ...personalLife, ...calendar, ...email];
+
+  return {
+    tasks: { businessProcesses, personalLife, calendar, email },
+    analysis_summary: 'Report with thin areas for testing.',
+    total_task_count: allTasks.length,
+    ea_task_percent: 100,
+    ea_task_count: allTasks.length,
+    summary: 'Report with thin areas.',
   };
 }
 
@@ -502,118 +624,59 @@ function createReportWithLowEAPercentage(): TaskGenerationResult {
  * Create a report without any core EA tasks
  */
 function createReportWithoutCoreEATasks(): TaskGenerationResult {
-  const createGenericEATasks = (
-    count: number,
-    frequency: 'daily' | 'weekly' | 'monthly'
-  ): Task[] =>
+  const createGenericTasks = (count: number, areaLabel: string): Task[] =>
     Array.from({ length: count }, (_, i) => ({
-      title: `Generic EA Task ${i + 1}`,
-      description: `A generic task without core EA keywords for ${frequency} frequency.`,
+      title: `Generic ${areaLabel} Task ${i + 1}`,
+      description: `A generic task without core EA keywords for ${areaLabel} area of the business.`,
       owner: 'EA' as const,
       isEA: true,
       category: 'General',
-      frequency,
-      priority: 'medium' as const,
     }));
 
-  const createFounderTasks = (
-    count: number,
-    frequency: 'daily' | 'weekly' | 'monthly'
-  ): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `Founder Task ${i + 1}`,
-      description: `A strategic task for the founder in ${frequency} frequency.`,
-      owner: 'You' as const,
-      isEA: false,
-      category: 'Strategy',
-      frequency,
-      priority: 'high' as const,
-    }));
+  const businessProcesses = createGenericTasks(8, 'Operations');
+  const personalLife = createGenericTasks(5, 'Support');
+  const calendar = createGenericTasks(4, 'Time');
+  const email = createGenericTasks(3, 'Comms');
 
-  // 5 EA + 3 Founder per frequency = ~63% EA, but no core tasks
+  const allTasks = [...businessProcesses, ...personalLife, ...calendar, ...email];
+
   return {
-    tasks: {
-      daily: [...createGenericEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
-      weekly: [...createGenericEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
-      monthly: [...createGenericEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
-    },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
-    summary: '63% of tasks delegated.',
-  };
-}
-
-/**
- * Create a report with wrong task count (for testing task count fix)
- */
-function createReportWithWrongTaskCount(): TaskGenerationResult {
-  const createEATasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `Schedule meeting ${i + 1}`,
-      description: `Coordinate and book ${frequency} meetings with clients.`,
-      owner: 'EA' as const,
-      isEA: true,
-      category: 'Operations',
-      frequency,
-      priority: 'medium' as const,
-    }));
-
-  // 6 daily + 7 weekly + 9 monthly = 22 tasks (wrong count, not 24)
-  // Has EA tasks so EA percentage is already high
-  return {
-    tasks: {
-      daily: createEATasks(6, 'daily'),
-      weekly: createEATasks(7, 'weekly'),
-      monthly: createEATasks(9, 'monthly'),
-    },
+    tasks: { businessProcesses, personalLife, calendar, email },
+    analysis_summary: 'Report missing core EA tasks.',
+    total_task_count: allTasks.length,
     ea_task_percent: 100,
-    ea_task_count: 22,
-    total_task_count: 22,
-    summary: '100% of tasks delegated.',
+    ea_task_count: allTasks.length,
+    summary: 'All tasks delegated but missing core EA task types.',
   };
 }
 
 /**
  * Create a report with minor issues that needs fixing
+ * (missing core EA tasks but otherwise valid Core Four structure)
  */
 function createReportWithMinorIssues(): TaskGenerationResult {
-  const createEATasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
+  const createGenericTasks = (count: number, areaLabel: string): Task[] =>
     Array.from({ length: count }, (_, i) => ({
-      title: `Generic EA Task ${i + 1}`,
-      description: `A generic task without core EA keywords for ${frequency} frequency.`,
+      title: `Generic ${areaLabel} Task ${i + 1}`,
+      description: `A generic task without core EA keywords for ${areaLabel} area of the business.`,
       owner: 'EA' as const,
       isEA: true,
       category: 'General',
-      frequency,
-      priority: 'medium' as const,
     }));
 
-  const createFounderTasks = (
-    count: number,
-    frequency: 'daily' | 'weekly' | 'monthly'
-  ): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `Founder Task ${i + 1}`,
-      description: `A strategic task for the founder in ${frequency} frequency.`,
-      owner: 'You' as const,
-      isEA: false,
-      category: 'Strategy',
-      frequency,
-      priority: 'high' as const,
-    }));
+  const businessProcesses = createGenericTasks(8, 'Operations');
+  const personalLife = createGenericTasks(5, 'Support');
+  const calendar = createGenericTasks(4, 'Time');
+  const email = createGenericTasks(3, 'Comms');
 
-  // 5 EA + 3 Founder per frequency = 63% EA, but NO core EA task keywords
-  // Validation will fail due to missing core EA tasks, which ensureCoreEATasks will fix
+  const allTasks = [...businessProcesses, ...personalLife, ...calendar, ...email];
+
   return {
-    tasks: {
-      daily: [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
-      weekly: [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
-      monthly: [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
-    },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
-    summary: '63% of tasks delegated but missing core EA task types.',
+    tasks: { businessProcesses, personalLife, calendar, email },
+    analysis_summary: 'Report with minor issues for testing.',
+    total_task_count: allTasks.length,
+    ea_task_percent: 100,
+    ea_task_count: allTasks.length,
+    summary: 'All tasks delegated but missing core EA task types.',
   };
 }

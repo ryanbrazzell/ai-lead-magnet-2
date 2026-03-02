@@ -1,7 +1,8 @@
 /**
  * Report Fixer Tests
  *
- * Tests for auto-fix behavior ported from reportValidator.ts
+ * Tests for auto-fix behavior using Core Four architecture.
+ * Functions tested: ensureCoreEATasks, padThinAreas, fixReportIssues, isGoodEACandidate
  *
  * @module report-fixer.test
  */
@@ -9,10 +10,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   ensureCoreEATasks,
-  fixLowEAPercentage,
-  fixTaskCount,
-  isGoodEACandidate,
+  padThinAreas,
   fixReportIssues,
+  isGoodEACandidate,
 } from '../report-fixer';
 import type { Task, TaskGenerationResult } from '@/types';
 
@@ -23,360 +23,407 @@ function createTask(overrides: Partial<Task> = {}): Task {
   return {
     title: 'Test Task',
     description: 'This is a test task description for testing purposes.',
-    owner: 'You',
-    isEA: false,
-    category: 'Testing',
-    frequency: 'daily',
-    priority: 'medium',
+    owner: 'EA',
+    isEA: true,
+    category: 'Operations',
     ...overrides,
   };
 }
 
 /**
- * Helper to create a valid TaskGenerationResult
+ * Helper to create a valid TaskGenerationResult with Core Four structure
  */
 function createValidReport(overrides: Partial<TaskGenerationResult> = {}): TaskGenerationResult {
-  const dailyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
+  const businessProcesses: Task[] = Array.from({ length: 5 }, (_, i) =>
     createTask({
-      title: `Daily Task ${i + 1}`,
-      frequency: 'daily',
-      isEA: i < 5, // 5 EA tasks per frequency for ~63%
-      owner: i < 5 ? 'EA' : 'You',
+      title: `Business Process Task ${i + 1}`,
+      category: 'Operations',
     })
   );
 
-  const weeklyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
+  const personalLife: Task[] = Array.from({ length: 3 }, (_, i) =>
     createTask({
-      title: `Weekly Task ${i + 1}`,
-      frequency: 'weekly',
-      isEA: i < 5,
-      owner: i < 5 ? 'EA' : 'You',
+      title: `Personal Life Task ${i + 1}`,
+      category: 'Personal',
     })
   );
 
-  const monthlyTasks: Task[] = Array.from({ length: 8 }, (_, i) =>
+  const calendar: Task[] = Array.from({ length: 3 }, (_, i) =>
     createTask({
-      title: `Monthly Task ${i + 1}`,
-      frequency: 'monthly',
-      isEA: i < 5,
-      owner: i < 5 ? 'EA' : 'You',
+      title: `Calendar Task ${i + 1}`,
+      category: 'Scheduling',
     })
   );
+
+  const email: Task[] = Array.from({ length: 2 }, (_, i) =>
+    createTask({
+      title: `Email Task ${i + 1}`,
+      category: 'Communication',
+    })
+  );
+
+  const allTasks = [...businessProcesses, ...personalLife, ...calendar, ...email];
+  const eaCount = allTasks.filter((t) => t.isEA).length;
 
   return {
     tasks: {
-      daily: dailyTasks,
-      weekly: weeklyTasks,
-      monthly: monthlyTasks,
+      businessProcesses,
+      personalLife,
+      calendar,
+      email,
     },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
+    analysis_summary: 'Test analysis summary for the report.',
+    total_task_count: allTasks.length,
+    ea_task_count: eaCount,
+    ea_task_percent: Math.round((eaCount / allTasks.length) * 100),
     summary: 'Test report summary.',
     ...overrides,
   };
 }
 
+/**
+ * Helper to flatten all tasks from a Core Four report
+ */
+function getAllTasks(report: TaskGenerationResult): Task[] {
+  return [
+    ...report.tasks.businessProcesses,
+    ...report.tasks.personalLife,
+    ...report.tasks.calendar,
+    ...report.tasks.email,
+  ];
+}
+
 describe('report-fixer', () => {
   /**
-   * Test 1: ensureCoreEATasks injects missing core tasks
-   *
-   * This test verifies that when core EA tasks are missing,
-   * the function correctly injects them by replacing lowest-priority tasks.
+   * Test 1: ensureCoreEATasks injects missing core tasks into Core Four areas
    */
   describe('ensureCoreEATasks', () => {
-    it('injects missing core tasks by replacing lowest-priority tasks', () => {
-      // Create a report missing all core EA tasks
-      const report = createValidReport();
+    it('injects missing core tasks into their respective Core Four areas', () => {
+      // Use titles/descriptions that won't match any core EA detection keywords
+      // (no: email, inbox, calendar, schedule, appointment, meeting, personal,
+      //  travel, booking, vendor, family, process, recurring, workflow, system, etc.)
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: Array.from({ length: 5 }, (_, i) =>
+            createTask({ title: `Run quarterly audit ${i + 1}`, description: 'Perform an audit of metrics.', category: 'Operations' })
+          ),
+          personalLife: Array.from({ length: 3 }, (_, i) =>
+            createTask({ title: `Pick up dry cleaning ${i + 1}`, description: 'Drop off and pick up laundry items.', category: 'Errands' })
+          ),
+          calendar: Array.from({ length: 3 }, (_, i) =>
+            createTask({ title: `Prepare slide deck ${i + 1}`, description: 'Build a presentation for the team.', category: 'Design' })
+          ),
+          email: Array.from({ length: 2 }, (_, i) =>
+            createTask({ title: `Write blog post ${i + 1}`, description: 'Draft content for the company blog.', category: 'Marketing' })
+          ),
+        },
+      });
 
-      // Ensure no core EA tasks exist
-      const allTasks = [
-        ...report.tasks.daily,
-        ...report.tasks.weekly,
-        ...report.tasks.monthly,
-      ];
-
-      // Verify no email/calendar/personal/business process tasks exist initially
-      const hasEmailTask = allTasks.some(
-        (t) => t.isEA && t.title.toLowerCase().includes('email')
-      );
-      const hasCalendarTask = allTasks.some(
-        (t) => t.isEA && t.title.toLowerCase().includes('calendar')
-      );
-
-      expect(hasEmailTask).toBe(false);
-      expect(hasCalendarTask).toBe(false);
-
-      // Run the fixer
       const fixedReport = ensureCoreEATasks(report);
 
-      // Verify core tasks were injected
-      const fixedAllTasks = [
-        ...fixedReport.tasks.daily,
-        ...fixedReport.tasks.weekly,
-        ...fixedReport.tasks.monthly,
-      ];
+      const allTasks = getAllTasks(fixedReport);
 
-      // Check for email management task
-      const hasEmailAfter = fixedAllTasks.some(
+      // Check for email management task (injected)
+      const hasEmailTask = allTasks.some(
         (t) =>
           t.isEA &&
-          (t.title.toLowerCase().includes('email') ||
+          (t.title.toLowerCase().includes('inbox') ||
+            t.title.toLowerCase().includes('email') ||
             t.description.toLowerCase().includes('email'))
       );
 
-      // Check for calendar management task
-      const hasCalendarAfter = fixedAllTasks.some(
+      // Check for calendar management task (injected)
+      const hasCalendarTask = allTasks.some(
         (t) =>
           t.isEA &&
           (t.title.toLowerCase().includes('calendar') ||
+            t.description.toLowerCase().includes('scheduling') ||
             t.description.toLowerCase().includes('calendar'))
       );
 
-      expect(hasEmailAfter).toBe(true);
-      expect(hasCalendarAfter).toBe(true);
-
-      // Total should still be 24
-      expect(fixedAllTasks.length).toBe(24);
+      expect(hasEmailTask).toBe(true);
+      expect(hasCalendarTask).toBe(true);
     });
 
-    it('recalculates EA percentage after injection', () => {
-      // Create report with low EA percentage
-      const report = createValidReport();
-      report.tasks.daily = report.tasks.daily.map((t) => ({
-        ...t,
-        isEA: false,
-        owner: 'You' as const,
-      }));
-      report.ea_task_percent = 27; // Below 40%
+    it('adds email management task to the email area', () => {
+      // Report with no email-related tasks
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Generic ops task' })],
+          personalLife: [createTask({ title: 'Generic personal task' })],
+          calendar: [createTask({ title: 'Generic scheduling task' })],
+          email: [createTask({ title: 'Generic comms task' })],
+        },
+      });
 
       const fixedReport = ensureCoreEATasks(report);
 
-      // EA percentage should be recalculated after core task injection
-      const allTasks = [
-        ...fixedReport.tasks.daily,
-        ...fixedReport.tasks.weekly,
-        ...fixedReport.tasks.monthly,
-      ];
-      const eaCount = allTasks.filter((t) => t.isEA).length;
-      const expectedPercentage = Math.round((eaCount / allTasks.length) * 100);
+      // Email area should have grown (original + injected email management task)
+      const emailTasks = fixedReport.tasks.email;
+      const hasEmailCore = emailTasks.some(
+        (t) => t.coreTaskType === 'emailManagement' || t.isCoreEATask
+      );
+      expect(hasEmailCore).toBe(true);
+    });
 
-      expect(fixedReport.ea_task_percent).toBe(expectedPercentage);
+    it('adds calendar management task to the calendar area', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Generic ops task' })],
+          personalLife: [createTask({ title: 'Generic personal task' })],
+          calendar: [createTask({ title: 'Generic time task' })],
+          email: [createTask({ title: 'Generic comms task' })],
+        },
+      });
+
+      const fixedReport = ensureCoreEATasks(report);
+
+      const calendarTasks = fixedReport.tasks.calendar;
+      const hasCalendarCore = calendarTasks.some(
+        (t) => t.coreTaskType === 'calendarManagement' || t.isCoreEATask
+      );
+      expect(hasCalendarCore).toBe(true);
+    });
+
+    it('recalculates EA counts after injection', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: Array.from({ length: 3 }, (_, i) =>
+            createTask({
+              title: `Founder task ${i + 1}`,
+              isEA: false,
+              owner: 'You',
+            })
+          ),
+          personalLife: [
+            createTask({ title: 'Personal founder task', isEA: false, owner: 'You' }),
+          ],
+          calendar: [
+            createTask({ title: 'Time block task', isEA: false, owner: 'You' }),
+          ],
+          email: [
+            createTask({ title: 'Read messages task', isEA: false, owner: 'You' }),
+          ],
+        },
+        ea_task_percent: 0,
+        ea_task_count: 0,
+        total_task_count: 6,
+      });
+
+      const fixedReport = ensureCoreEATasks(report);
+
+      // After injecting core EA tasks, EA count/percent should increase
+      const allTasks = getAllTasks(fixedReport);
+      const eaCount = allTasks.filter((t) => t.isEA).length;
+      const expectedPercent = Math.round((eaCount / allTasks.length) * 100);
+
+      expect(fixedReport.ea_task_count).toBe(eaCount);
+      expect(fixedReport.ea_task_percent).toBe(expectedPercent);
+      expect(fixedReport.total_task_count).toBe(allTasks.length);
+      expect(eaCount).toBeGreaterThan(0);
+    });
+
+    it('does not modify report when all core tasks are already present', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [
+            createTask({
+              title: 'Turning your recurring tasks into permanent hand-offs',
+              description: 'Documents processes into playbooks',
+              coreTaskType: 'businessProcessManagement',
+              isCoreEATask: true,
+            }),
+          ],
+          personalLife: [
+            createTask({
+              title: 'Handling your personal appointments and travel',
+              description: 'Manages travel bookings and personal appointments',
+              coreTaskType: 'personalLifeManagement',
+              isCoreEATask: true,
+            }),
+          ],
+          calendar: [
+            createTask({
+              title: 'Owning your entire calendar so you just show up',
+              description: 'Manages all scheduling and coordinates across time zones',
+              coreTaskType: 'calendarManagement',
+              isCoreEATask: true,
+            }),
+          ],
+          email: [
+            createTask({
+              title: 'Getting your inbox to zero every single day',
+              description: 'Processes every incoming email message and sorts them',
+              coreTaskType: 'emailManagement',
+              isCoreEATask: true,
+            }),
+          ],
+        },
+      });
+
+      const fixedReport = ensureCoreEATasks(report);
+
+      // Should be unchanged
+      expect(fixedReport.tasks.businessProcesses.length).toBe(1);
+      expect(fixedReport.tasks.personalLife.length).toBe(1);
+      expect(fixedReport.tasks.calendar.length).toBe(1);
+      expect(fixedReport.tasks.email.length).toBe(1);
     });
   });
 
   /**
-   * Test 2: fixLowEAPercentage converts delegatable tasks to EA
+   * Test 2: padThinAreas pads Core Four areas to meet minimums
    *
-   * This test verifies that founder tasks matching delegation keywords
-   * are converted to EA tasks to reach the 40% minimum.
+   * Minimums: businessProcesses: 5, personalLife: 3, calendar: 3, email: 2
    */
-  describe('fixLowEAPercentage', () => {
-    it('converts delegatable founder tasks to EA to reach 40% minimum', () => {
-      // Create report with low EA percentage and tasks with delegatable keywords
-      const report = createValidReport();
+  describe('padThinAreas', () => {
+    it('pads businessProcesses to minimum of 5', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [
+            createTask({ title: 'Ops task 1' }),
+            createTask({ title: 'Ops task 2' }),
+          ], // only 2, need 5
+          personalLife: Array.from({ length: 3 }, () => createTask({ title: 'Personal task' })),
+          calendar: Array.from({ length: 3 }, () => createTask({ title: 'Calendar task' })),
+          email: Array.from({ length: 2 }, () => createTask({ title: 'Email task' })),
+        },
+      });
 
-      // Daily: All have delegatable keywords, all founder tasks
-      report.tasks.daily = Array.from({ length: 8 }, (_, i) =>
-        createTask({
-          title: `Schedule meeting ${i + 1}`,
-          description: 'Coordinate and book meetings with clients',
-          frequency: 'daily',
-          isEA: false,
-          owner: 'You',
-        })
-      );
+      const fixedReport = padThinAreas(report);
 
-      // Weekly: All have delegatable keywords, all founder tasks
-      report.tasks.weekly = Array.from({ length: 8 }, (_, i) =>
-        createTask({
-          title: `Research topic ${i + 1}`,
-          description: 'Compile research data and update records',
-          frequency: 'weekly',
-          isEA: false,
-          owner: 'You',
-        })
-      );
-
-      // Monthly: 2 EA tasks, rest are founder with keywords
-      report.tasks.monthly = Array.from({ length: 8 }, (_, i) =>
-        createTask({
-          title: `Process reports ${i + 1}`,
-          description: 'Handle and organize monthly reports',
-          frequency: 'monthly',
-          isEA: i < 2,
-          owner: i < 2 ? 'EA' : 'You',
-        })
-      );
-
-      report.ea_task_percent = 7; // Very low
-
-      const fixedReport = fixLowEAPercentage(report);
-
-      // Check that EA percentage has increased
-      const allTasks = [
-        ...fixedReport.tasks.daily,
-        ...fixedReport.tasks.weekly,
-        ...fixedReport.tasks.monthly,
-      ];
-      const eaCount = allTasks.filter((t) => t.isEA).length;
-      const percentage = Math.round((eaCount / allTasks.length) * 100);
-
-      // Should be at or above 40%
-      expect(percentage).toBeGreaterThanOrEqual(40);
-      expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
+      expect(fixedReport.tasks.businessProcesses.length).toBeGreaterThanOrEqual(5);
     });
 
-    it('converts tasks with delegatable keywords first', () => {
-      const report = createValidReport();
+    it('pads personalLife to minimum of 3', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: Array.from({ length: 5 }, () =>
+            createTask({ title: 'Business task' })
+          ),
+          personalLife: [createTask({ title: 'Personal task 1' })], // only 1, need 3
+          calendar: Array.from({ length: 3 }, () => createTask({ title: 'Calendar task' })),
+          email: Array.from({ length: 2 }, () => createTask({ title: 'Email task' })),
+        },
+      });
 
-      // Set up tasks - some with keywords, some without; ALL founder tasks
-      report.tasks.daily = [
-        createTask({
-          title: 'Schedule appointments',
-          description: 'Book and coordinate appointments',
-          isEA: false,
-          owner: 'You',
-        }),
-        createTask({
-          title: 'Research competitors',
-          description: 'Research and compile competitor data',
-          isEA: false,
-          owner: 'You',
-        }),
-        createTask({
-          title: 'Strategic planning',
-          description: 'High-level business strategy work',
-          isEA: false,
-          owner: 'You',
-        }),
-        ...Array.from({ length: 5 }, () =>
-          createTask({ isEA: false, owner: 'You' })
-        ),
-      ];
+      const fixedReport = padThinAreas(report);
 
-      // Make weekly and monthly all founder tasks too
-      report.tasks.weekly = report.tasks.weekly.map((t) => ({
-        ...t,
-        title: 'Important task',
-        description: 'Critical founder-only work',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-      report.tasks.monthly = report.tasks.monthly.map((t) => ({
-        ...t,
-        title: 'Important task',
-        description: 'Critical founder-only work',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      report.ea_task_percent = 0;
-
-      const fixedReport = fixLowEAPercentage(report);
-
-      // The tasks with keywords should be converted first
-      const scheduleTask = fixedReport.tasks.daily.find((t) =>
-        t.title.includes('Schedule')
-      );
-      const researchTask = fixedReport.tasks.daily.find((t) =>
-        t.title.includes('Research')
-      );
-
-      expect(scheduleTask?.isEA).toBe(true);
-      expect(researchTask?.isEA).toBe(true);
-    });
-  });
-
-  /**
-   * Test 3: fixTaskCount trims/pads to exactly 8 per frequency
-   *
-   * This test verifies that task arrays are trimmed if over 8
-   * or padded with generic tasks if under 8.
-   */
-  describe('fixTaskCount', () => {
-    it('trims tasks to 8 if over limit', () => {
-      const report = createValidReport();
-
-      // Add extra tasks (12 daily instead of 8)
-      report.tasks.daily = Array.from({ length: 12 }, (_, i) =>
-        createTask({
-          title: `Daily Task ${i + 1}`,
-          frequency: 'daily',
-        })
-      );
-
-      const fixedReport = fixTaskCount(report);
-
-      expect(fixedReport.tasks.daily.length).toBe(8);
-      expect(fixedReport.tasks.weekly.length).toBe(8);
-      expect(fixedReport.tasks.monthly.length).toBe(8);
+      expect(fixedReport.tasks.personalLife.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('pads tasks to 8 if under limit', () => {
-      const report = createValidReport();
+    it('pads calendar to minimum of 3', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: Array.from({ length: 5 }, () =>
+            createTask({ title: 'Business task' })
+          ),
+          personalLife: Array.from({ length: 3 }, () => createTask({ title: 'Personal task' })),
+          calendar: [createTask({ title: 'Calendar task 1' })], // only 1, need 3
+          email: Array.from({ length: 2 }, () => createTask({ title: 'Email task' })),
+        },
+      });
 
-      // Reduce to only 5 daily tasks
-      report.tasks.daily = Array.from({ length: 5 }, (_, i) =>
-        createTask({
-          title: `Daily Task ${i + 1}`,
-          frequency: 'daily',
-        })
-      );
+      const fixedReport = padThinAreas(report);
 
-      // Reduce to only 6 weekly tasks
-      report.tasks.weekly = Array.from({ length: 6 }, (_, i) =>
-        createTask({
-          title: `Weekly Task ${i + 1}`,
-          frequency: 'weekly',
-        })
-      );
-
-      const fixedReport = fixTaskCount(report);
-
-      expect(fixedReport.tasks.daily.length).toBe(8);
-      expect(fixedReport.tasks.weekly.length).toBe(8);
-      expect(fixedReport.tasks.monthly.length).toBe(8);
-
-      // Total should be exactly 24
-      const totalTasks =
-        fixedReport.tasks.daily.length +
-        fixedReport.tasks.weekly.length +
-        fixedReport.tasks.monthly.length;
-      expect(totalTasks).toBe(24);
+      expect(fixedReport.tasks.calendar.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('creates generic tasks with appropriate frequency', () => {
-      const report = createValidReport();
+    it('pads email to minimum of 2', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: Array.from({ length: 5 }, () =>
+            createTask({ title: 'Business task' })
+          ),
+          personalLife: Array.from({ length: 3 }, () => createTask({ title: 'Personal task' })),
+          calendar: Array.from({ length: 3 }, () => createTask({ title: 'Calendar task' })),
+          email: [], // 0 tasks, need 2
+        },
+      });
 
-      // Reduce to only 6 monthly tasks
-      report.tasks.monthly = Array.from({ length: 6 }, (_, i) =>
-        createTask({
-          title: `Monthly Task ${i + 1}`,
-          frequency: 'monthly',
-        })
-      );
+      const fixedReport = padThinAreas(report);
 
-      const fixedReport = fixTaskCount(report);
+      expect(fixedReport.tasks.email.length).toBeGreaterThanOrEqual(2);
+    });
 
-      // The padded tasks should have valid structure
-      const paddedTasks = fixedReport.tasks.monthly.slice(6);
-      paddedTasks.forEach((task) => {
-        expect(task.title).toBeDefined();
-        expect(task.title.length).toBeGreaterThan(0);
-        expect(task.description).toBeDefined();
-        expect(task.description.length).toBeGreaterThan(20);
-        expect(task.owner).toBe('You');
-        expect(task.isEA).toBe(false);
+    it('does not modify areas that already meet minimums', () => {
+      const report = createValidReport(); // all areas at minimums
+
+      const fixedReport = padThinAreas(report);
+
+      expect(fixedReport.tasks.businessProcesses.length).toBe(5);
+      expect(fixedReport.tasks.personalLife.length).toBe(3);
+      expect(fixedReport.tasks.calendar.length).toBe(3);
+      expect(fixedReport.tasks.email.length).toBe(2);
+    });
+
+    it('pads multiple thin areas simultaneously', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Ops task 1' })], // need 5
+          personalLife: [], // need 3
+          calendar: [createTask({ title: 'Cal task 1' })], // need 3
+          email: [], // need 2
+        },
+        total_task_count: 2,
+        ea_task_count: 2,
+        ea_task_percent: 100,
+      });
+
+      const fixedReport = padThinAreas(report);
+
+      expect(fixedReport.tasks.businessProcesses.length).toBeGreaterThanOrEqual(5);
+      expect(fixedReport.tasks.personalLife.length).toBeGreaterThanOrEqual(3);
+      expect(fixedReport.tasks.calendar.length).toBeGreaterThanOrEqual(3);
+      expect(fixedReport.tasks.email.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('recalculates total_task_count after padding', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Ops task 1' })],
+          personalLife: [createTask({ title: 'Personal task 1' })],
+          calendar: [createTask({ title: 'Calendar task 1' })],
+          email: [createTask({ title: 'Email task 1' })],
+        },
+        total_task_count: 4,
+        ea_task_count: 4,
+        ea_task_percent: 100,
+      });
+
+      const fixedReport = padThinAreas(report);
+
+      const actualTotal = getAllTasks(fixedReport).length;
+      expect(fixedReport.total_task_count).toBe(actualTotal);
+      expect(actualTotal).toBeGreaterThan(4);
+    });
+
+    it('padded tasks are EA-owned', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [],
+          personalLife: [],
+          calendar: [],
+          email: [],
+        },
+        total_task_count: 0,
+        ea_task_count: 0,
+        ea_task_percent: 0,
+      });
+
+      const fixedReport = padThinAreas(report);
+
+      const allTasks = getAllTasks(fixedReport);
+      // All padded tasks should be EA-owned
+      allTasks.forEach((task) => {
+        expect(task.isEA).toBe(true);
+        expect(task.owner).toBe('EA');
       });
     });
   });
 
   /**
-   * Test 4: isGoodEACandidate identifies delegatable keywords
-   *
-   * This test verifies that the function correctly identifies
-   * tasks that are good candidates for EA delegation based on keywords.
+   * Test 3: isGoodEACandidate identifies delegatable keywords
    */
   describe('isGoodEACandidate', () => {
     it('identifies tasks with delegatable keywords', () => {
@@ -473,110 +520,72 @@ describe('report-fixer', () => {
   });
 
   /**
-   * Test fixReportIssues orchestration function
+   * Test 4: fixReportIssues orchestration function
    */
   describe('fixReportIssues', () => {
-    it('calls fixLowEAPercentage when EA percentage is low', () => {
-      const report = createValidReport();
-      report.ea_task_percent = 20;
+    it('pads thin areas when error mentions too few tasks', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Ops 1' })], // under minimum
+          personalLife: [createTask({ title: 'Personal 1' })], // under minimum
+          calendar: [createTask({ title: 'Calendar 1' })], // under minimum
+          email: [], // under minimum
+        },
+        total_task_count: 3,
+        ea_task_count: 3,
+        ea_task_percent: 100,
+      });
 
-      // Make all tasks have keywords so they can be converted
-      report.tasks.daily = report.tasks.daily.map((t) => ({
-        ...t,
-        title: 'Schedule meeting',
-        description: 'Coordinate and book meetings',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      report.tasks.weekly = report.tasks.weekly.map((t) => ({
-        ...t,
-        title: 'Research topics',
-        description: 'Compile and organize research data',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      report.tasks.monthly = report.tasks.monthly.map((t) => ({
-        ...t,
-        title: 'Process reports',
-        description: 'Handle monthly report processing',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      const errors = ['EA percentage too low: 20% (minimum 40%)'];
+      const errors = ['Too few tasks in businessProcesses: 1 tasks (target 5-8)'];
 
       const fixedReport = fixReportIssues(report, errors);
 
-      expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
+      // All areas should meet minimums after fix
+      expect(fixedReport.tasks.businessProcesses.length).toBeGreaterThanOrEqual(5);
+      expect(fixedReport.tasks.personalLife.length).toBeGreaterThanOrEqual(3);
+      expect(fixedReport.tasks.calendar.length).toBeGreaterThanOrEqual(3);
+      expect(fixedReport.tasks.email.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('calls fixTaskCount when task count is wrong', () => {
-      const report = createValidReport();
+    it('recalculates totals after fixing', () => {
+      const report = createValidReport({
+        tasks: {
+          businessProcesses: [createTask({ title: 'Ops 1' })],
+          personalLife: [],
+          calendar: [],
+          email: [],
+        },
+        total_task_count: 1,
+        ea_task_count: 1,
+        ea_task_percent: 100,
+      });
 
-      // Add extra tasks
-      report.tasks.daily = Array.from({ length: 15 }, (_, i) =>
-        createTask({
-          title: `Daily Task ${i + 1}`,
-          frequency: 'daily',
-        })
-      );
-
-      const errors = ['Expected 24 total tasks, got 31'];
+      const errors = ['Too few tasks in personalLife: 0 tasks (target 3-5)'];
 
       const fixedReport = fixReportIssues(report, errors);
 
-      expect(fixedReport.tasks.daily.length).toBe(8);
+      const actualTotal = getAllTasks(fixedReport).length;
+      expect(fixedReport.total_task_count).toBe(actualTotal);
+      expect(actualTotal).toBeGreaterThan(1);
     });
 
-    it('handles multiple errors', () => {
+    it('returns report unchanged when no matching error patterns', () => {
       const report = createValidReport();
+      const originalTotal = report.total_task_count;
 
-      // Create a report with multiple issues - all tasks have keywords
-      report.tasks.daily = Array.from({ length: 12 }, (_, i) =>
-        createTask({
-          title: 'Schedule appointments',
-          description: 'Coordinate meeting times',
-          frequency: 'daily',
-          isEA: false,
-          owner: 'You',
-        })
-      );
-
-      report.tasks.weekly = report.tasks.weekly.map((t) => ({
-        ...t,
-        title: 'Research topics',
-        description: 'Compile and organize data',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      report.tasks.monthly = report.tasks.monthly.map((t) => ({
-        ...t,
-        title: 'Process reports',
-        description: 'Handle and update monthly data',
-        isEA: false,
-        owner: 'You' as const,
-      }));
-
-      report.ea_task_percent = 10;
-
-      const errors = [
-        'Expected 24 total tasks, got 28',
-        'EA percentage too low: 10% (minimum 40%)',
-      ];
+      const errors = ['Some unrecognized error message'];
 
       const fixedReport = fixReportIssues(report, errors);
 
-      // Both issues should be fixed
-      const totalTasks =
-        fixedReport.tasks.daily.length +
-        fixedReport.tasks.weekly.length +
-        fixedReport.tasks.monthly.length;
+      expect(fixedReport.total_task_count).toBe(originalTotal);
+    });
 
-      expect(totalTasks).toBe(24);
-      expect(fixedReport.ea_task_percent).toBeGreaterThanOrEqual(40);
+    it('handles empty error array gracefully', () => {
+      const report = createValidReport();
+
+      const fixedReport = fixReportIssues(report, []);
+
+      expect(fixedReport.total_task_count).toBe(report.total_task_count);
     });
   });
 });

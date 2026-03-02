@@ -27,7 +27,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { generatePDFV2 } from '@/lib/pdf/generator-v2';
 import { generateSafeFilename } from '@/lib/pdf/s3Service';
-import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency } from '@/types';
+import type { TaskGenerationResult, UnifiedLeadData, TasksByFrequency, Task, TasksByCoreFour } from '@/types';
+import { inferCoreTaskType } from '@/lib/pdf/layout-v2';
 import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
 
 export const maxDuration = 30;
@@ -44,9 +45,10 @@ interface TaskHours {
 
 /**
  * Request body structure for PDF generation
+ * Accepts Core Four grouped tasks (new) or legacy frequency-based tasks
  */
 interface GeneratePDFRequestBody {
-  tasks: TasksByFrequency;
+  tasks: TasksByCoreFour | TasksByFrequency;
   eaPercentage: number;
   userData: {
     firstName?: string;
@@ -80,23 +82,69 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { tasks, eaPercentage, userData, taskHours, revenueRange } = body;
 
     // Construct TaskGenerationResult from request data
-    const allTasks = [
-      ...(tasks.daily || []),
-      ...(tasks.weekly || []),
-      ...(tasks.monthly || []),
+    // Detect whether input is Core Four or legacy frequency-based
+    const isCoreFour = 'businessProcesses' in tasks || 'personalLife' in tasks;
+
+    let coreFourTasks: TasksByCoreFour;
+
+    if (isCoreFour) {
+      // New Core Four format — use directly
+      const cfTasks = tasks as TasksByCoreFour;
+      coreFourTasks = {
+        businessProcesses: cfTasks.businessProcesses || [],
+        personalLife: cfTasks.personalLife || [],
+        calendar: cfTasks.calendar || [],
+        email: cfTasks.email || [],
+      };
+    } else {
+      // Legacy frequency-based format — convert to Core Four
+      const freqTasks = tasks as TasksByFrequency;
+      const allLegacy: Task[] = [
+        ...(freqTasks.daily || []),
+        ...(freqTasks.weekly || []),
+        ...(freqTasks.monthly || []),
+      ];
+
+      coreFourTasks = {
+        businessProcesses: [],
+        personalLife: [],
+        calendar: [],
+        email: [],
+      };
+
+      for (const task of allLegacy) {
+        const area = inferCoreTaskType({
+          title: task.title,
+          description: task.description,
+          coreTaskType: task.coreTaskType,
+        });
+
+        const areaKeyMap: Record<string, keyof TasksByCoreFour> = {
+          business: 'businessProcesses',
+          personal: 'personalLife',
+          calendar: 'calendar',
+          email: 'email',
+        };
+
+        coreFourTasks[areaKeyMap[area]].push(task);
+      }
+    }
+
+    const allTasks: Task[] = [
+      ...coreFourTasks.businessProcesses,
+      ...coreFourTasks.personalLife,
+      ...coreFourTasks.calendar,
+      ...coreFourTasks.email,
     ];
     const eaTaskCount = allTasks.filter((task) => task.isEA).length;
 
     const report: TaskGenerationResult = {
-      tasks: {
-        daily: tasks.daily || [],
-        weekly: tasks.weekly || [],
-        monthly: tasks.monthly || [],
-      },
+      tasks: coreFourTasks,
       ea_task_percent: eaPercentage,
       ea_task_count: eaTaskCount,
       total_task_count: allTasks.length,
-      summary: `Based on our analysis, approximately ${eaPercentage}% of your daily, weekly, and monthly tasks could be delegated to an Executive Assistant.`,
+      analysis_summary: `Based on our analysis, approximately ${eaPercentage}% of tasks could be delegated to an Executive Assistant.`,
+      summary: `Based on our analysis, approximately ${eaPercentage}% of tasks could be delegated to an Executive Assistant.`,
     };
 
     // Construct UnifiedLeadData from userData

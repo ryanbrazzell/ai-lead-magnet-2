@@ -1,18 +1,24 @@
 /**
- * Task Generator Service Tests (Task Group 4.1)
+ * Task Generator Service Tests — Core Four Architecture
  *
- * Tests for the task generator service including:
- * - generateTasks returns TaskGenerationResult with 30 tasks
- * - Lead type routing (main uses unified prompt, simple/standard use streamlined)
+ * Tests for the two-prompt chain task generator:
+ * - generateTasks returns TaskGenerationResult with Core Four grouped tasks
+ * - Two-prompt chain: generateAnalysis -> generateCoreFourTasks
  * - Error handling returns structured error response
  * - Fallback prompt escalation on repeated failures
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
+import type {
+  UnifiedLeadData,
+  TaskGenerationResult,
+  BusinessAnalysisBrief,
+} from '@/types';
 
 // Mock the Claude client module
 vi.mock('../claude-client', () => ({
+  generateAnalysis: vi.fn(),
+  generateCoreFourTasks: vi.fn(),
   generateWithClaude: vi.fn(),
 }));
 
@@ -22,145 +28,224 @@ vi.mock('@/lib/website/analyzer', () => ({
   scrapeWebsiteContent: vi.fn(),
 }));
 
-// Mock the prompts module
+// Mock the lead-brief module
+vi.mock('../lead-brief', () => ({
+  buildLeadBrief: vi.fn().mockReturnValue({
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    domain: null,
+    revenue: '$1M - $5M',
+    revenueTier: 'scaling',
+    dataRichness: 'medium',
+    painPoints: ['Too many meetings'],
+    inferredIndustry: 'Software',
+    hasWebsiteData: false,
+    specificityExpectation: 'Moderate specificity expected.',
+  }),
+}));
+
+// Mock the prompt submodules that task-generator imports directly
+vi.mock('../prompts/business-analysis-prompt', () => ({
+  buildBusinessAnalysisPrompt: vi.fn().mockReturnValue('analysis-prompt'),
+}));
+
+vi.mock('../prompts/core-four-generation-prompt', () => ({
+  buildCoreFourGenerationPrompt: vi.fn().mockReturnValue('generation-prompt'),
+}));
+
 vi.mock('../prompts', () => ({
+  buildSimplifiedPrompt: vi.fn().mockReturnValue('simplified-prompt'),
+  buildEmergencyPrompt: vi.fn().mockReturnValue('emergency-prompt'),
+  buildBusinessAnalysisPrompt: vi.fn().mockReturnValue('analysis-prompt'),
+  buildCoreFourGenerationPrompt: vi.fn().mockReturnValue('generation-prompt'),
   buildUnifiedPromptJSON: vi.fn(),
   buildStreamlinedPrompt: vi.fn(),
-  buildSimplifiedPrompt: vi.fn(),
-  buildEmergencyPrompt: vi.fn(),
 }));
 
 import { generateTasks } from '../task-generator';
-import { generateWithClaude } from '../claude-client';
+import { generateAnalysis, generateCoreFourTasks, generateWithClaude } from '../claude-client';
+import { buildBusinessAnalysisPrompt } from '../prompts/business-analysis-prompt';
+import { buildCoreFourGenerationPrompt } from '../prompts/core-four-generation-prompt';
+import { buildLeadBrief } from '../lead-brief';
 import {
-  buildUnifiedPromptJSON,
-  buildStreamlinedPrompt,
   buildSimplifiedPrompt,
   buildEmergencyPrompt,
 } from '../prompts';
 
 describe('Task Generator Service', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    // Setup default mock implementations
-    vi.mocked(buildUnifiedPromptJSON).mockReturnValue('unified-prompt');
-    vi.mocked(buildStreamlinedPrompt).mockReturnValue('streamlined-prompt');
+    vi.clearAllMocks();
+
+    // Re-apply default mock implementations after clear
+    vi.mocked(buildBusinessAnalysisPrompt).mockReturnValue('analysis-prompt');
+    vi.mocked(buildCoreFourGenerationPrompt).mockReturnValue('generation-prompt');
     vi.mocked(buildSimplifiedPrompt).mockReturnValue('simplified-prompt');
     vi.mocked(buildEmergencyPrompt).mockReturnValue('emergency-prompt');
+    vi.mocked(buildLeadBrief).mockReturnValue({
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      domain: null,
+      revenue: '$1M - $5M',
+      revenueTier: 'scaling',
+      dataRichness: 'medium',
+      painPoints: ['Too many meetings'],
+      inferredIndustry: 'Software',
+      hasWebsiteData: false,
+      specificityExpectation: 'Moderate specificity expected — pain points available but no website data.',
+    });
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
   });
 
   /**
-   * Test 1: generateTasks returns TaskGenerationResult with 30 tasks
+   * Test 1: generateTasks returns TaskGenerationResult with Core Four tasks
    */
-  describe('generateTasks returns TaskGenerationResult with 24 tasks', () => {
-    it('returns a TaskGenerationResult with exactly 24 tasks', async () => {
+  describe('generateTasks returns TaskGenerationResult with Core Four tasks', () => {
+    it('returns a TaskGenerationResult with correct Core Four task counts', async () => {
       const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
       expect(result).toBeDefined();
-      expect(result.total_task_count).toBe(24);
-      expect(result.tasks.daily).toHaveLength(8);
-      expect(result.tasks.weekly).toHaveLength(8);
-      expect(result.tasks.monthly).toHaveLength(8);
+      expect(result.total_task_count).toBe(20);
+      expect(result.tasks.businessProcesses).toHaveLength(8);
+      expect(result.tasks.personalLife).toHaveLength(5);
+      expect(result.tasks.calendar).toHaveLength(4);
+      expect(result.tasks.email).toHaveLength(3);
     });
 
     it('returns valid EA percentage and counts', async () => {
       const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      expect(result.ea_task_percent).toBeGreaterThanOrEqual(50);
-      expect(result.ea_task_percent).toBeLessThanOrEqual(70);
-      expect(result.ea_task_count).toBeGreaterThan(0);
+      expect(result.ea_task_percent).toBe(100);
+      expect(result.ea_task_count).toBe(20);
       expect(result.summary).toBeDefined();
+      expect(result.analysis_summary).toBeDefined();
     });
 
     it('returns tasks with required fields', async () => {
       const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      // Check that all tasks have required fields
       const allTasks = [
-        ...result.tasks.daily,
-        ...result.tasks.weekly,
-        ...result.tasks.monthly,
+        ...result.tasks.businessProcesses,
+        ...result.tasks.personalLife,
+        ...result.tasks.calendar,
+        ...result.tasks.email,
       ];
 
       for (const task of allTasks) {
         expect(task.title).toBeDefined();
         expect(task.description).toBeDefined();
-        expect(task.owner).toMatch(/^(EA|You)$/);
-        expect(typeof task.isEA).toBe('boolean');
+        expect(task.owner).toBe('EA');
+        expect(task.isEA).toBe(true);
         expect(task.category).toBeDefined();
       }
     });
   });
 
   /**
-   * Test 2: Lead type routing (main uses unified prompt, simple/standard use streamlined)
+   * Test 2: Two-prompt chain execution
    */
-  describe('Lead type routing', () => {
-    it('uses buildUnifiedPromptJSON for main leadType', async () => {
+  describe('Two-prompt chain execution', () => {
+    it('calls generateAnalysis then generateCoreFourTasks in sequence', async () => {
       const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      const callOrder: string[] = [];
+      vi.mocked(generateAnalysis).mockImplementation(async () => {
+        callOrder.push('analysis');
+        return mockAnalysis;
+      });
+      vi.mocked(generateCoreFourTasks).mockImplementation(async () => {
+        callOrder.push('coreFourTasks');
+        return mockResult;
+      });
 
       await generateTasks(mockLeadData);
 
-      expect(buildUnifiedPromptJSON).toHaveBeenCalledWith(mockLeadData);
-      expect(buildStreamlinedPrompt).not.toHaveBeenCalled();
+      expect(callOrder).toEqual(['analysis', 'coreFourTasks']);
     });
 
-    it('uses buildStreamlinedPrompt for simple leadType', async () => {
-      const mockLeadData = createMockLeadData('simple');
-      const mockResult = createMockTaskResult();
+    it('uses the same two-prompt chain for all lead types', async () => {
+      for (const leadType of ['main', 'simple', 'standard'] as const) {
+        vi.clearAllMocks();
+        vi.mocked(buildBusinessAnalysisPrompt).mockReturnValue('analysis-prompt');
+        vi.mocked(buildCoreFourGenerationPrompt).mockReturnValue('generation-prompt');
+        vi.mocked(buildLeadBrief).mockReturnValue({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          domain: null,
+          revenue: '$1M - $5M',
+          revenueTier: 'scaling',
+          dataRichness: 'medium',
+          painPoints: ['Too many meetings'],
+          inferredIndustry: 'Software',
+          hasWebsiteData: false,
+          specificityExpectation: 'Moderate specificity expected.',
+        });
 
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+        const mockAnalysis = createMockAnalysisBrief();
+        const mockResult = createMockTaskResult();
 
-      await generateTasks(mockLeadData);
+        vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+        vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
-      expect(buildStreamlinedPrompt).toHaveBeenCalledWith(mockLeadData);
-      expect(buildUnifiedPromptJSON).not.toHaveBeenCalled();
+        const mockLeadData = createMockLeadData(leadType);
+        await generateTasks(mockLeadData);
+
+        expect(generateAnalysis).toHaveBeenCalledTimes(1);
+        expect(generateCoreFourTasks).toHaveBeenCalledTimes(1);
+      }
     });
 
-    it('uses buildStreamlinedPrompt for standard leadType', async () => {
-      const mockLeadData = createMockLeadData('standard');
-      const mockResult = createMockTaskResult();
-
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
-
-      await generateTasks(mockLeadData);
-
-      expect(buildStreamlinedPrompt).toHaveBeenCalledWith(mockLeadData);
-      expect(buildUnifiedPromptJSON).not.toHaveBeenCalled();
-    });
-
-    it('passes correct prompt to Gemini client based on lead type', async () => {
+    it('passes analysis prompt to generateAnalysis', async () => {
       const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(buildUnifiedPromptJSON).mockReturnValue('custom-unified-prompt');
-      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+      vi.mocked(buildBusinessAnalysisPrompt).mockReturnValue('custom-analysis-prompt');
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
-      expect(generateWithClaude).toHaveBeenCalledWith('custom-unified-prompt');
+      expect(generateAnalysis).toHaveBeenCalledWith('custom-analysis-prompt');
+    });
+
+    it('passes generation prompt to generateCoreFourTasks', async () => {
+      const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
+      const mockResult = createMockTaskResult();
+
+      vi.mocked(buildCoreFourGenerationPrompt).mockReturnValue('custom-generation-prompt');
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+
+      await generateTasks(mockLeadData);
+
+      expect(generateCoreFourTasks).toHaveBeenCalledWith('custom-generation-prompt');
     });
   });
 
@@ -168,12 +253,12 @@ describe('Task Generator Service', () => {
    * Test 3: Error handling returns structured error response
    */
   describe('Error handling', () => {
-    it('throws structured error on Claude API failure', async () => {
+    it('throws structured error when all attempts fail', async () => {
       const mockLeadData = createMockLeadData('main');
       const apiError = new Error('Claude API error: rate limit exceeded');
 
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(apiError);
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(apiError)
         .mockRejectedValueOnce(apiError)
         .mockRejectedValueOnce(apiError);
 
@@ -186,8 +271,8 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const apiKeyError = new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable');
 
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(apiKeyError);
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(apiKeyError)
         .mockRejectedValueOnce(apiKeyError)
         .mockRejectedValueOnce(apiKeyError);
 
@@ -198,8 +283,8 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const timeoutError = new Error('Claude API request timed out after 90000ms');
 
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(timeoutError);
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(timeoutError)
         .mockRejectedValueOnce(timeoutError)
         .mockRejectedValueOnce(timeoutError);
 
@@ -210,18 +295,17 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('simple');
       const networkError = new Error('Network error');
 
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(networkError);
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(networkError);
 
       try {
         await generateTasks(mockLeadData);
-        // Should not reach here
         expect(true).toBe(false);
       } catch (error) {
         const err = error as Error;
-        // Error wraps all attempt errors including the network error
+        expect(err.message).toContain('simple');
         expect(err.message).toContain('Network error');
       }
     });
@@ -231,61 +315,61 @@ describe('Task Generator Service', () => {
    * Test 4: Fallback prompt escalation on repeated failures
    */
   describe('Fallback prompt escalation', () => {
-    it('escalates to simplified prompt on first failure', async () => {
+    it('falls back to simplified prompt when two-prompt chain fails', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      // First call fails, second succeeds with simplified prompt
-      vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(new Error('First attempt failed'))
-        .mockResolvedValueOnce(mockResult);
+      // Two-prompt chain fails (generateAnalysis throws)
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
+      // Simplified fallback succeeds
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
-      expect(buildSimplifiedPrompt).toHaveBeenCalledWith(expect.objectContaining({ leadType: 'main' }));
-      expect(result.total_task_count).toBe(24);
+      expect(buildSimplifiedPrompt).toHaveBeenCalled();
+      expect(result.total_task_count).toBe(20);
     });
 
     it('escalates to emergency prompt when simplified also fails', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      // First and second calls fail, third succeeds with emergency prompt
+      // Two-prompt chain fails
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
+      // Simplified fallback fails, then emergency succeeds
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(new Error('First attempt failed'))
-        .mockRejectedValueOnce(new Error('Simplified attempt failed'))
+        .mockRejectedValueOnce(new Error('Simplified failed'))
         .mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
       expect(buildEmergencyPrompt).toHaveBeenCalled();
-      expect(result.total_task_count).toBe(24);
+      expect(result.total_task_count).toBe(20);
     });
 
     it('throws error after all fallback attempts exhausted', async () => {
       const mockLeadData = createMockLeadData('main');
 
       // All attempts fail
+      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(new Error('First attempt failed'))
-        .mockRejectedValueOnce(new Error('Simplified attempt failed'))
-        .mockRejectedValueOnce(new Error('Emergency attempt failed'));
+        .mockRejectedValueOnce(new Error('Simplified failed'))
+        .mockRejectedValueOnce(new Error('Emergency failed'));
 
       await expect(generateTasks(mockLeadData)).rejects.toThrow(
         /All task generation attempts failed/
       );
     });
 
-    it('uses correct escalation order: primary -> simplified -> emergency', async () => {
+    it('uses correct escalation order: two-prompt chain -> simplified -> emergency', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
-      // Track call order
       const callOrder: string[] = [];
 
-      vi.mocked(buildUnifiedPromptJSON).mockImplementation(() => {
-        callOrder.push('unified');
-        return 'unified-prompt';
+      vi.mocked(generateAnalysis).mockImplementation(async () => {
+        callOrder.push('two-prompt-chain');
+        throw new Error('Chain failed');
       });
 
       vi.mocked(buildSimplifiedPrompt).mockImplementation(() => {
@@ -298,21 +382,39 @@ describe('Task Generator Service', () => {
         return 'emergency-prompt';
       });
 
-      // First two fail, third succeeds
+      // Simplified fails, emergency succeeds
       vi.mocked(generateWithClaude)
-        .mockRejectedValueOnce(new Error('First attempt failed'))
-        .mockRejectedValueOnce(new Error('Simplified attempt failed'))
+        .mockRejectedValueOnce(new Error('Simplified failed'))
         .mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
-      expect(callOrder).toEqual(['unified', 'simplified', 'emergency']);
+      expect(callOrder).toEqual(['two-prompt-chain', 'simplified', 'emergency']);
+    });
+
+    it('recovers from Call 2 failure via simplified fallback', async () => {
+      const mockLeadData = createMockLeadData('main');
+      const mockAnalysis = createMockAnalysisBrief();
+      const mockResult = createMockTaskResult();
+
+      // Call 1 succeeds but Call 2 fails
+      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasks).mockRejectedValueOnce(
+        new Error('Generation failed')
+      );
+      // Simplified fallback succeeds
+      vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
+
+      const result = await generateTasks(mockLeadData);
+
+      expect(buildSimplifiedPrompt).toHaveBeenCalled();
+      expect(result.total_task_count).toBe(20);
     });
   });
 });
 
 /**
- * Helper function to create mock lead data
+ * Helper: create mock lead data
  */
 function createMockLeadData(
   leadType: 'main' | 'standard' | 'simple'
@@ -336,29 +438,66 @@ function createMockLeadData(
 }
 
 /**
- * Helper function to create a mock TaskGenerationResult
+ * Helper: create mock BusinessAnalysisBrief
+ */
+function createMockAnalysisBrief(): BusinessAnalysisBrief {
+  return {
+    business_description:
+      'A mid-market software company with 10-50 employees, generating $1M-$5M in revenue.',
+    recurring_processes: [
+      'Client onboarding and setup',
+      'Monthly reporting and analytics',
+      'Vendor contract renewals',
+      'Team meeting coordination',
+      'Invoice processing and follow-ups',
+    ],
+    calendar_patterns: [
+      'Back-to-back meetings with no buffer time',
+      'Recurring 1:1s consuming 30% of the week',
+      'No dedicated deep work blocks',
+    ],
+    personal_life_opportunities: [
+      'Travel booking and itinerary management',
+      'Family event planning',
+      'Personal appointment scheduling',
+    ],
+    pain_point_decomposition: [
+      'Email overload from vendor and client communications',
+      'Meeting prep takes too long due to scattered notes',
+      'Manual data entry across CRM and project tools',
+      'No system for recurring administrative tasks',
+    ],
+    revenue_tier_context:
+      'At $1M-$5M revenue, an EA can directly reclaim 15+ hours per week from ops overhead.',
+  };
+}
+
+/**
+ * Helper: create mock TaskGenerationResult with Core Four structure
  */
 function createMockTaskResult(): TaskGenerationResult {
-  const createTasks = (count: number) =>
+  const createTasks = (count: number, area: string) =>
     Array.from({ length: count }, (_, i) => ({
-      title: `Task ${i + 1}`,
-      description:
-        'A detailed task description that explains what needs to be done for this specific task.',
-      owner: i < 5 ? ('EA' as const) : ('You' as const),
-      isEA: i < 5,
-      category: 'General',
+      title: `${area} Task ${i + 1}`,
+      description: `A detailed description for ${area} task ${i + 1} explaining what the EA should do.`,
+      owner: 'EA' as const,
+      isEA: true,
+      category: 'Operations',
     }));
 
   return {
     tasks: {
-      daily: createTasks(8),
-      weekly: createTasks(8),
-      monthly: createTasks(8),
+      businessProcesses: createTasks(8, 'Business Process'),
+      personalLife: createTasks(5, 'Personal Life'),
+      calendar: createTasks(4, 'Calendar'),
+      email: createTasks(3, 'Email'),
     },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
+    analysis_summary:
+      'Based on the analysis, approximately 20 tasks can be delegated to an EA across the Core Four areas.',
+    total_task_count: 20,
+    ea_task_percent: 100,
+    ea_task_count: 20,
     summary:
-      'Based on what I can see, around 63 percent of these tasks could be in the hands of your EA.',
+      'Based on the analysis, approximately 20 tasks can be delegated to an EA across the Core Four areas.',
   };
 }

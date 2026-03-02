@@ -8,7 +8,6 @@
  */
 
 import type { UnifiedLeadData } from '@/types';
-import { TIME_FREEDOM_PROMPT_JSON } from './time-freedom-prompt';
 
 /**
  * Structured logger for prompt building
@@ -167,30 +166,51 @@ export function serializeLeadData(data: UnifiedLeadData): string {
 /**
  * Build JSON-output unified prompt for any lead type
  *
- * Takes the TIME_FREEDOM_PROMPT_JSON template and replaces the
- * {LEAD_CONTEXT} placeholder with serialized lead data.
+ * Legacy function used by fallback paths. Builds a Core Four prompt
+ * from serialized lead data.
  *
  * @param leadData - The unified lead data to include in the prompt
  * @returns The complete prompt with lead context injected
  */
 export function buildUnifiedPromptJSON(leadData: UnifiedLeadData): string {
   const serializedData = serializeLeadData(leadData);
-  const prompt = TIME_FREEDOM_PROMPT_JSON.replace(
-    '{LEAD_CONTEXT}',
-    serializedData
-  );
 
-  log.info('JSON unified prompt built', {
+  const prompt = `You are a professional Executive Assistant advisor. Generate personalized EA delegation tasks organized by Core Four areas.
+
+===== FOUNDER CONTEXT =====
+${serializedData}
+
+===== YOUR TASK =====
+Generate ~22-25 personalized tasks organized by Core Four area. All tasks are EA-delegatable.
+
+Target counts:
+- businessProcesses: 8-10 tasks (most personalized)
+- personalLife: 5-6 tasks
+- calendar: 4-5 tasks
+- email: 3-4 tasks
+
+Every task must include coreTaskType: emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement.
+
+Task titles: Conversational, specific, use "your" and "you".
+Descriptions: 2-3 sentences with specific actions.
+NEVER use em-dashes. Use regular hyphens only.
+Every task must be unique.
+
+Output ONLY valid JSON:
+{
+  "tasks": {
+    "businessProcesses": [{"title":"...","description":"...","category":"Operations","coreTaskType":"businessProcessManagement","owner":"EA","isEA":true}],
+    "personalLife": [...],
+    "calendar": [...],
+    "email": [...]
+  },
+  "analysis_summary": "Brief paragraph about delegation opportunities",
+  "total_task_count": 22
+}`;
+
+  log.info('Unified prompt built', {
     leadType: leadData.leadType,
     promptLength: prompt.length,
-    hasName: !!(leadData.firstName || leadData.lastName),
-    hasWebsite: !!(leadData.website || leadData.companyWebsite),
-    hasBusinessType: !!leadData.businessType,
-    hasWebsiteAnalysis: !!leadData.companyAnalysis,
-    hasChallenges: !!(leadData.challenges || leadData.timeBottleneck),
-    dataFieldsCount: Object.values(leadData).filter(
-      (v) => v !== undefined && v !== null && v !== ''
-    ).length,
   });
 
   return prompt;

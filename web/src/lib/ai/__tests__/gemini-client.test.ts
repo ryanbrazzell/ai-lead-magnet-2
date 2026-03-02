@@ -188,7 +188,7 @@ describe('Gemini AI Client', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(result).toBeDefined();
-      expect(result.total_task_count).toBe(30);
+      expect(result.total_task_count).toBe(20);
     });
 
     it('throws after retry is exhausted', async () => {
@@ -254,9 +254,9 @@ describe('Gemini AI Client', () => {
 
       const parsed = parseGeminiResponse(jsonString);
 
-      expect(parsed.total_task_count).toBe(30);
-      expect(parsed.ea_task_percent).toBe(50);
-      expect(parsed.tasks.daily).toHaveLength(10);
+      expect(parsed.total_task_count).toBe(20);
+      expect(parsed.ea_task_percent).toBe(100);
+      expect(parsed.tasks.businessProcesses).toHaveLength(8);
     });
 
     it('strips markdown code blocks from response', () => {
@@ -265,7 +265,7 @@ describe('Gemini AI Client', () => {
 
       const parsed = parseGeminiResponse(wrappedJson);
 
-      expect(parsed.total_task_count).toBe(30);
+      expect(parsed.total_task_count).toBe(20);
     });
 
     it('strips json prefix without backticks', () => {
@@ -274,7 +274,7 @@ describe('Gemini AI Client', () => {
 
       const parsed = parseGeminiResponse(prefixedJson);
 
-      expect(parsed.total_task_count).toBe(30);
+      expect(parsed.total_task_count).toBe(20);
     });
 
     it('throws on invalid JSON', () => {
@@ -303,14 +303,16 @@ function createMockTaskResult(): TaskGenerationResult {
 
   return {
     tasks: {
-      daily: createTasks(10),
-      weekly: createTasks(10),
-      monthly: createTasks(10),
+      businessProcesses: createTasks(8),
+      personalLife: createTasks(5),
+      calendar: createTasks(4),
+      email: createTasks(3),
     },
-    ea_task_percent: 50,
-    ea_task_count: 15,
-    total_task_count: 30,
+    analysis_summary: 'Analysis of delegation opportunities.',
+    ea_task_percent: 100,
+    ea_task_count: 20,
+    total_task_count: 20,
     summary:
-      'Based on what I can see, around 50 percent of these tasks could be in the hands of your EA.',
+      'Based on analysis, tasks could be delegated to your EA.',
   };
 }

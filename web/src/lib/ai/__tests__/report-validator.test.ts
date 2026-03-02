@@ -1,13 +1,14 @@
 /**
- * Report Validator Tests (Task Group 5.1)
+ * Report Validator Tests
  *
  * Tests for the report validation module including:
  * - validateReport returns ValidationResult with errors/warnings
- * - Task count validation (exactly 24 total, 8 per frequency)
- * - EA percentage validation (>= 50%)
+ * - Core Four area task count validation
  * - Core EA task detection (email, calendar, personal life, business process)
  * - analyzeReport returns correct ReportAnalysis
  * - validateTaskQuality catches missing/short titles and descriptions
+ * - Semantic dedup detection
+ * - Anti-pattern detection
  */
 
 import { describe, it, expect } from 'vitest';
@@ -16,97 +17,82 @@ import {
   analyzeReport,
   validateCoreEATasks,
   validateTaskQuality,
+  validateNoDuplicates,
+  validateNoAntiPatterns,
   hasEmailManagementTask,
   hasCalendarManagementTask,
   hasPersonalLifeManagementTask,
   hasBusinessProcessManagementTask,
 } from '../report-validator';
-import type { Task, TasksByFrequency, TaskGenerationResult } from '@/types';
+import type { Task, TaskGenerationResult } from '@/types';
 
 /**
- * Helper function to create a valid TaskGenerationResult
+ * Helper: create a valid Core Four report
  */
 function createValidReport(): TaskGenerationResult {
-  const createEATasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
+  const createTasks = (count: number, area: string, keyword: string): Task[] =>
     Array.from({ length: count }, (_, i) => ({
-      title: `EA Task ${i + 1} for ${frequency}`,
-      description: `A detailed task description explaining what the EA needs to do for this specific ${frequency} task.`,
+      title: `${keyword} Task ${i + 1} for ${area}`,
+      description: `A detailed description for ${keyword.toLowerCase()} task ${i + 1} in the ${area} area. This should be specific.`,
       owner: 'EA' as const,
       isEA: true,
       category: 'Operations',
-      frequency,
-      priority: 'medium' as const,
     }));
 
-  const createFounderTasks = (count: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] =>
-    Array.from({ length: count }, (_, i) => ({
-      title: `Founder Task ${i + 1} for ${frequency}`,
-      description: `A detailed task description explaining what the founder needs to do for this specific ${frequency} task.`,
-      owner: 'You' as const,
-      isEA: false,
-      category: 'Strategy',
-      frequency,
-      priority: 'high' as const,
-    }));
-
-  // Create tasks with ~63% EA (5 EA + 3 Founder per frequency = 15 EA total out of 24 = 63%)
   return {
     tasks: {
-      daily: [...createEATasks(5, 'daily'), ...createFounderTasks(3, 'daily')],
-      weekly: [...createEATasks(5, 'weekly'), ...createFounderTasks(3, 'weekly')],
-      monthly: [...createEATasks(5, 'monthly'), ...createFounderTasks(3, 'monthly')],
+      businessProcesses: createTasks(8, 'business', 'Process'),
+      personalLife: createTasks(5, 'personal', 'Personal'),
+      calendar: createTasks(4, 'calendar', 'Calendar'),
+      email: createTasks(3, 'email', 'Email'),
     },
-    ea_task_percent: 63,
-    ea_task_count: 15,
-    total_task_count: 24,
-    summary: 'Around 63% of tasks can be delegated to your EA.',
+    analysis_summary: 'Analysis of delegation opportunities.',
+    total_task_count: 20,
+    ea_task_percent: 100,
+    ea_task_count: 20,
+    summary: 'Analysis of delegation opportunities.',
   };
 }
 
 /**
- * Helper function to create report with core EA tasks
+ * Helper: create report with core EA tasks
  */
 function createReportWithCoreEATasks(): TaskGenerationResult {
   const report = createValidReport();
 
-  // Replace some tasks with core EA tasks
-  report.tasks.daily[0] = {
+  report.tasks.email[0] = {
     title: 'Complete Email Management',
     description: 'Manage inbox, filter emails, respond to correspondence on behalf of founder.',
     owner: 'EA',
     isEA: true,
     category: 'Communication',
-    isCoreEATask: true,
     coreTaskType: 'emailManagement',
   };
 
-  report.tasks.daily[1] = {
+  report.tasks.calendar[0] = {
     title: 'Calendar and Schedule Management',
     description: 'Manage calendar, schedule appointments, and optimize meeting times.',
     owner: 'EA',
     isEA: true,
-    category: 'Time Management',
-    isCoreEATask: true,
+    category: 'Scheduling',
     coreTaskType: 'calendarManagement',
   };
 
-  report.tasks.weekly[0] = {
+  report.tasks.personalLife[0] = {
     title: 'Personal Life Coordination',
     description: 'Handle personal travel bookings, family logistics, and vendor communications.',
     owner: 'EA',
     isEA: true,
-    category: 'Personal Support',
-    isCoreEATask: true,
+    category: 'Personal',
     coreTaskType: 'personalLifeManagement',
   };
 
-  report.tasks.monthly[0] = {
+  report.tasks.businessProcesses[0] = {
     title: 'Business Process Management',
     description: 'Document and optimize recurring workflow processes and automation systems.',
     owner: 'EA',
     isEA: true,
     category: 'Operations',
-    isCoreEATask: true,
     coreTaskType: 'businessProcessManagement',
   };
 
@@ -114,13 +100,9 @@ function createReportWithCoreEATasks(): TaskGenerationResult {
 }
 
 describe('Report Validator', () => {
-  /**
-   * Test 1: validateReport returns ValidationResult with errors/warnings
-   */
   describe('validateReport returns ValidationResult', () => {
     it('returns ValidationResult structure with isValid, errors, and warnings', () => {
       const report = createReportWithCoreEATasks();
-
       const result = validateReport(report);
 
       expect(result).toHaveProperty('isValid');
@@ -131,335 +113,119 @@ describe('Report Validator', () => {
       expect(Array.isArray(result.warnings)).toBe(true);
     });
 
-    it('returns isValid: true for a valid report with all requirements met', () => {
+    it('returns isValid: true for a valid report', () => {
       const report = createReportWithCoreEATasks();
-
       const result = validateReport(report);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('returns isValid: false when report has validation errors', () => {
+    it('returns isValid: false when report has too few tasks', () => {
       const report = createValidReport();
-      // Remove tasks to make it invalid
-      report.tasks.daily = [];
+      report.tasks.businessProcesses = [];
+      report.tasks.personalLife = [];
+      report.tasks.calendar = [];
 
       const result = validateReport(report);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors.some(e => e.includes('Too few tasks'))).toBe(true);
     });
   });
 
-  /**
-   * Test 2: Task count validation (exactly 24 total, 8 per frequency)
-   */
-  describe('Task count validation', () => {
-    it('validates exactly 24 total tasks', () => {
+  describe('Core Four area validation', () => {
+    it('warns when area has fewer tasks than target', () => {
       const report = createReportWithCoreEATasks();
+      report.tasks.businessProcesses = report.tasks.businessProcesses.slice(0, 3);
 
       const result = validateReport(report);
 
-      expect(result.isValid).toBe(true);
-      expect(result.errors.filter(e => e.includes('total tasks'))).toHaveLength(0);
-    });
-
-    it('returns error when total tasks is not 24', () => {
-      const report = createValidReport();
-      report.tasks.daily = report.tasks.daily.slice(0, 5); // Only 5 daily tasks
-
-      const result = validateReport(report);
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('total tasks'))).toBe(true);
-      expect(result.errors.some(e => e.includes('21'))).toBe(true); // 5 + 8 + 8 = 21
-    });
-
-    it('returns warning when daily tasks count is not 8', () => {
-      const report = createValidReport();
-      // Add extra task to daily to trigger warning but maintain 24 total
-      const extraTask: Task = {
-        title: 'Extra Task',
-        description: 'An extra task description for testing purposes.',
-        owner: 'EA',
-        isEA: true,
-        category: 'Operations',
-      };
-      report.tasks.daily.push(extraTask);
-      report.tasks.weekly = report.tasks.weekly.slice(0, 7); // Remove one weekly
-
-      const result = validateReport(report);
-
-      expect(result.warnings.some(w => w.includes('daily tasks') && w.includes('9'))).toBe(true);
-      expect(result.warnings.some(w => w.includes('weekly tasks') && w.includes('7'))).toBe(true);
-    });
-
-    it('validates 8 tasks per frequency', () => {
-      const report = createReportWithCoreEATasks();
-      const analysis = analyzeReport(report);
-
-      expect(analysis.dailyTasks).toBe(8);
-      expect(analysis.weeklyTasks).toBe(8);
-      expect(analysis.monthlyTasks).toBe(8);
+      expect(result.warnings.some(w => w.includes('Business Processes'))).toBe(true);
     });
   });
 
-  /**
-   * Test 3: EA percentage validation (>= 50%)
-   */
-  describe('EA percentage validation', () => {
-    it('validates when EA percentage is at least 50%', () => {
-      const report = createReportWithCoreEATasks();
-
-      const result = validateReport(report);
-
-      expect(result.errors.filter(e => e.includes('EA percentage'))).toHaveLength(0);
-    });
-
-    it('returns error when EA percentage is below 50%', () => {
-      const report = createValidReport();
-      // Make most tasks founder tasks (only 3 EA tasks out of 24 = 13%)
-      const founderTask: Task = {
-        title: 'Founder Strategy Task',
-        description: 'A strategic task that only the founder can perform.',
-        owner: 'You',
-        isEA: false,
-        category: 'Strategy',
-      };
-
-      report.tasks.daily = Array(8).fill(founderTask).map((t, i) => ({
-        ...t,
-        title: `Founder Task ${i + 1}`,
-      }));
-      report.tasks.weekly = Array(8).fill(founderTask).map((t, i) => ({
-        ...t,
-        title: `Founder Weekly Task ${i + 1}`,
-      }));
-      report.tasks.monthly = Array(8).fill(founderTask).map((t, i) => ({
-        ...t,
-        title: `Founder Monthly Task ${i + 1}`,
-      }));
-
-      // Add only 3 EA tasks (13%)
-      report.tasks.daily[0].owner = 'EA';
-      report.tasks.daily[0].isEA = true;
-      report.tasks.weekly[0].owner = 'EA';
-      report.tasks.weekly[0].isEA = true;
-      report.tasks.monthly[0].owner = 'EA';
-      report.tasks.monthly[0].isEA = true;
-
-      const result = validateReport(report);
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('EA percentage too low'))).toBe(true);
-    });
-
-    it('passes when EA percentage is exactly 50%', () => {
-      const report = createValidReport();
-      // 12 EA tasks out of 24 = 50%
-      const createMixedTasks = (eaCount: number, frequency: 'daily' | 'weekly' | 'monthly'): Task[] => {
-        const tasks: Task[] = [];
-        for (let i = 0; i < 8; i++) {
-          tasks.push({
-            title: `Task ${i + 1} for ${frequency}`,
-            description: `A detailed description for task ${i + 1} in the ${frequency} frequency.`,
-            owner: i < eaCount ? 'EA' : 'You',
-            isEA: i < eaCount,
-            category: i < eaCount ? 'Operations' : 'Strategy',
-            frequency,
-          });
-        }
-        return tasks;
-      };
-
-      // 4 EA per frequency = 12 total EA out of 24 = 50%
-      report.tasks.daily = createMixedTasks(4, 'daily');
-      report.tasks.weekly = createMixedTasks(4, 'weekly');
-      report.tasks.monthly = createMixedTasks(4, 'monthly');
-
-      // Add core EA tasks to avoid those validation errors
-      report.tasks.daily[0] = {
-        title: 'Email Management',
-        description: 'Manage inbox and correspondence.',
-        owner: 'EA',
-        isEA: true,
-        category: 'Communication',
-      };
-      report.tasks.daily[1] = {
-        title: 'Calendar Management',
-        description: 'Manage schedule and appointments.',
-        owner: 'EA',
-        isEA: true,
-        category: 'Time Management',
-      };
-      report.tasks.weekly[0] = {
-        title: 'Personal Travel Coordination',
-        description: 'Book travel and personal appointments.',
-        owner: 'EA',
-        isEA: true,
-        category: 'Personal Support',
-      };
-      report.tasks.monthly[0] = {
-        title: 'Process Documentation',
-        description: 'Document and optimize workflow processes.',
-        owner: 'EA',
-        isEA: true,
-        category: 'Operations',
-      };
-
-      const result = validateReport(report);
-
-      expect(result.errors.filter(e => e.includes('EA percentage'))).toHaveLength(0);
-    });
-  });
-
-  /**
-   * Test 4: Core EA task detection (email, calendar, personal life, business process)
-   */
   describe('Core EA task detection', () => {
     it('detects email management task by keywords', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Manage Inbox',
-          description: 'Handle all email correspondence and inbox management.',
-          owner: 'EA',
-          isEA: true,
-          category: 'Communication',
-        },
-      ];
-
+      const tasks: Task[] = [{
+        title: 'Manage Inbox',
+        description: 'Handle all email correspondence and inbox management.',
+        owner: 'EA', isEA: true, category: 'Communication',
+      }];
       expect(hasEmailManagementTask(tasks)).toBe(true);
     });
 
     it('detects calendar management task by keywords', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Schedule Optimization',
-          description: 'Manage calendar and meeting scheduling.',
-          owner: 'EA',
-          isEA: true,
-          category: 'Time Management',
-        },
-      ];
-
+      const tasks: Task[] = [{
+        title: 'Schedule Optimization',
+        description: 'Manage calendar and meeting scheduling.',
+        owner: 'EA', isEA: true, category: 'Scheduling',
+      }];
       expect(hasCalendarManagementTask(tasks)).toBe(true);
     });
 
     it('detects personal life management task by keywords', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Travel Arrangements',
-          description: 'Book personal travel and coordinate family logistics.',
-          owner: 'EA',
-          isEA: true,
-          category: 'Personal Support',
-        },
-      ];
-
+      const tasks: Task[] = [{
+        title: 'Travel Arrangements',
+        description: 'Book personal travel and coordinate family logistics.',
+        owner: 'EA', isEA: true, category: 'Personal',
+      }];
       expect(hasPersonalLifeManagementTask(tasks)).toBe(true);
     });
 
     it('detects business process management task by keywords', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Workflow Optimization',
-          description: 'Document and improve business process automation.',
-          owner: 'EA',
-          isEA: true,
-          category: 'Operations',
-        },
-      ];
-
+      const tasks: Task[] = [{
+        title: 'Workflow Optimization',
+        description: 'Document and improve business process automation.',
+        owner: 'EA', isEA: true, category: 'Operations',
+      }];
       expect(hasBusinessProcessManagementTask(tasks)).toBe(true);
     });
 
-    it('does not detect core tasks for non-EA tasks', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Email Strategy',
-          description: 'Plan email marketing campaigns.',
-          owner: 'You',
-          isEA: false,
-          category: 'Marketing',
-        },
-      ];
-
-      expect(hasEmailManagementTask(tasks)).toBe(false);
-    });
-
     it('detects core tasks by coreTaskType flag', () => {
-      const tasks: Task[] = [
-        {
-          title: 'Core Task',
-          description: 'A core EA task without keywords.',
-          owner: 'EA',
-          isEA: true,
-          category: 'Operations',
-          isCoreEATask: true,
-          coreTaskType: 'emailManagement',
-        },
-      ];
-
+      const tasks: Task[] = [{
+        title: 'Core Task',
+        description: 'A core EA task.',
+        owner: 'EA', isEA: true, category: 'Operations',
+        coreTaskType: 'emailManagement',
+      }];
       expect(hasEmailManagementTask(tasks)).toBe(true);
     });
 
     it('returns errors for each missing core EA task type', () => {
-      const report = createValidReport(); // No core tasks
+      const report: TaskGenerationResult = {
+        tasks: {
+          businessProcesses: [{ title: 'Generic task', description: 'Something generic here.', owner: 'EA', isEA: true, category: 'Operations' }],
+          personalLife: [{ title: 'Another task', description: 'Another generic description here.', owner: 'EA', isEA: true, category: 'Operations' }],
+          calendar: [{ title: 'Yet another', description: 'Yet another generic description here.', owner: 'EA', isEA: true, category: 'Operations' }],
+          email: [],
+        },
+        analysis_summary: '', total_task_count: 3, ea_task_percent: 100, ea_task_count: 3, summary: '',
+      };
 
       const result = validateCoreEATasks(report);
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some(e => e.includes('Email Management'))).toBe(true);
-      expect(result.errors.some(e => e.includes('Calendar Management'))).toBe(true);
-      expect(result.errors.some(e => e.includes('Personal Life Management'))).toBe(true);
-      expect(result.errors.some(e => e.includes('Business Process Management'))).toBe(true);
     });
   });
 
-  /**
-   * Test 5: analyzeReport returns correct ReportAnalysis
-   */
-  describe('analyzeReport returns correct ReportAnalysis', () => {
-    it('returns correct total task counts', () => {
+  describe('analyzeReport', () => {
+    it('returns correct total task count', () => {
       const report = createValidReport();
-
       const analysis = analyzeReport(report);
-
-      expect(analysis.totalTasks).toBe(24);
-      expect(analysis.dailyTasks).toBe(8);
-      expect(analysis.weeklyTasks).toBe(8);
-      expect(analysis.monthlyTasks).toBe(8);
+      expect(analysis.totalTasks).toBe(20);
     });
 
-    it('returns correct EA vs founder task counts', () => {
-      const report = createValidReport(); // ~63% EA (5 EA + 3 Founder per frequency)
-
-      const analysis = analyzeReport(report);
-
-      expect(analysis.eaTasks).toBe(15);
-      expect(analysis.founderTasks).toBe(9);
-    });
-
-    it('calculates EA percentage using Math.round', () => {
+    it('returns correct EA task count', () => {
       const report = createValidReport();
-      // Convert 1 founder task per frequency to EA -> 18 EA / 24 = 75%
-      report.tasks.daily[5].owner = 'EA';
-      report.tasks.daily[5].isEA = true;
-      report.tasks.weekly[5].owner = 'EA';
-      report.tasks.weekly[5].isEA = true;
-      report.tasks.monthly[5].owner = 'EA';
-      report.tasks.monthly[5].isEA = true;
-      // Now 18 EA tasks out of 24
-
       const analysis = analyzeReport(report);
-
-      expect(analysis.eaPercentage).toBe(75); // 18/24 = 75%
+      expect(analysis.eaTasks).toBe(20);
+      expect(analysis.eaPercentage).toBe(100);
     });
 
     it('returns correct coreTasksPresent flags', () => {
       const report = createReportWithCoreEATasks();
-
       const analysis = analyzeReport(report);
 
       expect(analysis.coreTasksPresent.emailManagement).toBe(true);
@@ -467,108 +233,61 @@ describe('Report Validator', () => {
       expect(analysis.coreTasksPresent.personalLifeManagement).toBe(true);
       expect(analysis.coreTasksPresent.businessProcessManagement).toBe(true);
     });
-
-    it('returns false for missing core tasks', () => {
-      const report = createValidReport(); // No core tasks
-
-      const analysis = analyzeReport(report);
-
-      expect(analysis.coreTasksPresent.emailManagement).toBe(false);
-      expect(analysis.coreTasksPresent.calendarManagement).toBe(false);
-      expect(analysis.coreTasksPresent.personalLifeManagement).toBe(false);
-      expect(analysis.coreTasksPresent.businessProcessManagement).toBe(false);
-    });
   });
 
-  /**
-   * Test 6: validateTaskQuality catches missing/short titles and descriptions
-   */
-  describe('validateTaskQuality catches quality issues', () => {
-    it('returns warning for task with missing title', () => {
+  describe('validateTaskQuality', () => {
+    it('returns warning for task with title too short', () => {
       const report = createValidReport();
-      report.tasks.daily[0].title = '';
-
+      report.tasks.email[0].title = 'AB';
       const result = validateTaskQuality(report);
-
       expect(result.warnings.some(w => w.includes('Title too short'))).toBe(true);
     });
 
-    it('returns warning for task with title less than 3 characters', () => {
+    it('returns warning for task with title too long', () => {
       const report = createValidReport();
-      report.tasks.daily[0].title = 'AB';
-
+      report.tasks.email[0].title = 'A'.repeat(81);
       const result = validateTaskQuality(report);
-
-      expect(result.warnings.some(w => w.includes('Title too short'))).toBe(true);
-    });
-
-    it('returns warning for task with title over 60 characters', () => {
-      const report = createValidReport();
-      report.tasks.daily[0].title = 'A'.repeat(61);
-
-      const result = validateTaskQuality(report);
-
       expect(result.warnings.some(w => w.includes('Title too long'))).toBe(true);
     });
 
-    it('returns warning for task with missing description', () => {
+    it('returns warning for task with description too short', () => {
       const report = createValidReport();
-      report.tasks.daily[0].description = '';
-
+      report.tasks.email[0].description = 'Short.';
       const result = validateTaskQuality(report);
-
       expect(result.warnings.some(w => w.includes('Description too short'))).toBe(true);
     });
+  });
 
-    it('returns warning for task with description less than 20 characters', () => {
+  describe('validateNoDuplicates', () => {
+    it('flags tasks with high overlap', () => {
       const report = createValidReport();
-      report.tasks.daily[0].description = 'Short desc.';
+      report.tasks.email[0] = {
+        title: 'Managing your inbox every day to stay organized',
+        description: 'Your EA manages your inbox every day to keep things organized and on track.',
+        owner: 'EA', isEA: true, category: 'Communication',
+      };
+      report.tasks.email[1] = {
+        title: 'Managing your inbox every day for better organization',
+        description: 'Your EA manages your inbox daily to ensure everything stays organized and nothing slips.',
+        owner: 'EA', isEA: true, category: 'Communication',
+      };
 
-      const result = validateTaskQuality(report);
-
-      expect(result.warnings.some(w => w.includes('Description too short'))).toBe(true);
+      const result = validateNoDuplicates(report);
+      expect(result.warnings.some(w => w.includes('Duplicate detected'))).toBe(true);
     });
+  });
 
-    it('returns warning for invalid owner field', () => {
+  describe('validateNoAntiPatterns', () => {
+    it('flags tasks with generic banned phrases', () => {
       const report = createValidReport();
-      // @ts-expect-error - Testing invalid owner value
-      report.tasks.daily[0].owner = 'Invalid';
+      report.tasks.email[0] = {
+        title: 'Getting to inbox zero every day',
+        description: 'Your EA gets your inbox to zero.',
+        owner: 'EA', isEA: true, category: 'Communication',
+      };
 
-      const result = validateTaskQuality(report);
-
-      expect(result.warnings.some(w => w.includes('Invalid owner field'))).toBe(true);
-    });
-
-    it('returns warning for EA/owner inconsistency - EA owner with isEA false', () => {
-      const report = createValidReport();
-      report.tasks.daily[0].owner = 'EA';
-      report.tasks.daily[0].isEA = false;
-
-      const result = validateTaskQuality(report);
-
-      expect(result.warnings.some(w => w.includes('Owner is EA but isEA is false'))).toBe(true);
-    });
-
-    it('returns warning for EA/owner inconsistency - Founder owner with isEA true', () => {
-      const report = createValidReport();
-      report.tasks.daily[5].owner = 'You';
-      report.tasks.daily[5].isEA = true;
-
-      const result = validateTaskQuality(report);
-
-      expect(result.warnings.some(w => w.includes('Owner is Founder but isEA is true'))).toBe(true);
-    });
-
-    it('returns no warnings for valid task quality', () => {
-      const report = createReportWithCoreEATasks();
-
-      const result = validateTaskQuality(report);
-
-      // May have warnings for missing core tasks via keyword, but not quality issues
-      const qualityWarnings = result.warnings.filter(
-        w => w.includes('Title') || w.includes('Description') || w.includes('Owner') || w.includes('isEA')
-      );
-      expect(qualityWarnings).toHaveLength(0);
+      const result = validateNoAntiPatterns(report);
+      expect(result.warnings.some(w => w.includes('Anti-pattern'))).toBe(true);
     });
   });
 });

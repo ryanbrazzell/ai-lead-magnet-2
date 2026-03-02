@@ -26,12 +26,23 @@ vi.mock('@/lib/ai/report-validator', () => ({
 vi.mock('@/lib/ai/report-fixer', () => ({
   fixReportIssues: vi.fn(),
   ensureCoreEATasks: vi.fn(),
+  padThinAreas: vi.fn(),
+}));
+
+// Mock the lead-brief module
+vi.mock('@/lib/ai/lead-brief', () => ({
+  mapRevenueTier: vi.fn().mockReturnValue('optimizing'),
+}));
+
+// Mock the alerts module
+vi.mock('@/lib/alerts/critical-alert', () => ({
+  sendCriticalAlert: vi.fn(),
 }));
 
 import { POST } from '../route';
 import { generateTasks } from '@/lib/ai/task-generator';
 import { validateReport } from '@/lib/ai/report-validator';
-import { fixReportIssues, ensureCoreEATasks } from '@/lib/ai/report-fixer';
+import { fixReportIssues, ensureCoreEATasks, padThinAreas } from '@/lib/ai/report-fixer';
 
 describe('POST /api/generate-tasks', () => {
   beforeEach(() => {
@@ -44,6 +55,8 @@ describe('POST /api/generate-tasks', () => {
     });
     // Set up default mock for ensureCoreEATasks to pass through
     vi.mocked(ensureCoreEATasks).mockImplementation((report) => report);
+    // Set up default mock for padThinAreas to pass through
+    vi.mocked(padThinAreas).mockImplementation((report) => report);
   });
 
   afterEach(() => {
@@ -179,7 +192,7 @@ describe('POST /api/generate-tasks', () => {
    * Test 3: Returns TaskGenerationResult on success
    */
   describe('returns TaskGenerationResult on success', () => {
-    it('returns complete TaskGenerationResult with 30 tasks', async () => {
+    it('returns complete TaskGenerationResult with 20 tasks', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockResult = createMockTaskResult();
 
@@ -192,10 +205,10 @@ describe('POST /api/generate-tasks', () => {
       expect(response.status).toBe(200);
       expect(json.success).toBe(true);
       expect(json.data.tasks).toBeDefined();
-      expect(json.data.tasks.daily).toHaveLength(10);
-      expect(json.data.tasks.weekly).toHaveLength(10);
-      expect(json.data.tasks.monthly).toHaveLength(10);
-      expect(json.data.total_task_count).toBe(30);
+      expect(json.data.tasks.businessProcesses).toHaveLength(8);
+      expect(json.data.tasks.personalLife).toHaveLength(5);
+      expect(json.data.tasks.calendar).toHaveLength(4);
+      expect(json.data.total_task_count).toBe(20);
     });
 
     it('returns EA metrics in result', async () => {
@@ -378,14 +391,15 @@ function createMockTaskResult(): TaskGenerationResult {
 
   return {
     tasks: {
-      daily: createTasks(10),
-      weekly: createTasks(10),
-      monthly: createTasks(10),
+      businessProcesses: createTasks(8),
+      personalLife: createTasks(5),
+      calendar: createTasks(4),
+      email: createTasks(3),
     },
-    ea_task_percent: 50,
-    ea_task_count: 15,
-    total_task_count: 30,
-    summary:
-      'Based on what I can see, around 50 percent of these tasks could be in the hands of your EA.',
+    analysis_summary: 'Analysis of delegation opportunities.',
+    ea_task_percent: 100,
+    ea_task_count: 20,
+    total_task_count: 20,
+    summary: 'Around 100% of tasks can be delegated.',
   };
 }

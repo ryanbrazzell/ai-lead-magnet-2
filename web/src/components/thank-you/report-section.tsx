@@ -130,29 +130,32 @@ export function ReportSection({
         </Card>
       )}
 
-      {/* Tasks by Frequency */}
+      {/* Tasks by Core Four Area */}
       {tasks && (
         <div className="space-y-4">
-          <TaskFrequencySection
-            title="Daily Tasks"
-            tasks={tasks.daily || []}
+          <TaskAreaSection
+            title="Business Processes"
+            tasks={tasks.businessProcesses || []}
             color="blue"
             ceoHourlyRate={ceoHourlyRate}
-            frequency="daily"
           />
-          <TaskFrequencySection
-            title="Weekly Tasks"
-            tasks={tasks.weekly || []}
+          <TaskAreaSection
+            title="Personal Life"
+            tasks={tasks.personalLife || []}
             color="violet"
             ceoHourlyRate={ceoHourlyRate}
-            frequency="weekly"
           />
-          <TaskFrequencySection
-            title="Monthly Tasks"
-            tasks={tasks.monthly || []}
+          <TaskAreaSection
+            title="Calendar"
+            tasks={tasks.calendar || []}
             color="amber"
             ceoHourlyRate={ceoHourlyRate}
-            frequency="monthly"
+          />
+          <TaskAreaSection
+            title="Email"
+            tasks={tasks.email || []}
+            color="blue"
+            ceoHourlyRate={ceoHourlyRate}
           />
         </div>
       )}
@@ -166,7 +169,7 @@ export function ReportSection({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  tasks: data?.tasks || { daily: [], weekly: [], monthly: [] },
+                  tasks: data?.tasks || { businessProcesses: [], personalLife: [], calendar: [], email: [] },
                   eaPercentage: data?.ea_task_percent || 0,
                   userData: { firstName, stage, stageName },
                   taskHours: taskHours,
@@ -208,15 +211,14 @@ export function ReportSection({
   );
 }
 
-interface TaskFrequencySectionProps {
+interface TaskAreaSectionProps {
   title: string;
   tasks: Task[];
   color: 'blue' | 'violet' | 'amber';
   ceoHourlyRate: number;
-  frequency: 'daily' | 'weekly' | 'monthly';
 }
 
-function TaskFrequencySection({ title, tasks, color, ceoHourlyRate, frequency }: TaskFrequencySectionProps) {
+function TaskAreaSection({ title, tasks, color, ceoHourlyRate }: TaskAreaSectionProps) {
   if (!tasks || tasks.length === 0) return null;
 
   const colorStyles = {
@@ -247,8 +249,6 @@ function TaskFrequencySection({ title, tasks, color, ceoHourlyRate, frequency }:
               key={index}
               task={task}
               ceoHourlyRate={ceoHourlyRate}
-              frequency={frequency}
-              taskIndex={index}
             />
           ))}
         </div>
@@ -260,58 +260,15 @@ function TaskFrequencySection({ title, tasks, color, ceoHourlyRate, frequency }:
 interface TaskCardProps {
   task: Task;
   ceoHourlyRate: number;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  taskIndex: number;
 }
 
-function estimateTaskTime(
-  task: Task,
-  frequency: 'daily' | 'weekly' | 'monthly',
-  taskIndex: number
-): number {
-  const baseTimes = {
-    daily: [0.25, 0.33, 0.5, 0.75],
-    weekly: [0.5, 0.75, 1, 1.5],
-    monthly: [1, 1.5, 2, 3],
-  };
-
-  const timeOptions = baseTimes[frequency];
-  const baseTime = timeOptions[taskIndex % timeOptions.length];
-
-  const title = (task.title || '').toLowerCase();
-  let multiplier = 1;
-
-  if (title.includes('strategy') || title.includes('planning') || title.includes('analysis')) {
-    multiplier = 1.5;
-  } else if (title.includes('report') || title.includes('review') || title.includes('compile')) {
-    multiplier = 1.3;
-  } else if (title.includes('quick') || title.includes('simple') || title.includes('check')) {
-    multiplier = 0.7;
-  }
-
-  const isEA = task.isEA || (task.owner?.toLowerCase() === 'ea');
-  if (isEA && frequency !== 'daily') {
-    multiplier *= 1.2;
-  }
-
-  return baseTime * multiplier;
-}
-
-function calculateAnnualCost(
-  hoursPerOccurrence: number,
-  frequency: 'daily' | 'weekly' | 'monthly',
-  hourlyRate: number
-): number {
-  const occurrencesPerYear = { daily: 260, weekly: 52, monthly: 12 };
-  return hoursPerOccurrence * occurrencesPerYear[frequency] * hourlyRate;
-}
-
-function TaskCard({ task, ceoHourlyRate, frequency, taskIndex }: TaskCardProps) {
+function TaskCard({ task, ceoHourlyRate }: TaskCardProps) {
   const owner = task.owner?.toLowerCase() || 'ea';
   const isEATask = task.isEA || owner === 'ea';
 
-  const hoursPerOccurrence = estimateTaskTime(task, frequency, taskIndex);
-  const annualCost = calculateAnnualCost(hoursPerOccurrence, frequency, ceoHourlyRate);
+  // Estimate annual cost based on task complexity
+  const hoursPerWeek = 0.5;
+  const annualCost = hoursPerWeek * 52 * ceoHourlyRate;
 
   return (
     <div className={`rounded-lg border p-3 ${isEATask ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-white'}`}>

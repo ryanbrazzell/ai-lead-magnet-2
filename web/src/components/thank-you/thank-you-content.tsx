@@ -156,7 +156,7 @@ export function ThankYouContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tasks: tasksResult.data?.tasks || { daily: [], weekly: [], monthly: [] },
+          tasks: tasksResult.data?.tasks || { businessProcesses: [], personalLife: [], calendar: [], email: [] },
           eaPercentage: tasksResult.data?.ea_task_percent || 0,
           userData: {
             firstName: formData.firstName,

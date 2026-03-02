@@ -11,8 +11,10 @@ export type { UnifiedLeadData, WebsiteAnalysis } from './lead';
 // Task types
 export type {
   Task,
+  TasksByCoreFour,
   TasksByFrequency,
   TaskGenerationResult,
+  BusinessAnalysisBrief,
   CoreEATask,
   CoreEATasks,
   TaskOwner,

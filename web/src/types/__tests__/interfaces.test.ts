@@ -148,43 +148,45 @@ describe('TypeScript Interfaces', () => {
    * Test 3: TaskGenerationResult validates 30 total tasks structure
    */
   describe('TaskGenerationResult interface', () => {
-    it('validates 30 total tasks structure', () => {
-      // Create 10 tasks for each frequency
+    it('validates 20 total tasks in Core Four structure', () => {
       const createTasks = (count: number): Task[] =>
         Array.from({ length: count }, (_, i) => ({
           title: `Task ${i + 1}`,
           description: 'A detailed description of the task that is at least 20 words long to meet requirements.',
-          owner: i % 2 === 0 ? 'EA' : 'You' as const,
-          isEA: i % 2 === 0,
+          owner: 'EA' as const,
+          isEA: true,
           category: 'General',
         }));
 
       const result: TaskGenerationResult = {
         tasks: {
-          daily: createTasks(10),
-          weekly: createTasks(10),
-          monthly: createTasks(10),
+          businessProcesses: createTasks(8),
+          personalLife: createTasks(5),
+          calendar: createTasks(4),
+          email: createTasks(3),
         },
-        ea_task_percent: 50,
-        ea_task_count: 15,
-        total_task_count: 30,
-        summary: 'Based on what I can see, around 50 percent of these tasks could be in the hands of your EA.',
+        analysis_summary: 'Analysis.',
+        ea_task_percent: 100,
+        ea_task_count: 20,
+        total_task_count: 20,
+        summary: 'Around 100 percent of tasks can be delegated.',
       };
 
-      // Verify structure
-      expect(result.tasks.daily).toHaveLength(10);
-      expect(result.tasks.weekly).toHaveLength(10);
-      expect(result.tasks.monthly).toHaveLength(10);
-      expect(result.total_task_count).toBe(30);
+      // Verify Core Four structure
+      expect(result.tasks.businessProcesses).toHaveLength(8);
+      expect(result.tasks.personalLife).toHaveLength(5);
+      expect(result.tasks.calendar).toHaveLength(4);
+      expect(result.tasks.email).toHaveLength(3);
+      expect(result.total_task_count).toBe(20);
 
       // Verify EA metrics
-      expect(result.ea_task_percent).toBe(50);
-      expect(result.ea_task_count).toBe(15);
+      expect(result.ea_task_percent).toBe(100);
+      expect(result.ea_task_count).toBe(20);
       expect(typeof result.ea_task_percent).toBe('number');
       expect(Number.isInteger(result.ea_task_percent)).toBe(true); // Must be whole number
 
       // Verify summary
-      expect(result.summary).toContain('50 percent');
+      expect(result.summary).toContain('100 percent');
     });
   });
 

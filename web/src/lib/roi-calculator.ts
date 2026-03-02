@@ -35,18 +35,67 @@ export const WEEKLY_HOURS_BY_REVENUE: Record<string, number> = {
 export const EA_ANNUAL_INVESTMENT = 33000; // $2,750/month x 12
 
 /**
+ * Normalize any revenue string to a canonical range key.
+ * Handles free-text like "$2M to $3M", "1M-3M", "500k", "Over $10M", etc.
+ */
+function normalizeRevenueRange(input: string): string {
+  // Try exact match first
+  const exact = REVENUE_MAPPINGS.find(m => m.range === input);
+  if (exact) return exact.range;
+
+  // Also check weekly hours keys (same canonical values)
+  if (input in WEEKLY_HOURS_BY_REVENUE) return input;
+
+  const lower = input.toLowerCase().replace(/,/g, '');
+
+  if (lower.includes('under') || lower.includes('less than') || lower.includes('<')) {
+    return 'Under $500k';
+  }
+  if (lower.includes('over') || lower.includes('above') || lower.includes('>') || lower.includes('10m')) {
+    return 'Over $10M';
+  }
+
+  // Extract numbers — look for patterns like 500k, 1m, 3m, 5m
+  const hasNum = (n: string) => lower.includes(n);
+
+  if (hasNum('5m') && hasNum('10m')) return '$5M-$10M';
+  if (hasNum('3m') && hasNum('5m')) return '$3M-$5M';
+  if (hasNum('1m') && (hasNum('3m') || hasNum('5m'))) return '$1M-$3M';
+  if (hasNum('500') && hasNum('1m')) return '$500k-$1M';
+  if (hasNum('5m') || hasNum('7m') || hasNum('8m')) return '$5M-$10M';
+  if (hasNum('3m') || hasNum('4m')) return '$3M-$5M';
+  if (hasNum('1m') || hasNum('2m')) return '$1M-$3M';
+  if (hasNum('500k') || hasNum('500,000') || hasNum('750')) return '$500k-$1M';
+
+  // Last resort: try to parse a raw number
+  const numMatch = input.replace(/[^0-9.]/g, '');
+  const num = parseFloat(numMatch);
+  if (!isNaN(num)) {
+    if (num >= 10000000) return 'Over $10M';
+    if (num >= 5000000) return '$5M-$10M';
+    if (num >= 3000000) return '$3M-$5M';
+    if (num >= 1000000) return '$1M-$3M';
+    if (num >= 500000) return '$500k-$1M';
+  }
+
+  return 'Under $500k';
+}
+
+/**
  * Get CEO hourly rate from revenue range string
  */
 export function getCeoHourlyRate(revenueRange: string): number {
-  const mapping = REVENUE_MAPPINGS.find(m => m.range === revenueRange);
-  return mapping?.ceoHourlyRate ?? 100; // Default $100/hr if not found
+  const normalized = normalizeRevenueRange(revenueRange);
+  const mapping = REVENUE_MAPPINGS.find(m => m.range === normalized);
+  return mapping?.ceoHourlyRate ?? 100;
 }
 
 /**
  * Get revenue midpoint from revenue range string
  */
 export function getRevenueMidpoint(revenueRange: string): number {
-  const mapping = REVENUE_MAPPINGS.find(m => m.range === revenueRange);
+  const normalized = normalizeRevenueRange(revenueRange);
+  const mapping = REVENUE_MAPPINGS.find(m => m.range === normalized);
   return mapping?.midpoint ?? 100000;
 }
 
@@ -54,7 +103,8 @@ export function getRevenueMidpoint(revenueRange: string): number {
  * Get weekly hours from revenue range string
  */
 export function getWeeklyHoursByRevenue(revenueRange: string): number {
-  return WEEKLY_HOURS_BY_REVENUE[revenueRange] ?? 15; // Default 15 hrs if not found
+  const normalized = normalizeRevenueRange(revenueRange);
+  return WEEKLY_HOURS_BY_REVENUE[normalized] ?? 15;
 }
 
 /**

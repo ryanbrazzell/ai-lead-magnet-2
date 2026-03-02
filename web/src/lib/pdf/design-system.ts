@@ -1,5 +1,9 @@
 /**
- * PDF Design System
+ * @deprecated This file is unused. All PDF design tokens live in layout-v2.ts.
+ * Kept to avoid breaking any potential downstream imports, but nothing in the
+ * codebase references this module. Safe to delete once confirmed.
+ *
+ * PDF Design System (DEPRECATED)
  *
  * Unified design tokens matching the web UI exactly.
  * Color Scheme: Navy (#0f172a) + Gold (#f59e0b) + Green (#10b981)

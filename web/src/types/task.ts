@@ -1,8 +1,8 @@
 /**
  * Task Types for AI Task Generation Service
  *
- * Ported from: /tmp/ea-time-freedom-report/app/types/index.ts
- * These interfaces define the structure of generated tasks and results.
+ * Tasks are generated organized by Core Four areas (not frequency).
+ * All tasks are EA-delegatable.
  */
 
 /**
@@ -15,7 +15,7 @@ export type CoreTaskType =
   | 'businessProcessManagement';
 
 /**
- * Task frequency options
+ * Task frequency options (legacy, kept for compatibility)
  */
 export type TaskFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -32,16 +32,21 @@ export type TaskOwner = 'EA' | 'You';
 /**
  * Individual task interface
  *
- * Represents a single task that can be delegated to an EA or
- * kept by the founder.
+ * All tasks are EA-delegatable in the new architecture.
+ * owner/isEA default to 'EA'/true.
  */
 export interface Task {
   // Required fields
   title: string;
   description: string;
+  category: string;
+
+  // Core Four classification (required in new architecture)
+  coreTaskType?: CoreTaskType;
+
+  // EA ownership — defaults to EA in new flow, kept for compatibility
   owner: TaskOwner;
   isEA: boolean;
-  category: string;
 
   // Optional fields
   id?: string;
@@ -49,11 +54,20 @@ export interface Task {
   priority?: TaskPriority;
   timeEstimate?: string;
   isCoreEATask?: boolean;
-  coreTaskType?: CoreTaskType;
 }
 
 /**
- * Tasks grouped by frequency
+ * Tasks grouped by Core Four area
+ */
+export interface TasksByCoreFour {
+  businessProcesses: Task[];
+  personalLife: Task[];
+  calendar: Task[];
+  email: Task[];
+}
+
+/**
+ * Tasks grouped by frequency (legacy, kept for compatibility)
  */
 export interface TasksByFrequency {
   daily: Task[];
@@ -64,20 +78,33 @@ export interface TasksByFrequency {
 /**
  * Result of AI task generation
  *
- * Contains exactly 30 tasks (10 daily, 10 weekly, 10 monthly)
- * with EA percentage between 40-60%.
+ * Tasks grouped by Core Four area with ~22-25 total tasks.
+ * All tasks are EA-delegatable.
  */
 export interface TaskGenerationResult {
-  // Task structure with 10 tasks per frequency
-  tasks: TasksByFrequency;
+  // Core Four grouped tasks (new primary structure)
+  tasks: TasksByCoreFour;
 
-  // EA metrics (ea_task_percent must be a whole number)
-  ea_task_percent: number;
-  ea_task_count: number;
+  // Summary
+  analysis_summary: string;
   total_task_count: number;
 
-  // Summary text for the report
+  // Legacy fields kept for downstream compatibility
+  ea_task_percent: number;
+  ea_task_count: number;
   summary: string;
+}
+
+/**
+ * Business analysis brief from Call 1
+ */
+export interface BusinessAnalysisBrief {
+  business_description: string;
+  recurring_processes: string[];
+  calendar_patterns: string[];
+  personal_life_opportunities: string[];
+  pain_point_decomposition: string[];
+  revenue_tier_context: string;
 }
 
 /**

@@ -1,12 +1,10 @@
 /**
  * AI Prompts Module - Barrel Export
- *
- * This module provides all prompt-related functionality for
- * the AI task generation service.
  */
 
-// Main prompt template
-export { TIME_FREEDOM_PROMPT_JSON } from './time-freedom-prompt';
+// Two-prompt chain (primary)
+export { buildBusinessAnalysisPrompt } from './business-analysis-prompt';
+export { buildCoreFourGenerationPrompt } from './core-four-generation-prompt';
 
 // Lead data serialization
 export { serializeLeadData, buildUnifiedPromptJSON } from './serialize-lead';

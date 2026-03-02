@@ -1,30 +1,24 @@
 /**
- * Task Generator Service
+ * Task Generator Service — Two-Prompt Chain
  *
- * Main service for generating personalized task reports using Claude AI.
- * Handles lead type routing, prompt selection, and fallback escalation.
+ * Replaces the single monolithic prompt with:
+ * 1. Business Analysis (Call 1): Focused reasoning about the specific business
+ * 2. Core Four Task Generation (Call 2): Tasks organized by Core Four area
  *
- * Lead Type Routing:
- * - 'main' leadType: Uses buildUnifiedPromptJSON (full 240-line prompt)
- * - 'simple'/'standard' leadType: Uses buildStreamlinedPrompt (optimized prompt)
- *
- * Fallback Escalation (on failures):
- * - Primary prompt -> buildSimplifiedPrompt -> buildEmergencyPrompt
+ * Fallback escalation on failures: simplified -> emergency prompt (legacy single-call)
  */
 
 import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
-import { generateWithClaude } from './claude-client';
+import { generateAnalysis, generateCoreFourTasks, generateWithClaude } from './claude-client';
+import { buildBusinessAnalysisPrompt } from './prompts/business-analysis-prompt';
+import { buildCoreFourGenerationPrompt } from './prompts/core-four-generation-prompt';
+import { buildLeadBrief } from './lead-brief';
 import {
-  buildUnifiedPromptJSON,
-  buildStreamlinedPrompt,
   buildSimplifiedPrompt,
   buildEmergencyPrompt,
 } from './prompts';
 import { extractDomainFromEmail, scrapeWebsiteContent } from '@/lib/website/analyzer';
 
-/**
- * Structured logger for task generator operations
- */
 const log = {
   info: (message: string, context?: Record<string, unknown>) => {
     console.log(`[TaskGenerator:INFO] ${message}`, context || '');
@@ -35,130 +29,18 @@ const log = {
   error: (message: string, context?: Record<string, unknown>) => {
     console.error(`[TaskGenerator:ERROR] ${message}`, context || '');
   },
-  debug: (message: string, context?: Record<string, unknown>) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`[TaskGenerator:DEBUG] ${message}`, context || '');
-    }
-  },
 };
 
 /**
- * Count the number of non-empty fields in lead data
- */
-function countDataFields(leadData: UnifiedLeadData): number {
-  return Object.values(leadData).filter(
-    (value) => value !== undefined && value !== null && value !== ''
-  ).length;
-}
-
-/**
- * Build the appropriate prompt based on lead type
- *
- * Routing logic:
- * - 'main' leadType: Uses buildUnifiedPromptJSON (full 240-line prompt)
- * - 'simple' or 'standard' leadType: Uses buildStreamlinedPrompt (optimized)
- *
- * @param leadData - The unified lead data
- * @returns The constructed prompt string
- */
-function buildPromptForLeadType(leadData: UnifiedLeadData): string {
-  const { leadType } = leadData;
-  const dataFieldsCount = countDataFields(leadData);
-
-  log.info('Building prompt for lead type', {
-    leadType,
-    dataFieldsCount,
-    hasName: !!(leadData.firstName || leadData.lastName),
-    hasBusinessType: !!leadData.businessType,
-    hasChallenges: !!(leadData.challenges || leadData.timeBottleneck),
-  });
-
-  if (leadType === 'main') {
-    log.debug('Using buildUnifiedPromptJSON for main lead type');
-    return buildUnifiedPromptJSON(leadData);
-  }
-
-  // For 'simple' and 'standard' lead types, use streamlined prompt
-  log.debug('Using buildStreamlinedPrompt for simple/standard lead type', {
-    leadType,
-  });
-  return buildStreamlinedPrompt(leadData);
-}
-
-/**
- * Attempt task generation with a specific prompt
- *
- * @param prompt - The prompt to send to Gemini
- * @param attemptName - Name for logging purposes
- * @returns TaskGenerationResult
- * @throws Error if generation fails
- */
-async function attemptGeneration(
-  prompt: string,
-  attemptName: string
-): Promise<TaskGenerationResult> {
-  log.info('Starting API request', {
-    attemptName,
-    promptLength: prompt.length,
-    timeout: '30000ms',
-    maxRetries: 1,
-  });
-
-  const startTime = Date.now();
-
-  try {
-    const result = await generateWithClaude(prompt);
-
-    log.info('Response parsing successful', {
-      attemptName,
-      duration: Date.now() - startTime,
-      totalTasks: result.total_task_count,
-      eaPercent: result.ea_task_percent,
-      dailyCount: result.tasks.daily.length,
-      weeklyCount: result.tasks.weekly.length,
-      monthlyCount: result.tasks.monthly.length,
-    });
-
-    // Log validation results
-    const isValidTaskCount = result.total_task_count === 30;
-    const isValidEaPercent =
-      result.ea_task_percent >= 40 && result.ea_task_percent <= 60;
-
-    log.info('Validation results', {
-      attemptName,
-      isValidTaskCount,
-      isValidEaPercent,
-      taskCount: result.total_task_count,
-      eaPercent: result.ea_task_percent,
-    });
-
-    return result;
-  } catch (error) {
-    const err = error as Error;
-    log.error('Response parsing/API failed', {
-      attemptName,
-      duration: Date.now() - startTime,
-      error: err.message,
-    });
-    throw error;
-  }
-}
-
-/**
  * Enrich lead data with website analysis if possible
- * 
- * @param leadData - The unified lead data
- * @returns Enriched lead data with companyAnalysis if available
  */
 async function enrichWithWebsiteAnalysis(
   leadData: UnifiedLeadData
 ): Promise<UnifiedLeadData> {
-  // Skip if already has analysis or no email
   if (leadData.companyAnalysis || !leadData.email) {
     return leadData;
   }
 
-  // Extract domain from email
   const domain = extractDomainFromEmail(leadData.email);
   if (!domain) {
     log.info('No business domain found in email, skipping website analysis', {
@@ -171,7 +53,7 @@ async function enrichWithWebsiteAnalysis(
 
   try {
     const scrapeResult = await scrapeWebsiteContent(domain);
-    
+
     if (scrapeResult.analysisSuccess) {
       log.info('Website scrape successful', {
         domain,
@@ -185,109 +67,133 @@ async function enrichWithWebsiteAnalysis(
         website: leadData.website || `https://${domain}`,
       };
     } else {
-      log.warn('Website scrape failed', {
-        domain,
-        error: scrapeResult.error,
-      });
+      log.warn('Website scrape failed', { domain, error: scrapeResult.error });
     }
   } catch (error) {
     const err = error as Error;
-    log.warn('Website scrape error', {
-      domain,
-      error: err.message,
-    });
+    log.warn('Website scrape error', { domain, error: err.message });
   }
 
   return leadData;
 }
 
 /**
+ * Two-prompt chain: Business Analysis -> Core Four Generation
+ */
+async function generateWithTwoPromptChain(
+  leadData: UnifiedLeadData
+): Promise<TaskGenerationResult> {
+  const brief = buildLeadBrief(leadData);
+
+  log.info('Built lead brief', {
+    name: brief.name,
+    revenueTier: brief.revenueTier,
+    dataRichness: brief.dataRichness,
+    painPointCount: brief.painPoints.length,
+    inferredIndustry: brief.inferredIndustry,
+    hasWebsiteData: brief.hasWebsiteData,
+  });
+
+  // Call 1: Business Analysis
+  log.info('Starting Call 1: Business Analysis');
+  const analysisStartTime = Date.now();
+
+  const analysisPrompt = buildBusinessAnalysisPrompt(leadData, brief);
+  const analysisBrief = await generateAnalysis(analysisPrompt);
+
+  log.info('Call 1 complete', {
+    duration: Date.now() - analysisStartTime,
+    processCount: analysisBrief.recurring_processes.length,
+    calendarPatterns: analysisBrief.calendar_patterns.length,
+    personalOpportunities: analysisBrief.personal_life_opportunities.length,
+    painDecomposition: analysisBrief.pain_point_decomposition.length,
+  });
+
+  // Call 2: Core Four Task Generation
+  log.info('Starting Call 2: Core Four Task Generation');
+  const generationStartTime = Date.now();
+
+  const generationPrompt = buildCoreFourGenerationPrompt(analysisBrief, brief);
+  const result = await generateCoreFourTasks(generationPrompt);
+
+  log.info('Call 2 complete', {
+    duration: Date.now() - generationStartTime,
+    totalTasks: result.total_task_count,
+    businessProcesses: result.tasks.businessProcesses.length,
+    personalLife: result.tasks.personalLife.length,
+    calendar: result.tasks.calendar.length,
+    email: result.tasks.email.length,
+  });
+
+  return result;
+}
+
+/**
  * Generate personalized tasks using AI
  *
- * Main entry point for task generation. Handles:
- * 1. Website analysis from email domain (if business email)
- * 2. Lead type routing to select appropriate prompt
- * 3. Fallback escalation on failures (simplified -> emergency)
- * 4. Structured logging throughout the process
- *
- * @param leadData - The unified lead data from the form
- * @returns TaskGenerationResult with 30 tasks
- * @throws Error with structured message if all attempts fail
+ * Main entry point. Handles:
+ * 1. Website analysis from email domain
+ * 2. Two-prompt chain (analysis + generation)
+ * 3. Fallback escalation on failures
  */
 export async function generateTasks(
   leadData: UnifiedLeadData
 ): Promise<TaskGenerationResult> {
   const { leadType } = leadData;
-  const dataFieldsCount = countDataFields(leadData);
 
   log.info('Starting task generation', {
     leadType,
-    dataFieldsCount,
     email: leadData.email,
     timestamp: leadData.timestamp,
   });
 
-  // Enrich with website analysis if possible
+  // Enrich with website analysis
   const enrichedLeadData = await enrichWithWebsiteAnalysis(leadData);
-  const hasWebsiteAnalysis = !!enrichedLeadData.companyAnalysis;
-  
+
   log.info('Lead data enrichment complete', {
-    hasWebsiteAnalysis,
+    hasWebsiteAnalysis: !!enrichedLeadData.companyAnalysis,
     businessType: enrichedLeadData.companyAnalysis?.businessType,
     industry: enrichedLeadData.companyAnalysis?.industry,
   });
 
-  // Track errors for final error message
   const errors: string[] = [];
 
-  // Attempt 1: Primary prompt based on lead type (with enriched data)
+  // Attempt 1: Two-prompt chain (primary)
   try {
-    const primaryPrompt = buildPromptForLeadType(enrichedLeadData);
-    return await attemptGeneration(primaryPrompt, 'primary');
+    return await generateWithTwoPromptChain(enrichedLeadData);
   } catch (error) {
     const err = error as Error;
-    errors.push(`Primary attempt: ${err.message}`);
-    log.warn('Primary prompt failed, escalating to simplified', {
+    errors.push(`Two-prompt chain: ${err.message}`);
+    log.warn('Two-prompt chain failed, falling back to simplified', {
       leadType,
       error: err.message,
     });
   }
 
-  // Attempt 2: Simplified fallback prompt
+  // Attempt 2: Simplified fallback (single prompt)
   try {
-    log.info('Building simplified fallback prompt', {
-      leadType,
-      dataFieldsCount,
-    });
+    log.info('Building simplified fallback prompt');
     const simplifiedPrompt = buildSimplifiedPrompt(enrichedLeadData);
-    return await attemptGeneration(simplifiedPrompt, 'simplified');
+    return await generateWithClaude(simplifiedPrompt);
   } catch (error) {
     const err = error as Error;
     errors.push(`Simplified attempt: ${err.message}`);
     log.warn('Simplified prompt failed, escalating to emergency', {
-      leadType,
       error: err.message,
     });
   }
 
-  // Attempt 3: Emergency fallback prompt (minimal context)
+  // Attempt 3: Emergency fallback (minimal context)
   try {
-    log.info('Building emergency fallback prompt', {
-      leadType,
-    });
+    log.info('Building emergency fallback prompt');
     const emergencyPrompt = buildEmergencyPrompt();
-    return await attemptGeneration(emergencyPrompt, 'emergency');
+    return await generateWithClaude(emergencyPrompt);
   } catch (error) {
     const err = error as Error;
     errors.push(`Emergency attempt: ${err.message}`);
-    log.error('All task generation attempts failed', {
-      leadType,
-      dataFieldsCount,
-      errors,
-    });
+    log.error('All task generation attempts failed', { errors });
   }
 
-  // All attempts exhausted
   throw new Error(
     `All task generation attempts failed for lead type "${leadType}". Errors: ${errors.join('; ')}`
   );

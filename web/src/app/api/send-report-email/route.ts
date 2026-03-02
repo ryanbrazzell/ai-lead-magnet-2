@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
                       We've attached your complete EA Time Freedom Report as a PDF. It includes:
                     </p>
                     <ul style="color: #475569; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.8;">
-                      <li>Task-by-task breakdown by frequency (daily, weekly, monthly)</li>
+                      <li>Task-by-task breakdown across your Core Four areas of ownership</li>
                       <li>Which tasks can be delegated to an EA</li>
                       <li>Annual cost of each task at your hourly rate</li>
                       <li>Complete ROI analysis</li>

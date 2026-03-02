@@ -1,18 +1,12 @@
 /**
  * Fallback Prompts for AI Task Generation
  *
- * Ported from: /tmp/ea-time-freedom-report/app/utils/aiPromptBuilder.ts (lines 280-360)
- *
- * These prompts are used as fallbacks when the main prompt system
- * encounters issues or for simpler lead types.
+ * Used as fallbacks when the two-prompt chain fails.
+ * Aligned with Core Four architecture (no frequency references).
  */
 
 import type { UnifiedLeadData } from '@/types';
 
-/**
- * Structured logger for fallback prompt usage
- * In production, replace with actual logging implementation
- */
 const log = {
   info: (message: string, context?: Record<string, unknown>) => {
     if (process.env.NODE_ENV === 'development') {
@@ -27,12 +21,8 @@ const log = {
 /**
  * Build simplified prompt as fallback
  *
- * Ported from aiPromptBuilder.ts (lines 280-308)
- * Used when the main prompt system encounters issues or for
- * leads with minimal context.
- *
- * @param leadData - The unified lead data
- * @returns A simplified prompt string
+ * Used when the two-prompt chain encounters issues.
+ * Generates Core Four grouped tasks in a single call.
  */
 export function buildSimplifiedPrompt(leadData: UnifiedLeadData): string {
   const businessContext = leadData.businessType || 'business';
@@ -45,67 +35,77 @@ export function buildSimplifiedPrompt(leadData: UnifiedLeadData): string {
   log.info('Using simplified AI prompt as fallback', {
     leadType: leadData.leadType,
     businessType: leadData.businessType,
-    hasChallenges: !!(leadData.challenges || leadData.timeBottleneck),
   });
 
-  return `Create a personalized EA Time Freedom Report for ${name}, a ${businessContext} owner.
+  return `Create a personalized EA Task Delegation Report for ${name}, a ${businessContext} owner, focusing on ${challengeContext}.
 
-Generate exactly 24 tasks (8 daily, 8 weekly, 8 monthly) focusing on ${challengeContext}.
+Generate tasks organized by Core Four area. All tasks are EA-delegatable.
 
-MANDATORY: Include these 4 core EA areas:
-1. Complete email management (daily EA task, coreTaskType: "emailManagement")
-2. Calendar and scheduling management (daily EA task, coreTaskType: "calendarManagement")
-3. Personal life coordination (weekly EA task, coreTaskType: "personalLifeManagement")
-4. Business process management (monthly EA task, coreTaskType: "businessProcessManagement")
-
-Every task must include a coreTaskType field: "emailManagement", "calendarManagement", "personalLifeManagement", or "businessProcessManagement".
+MANDATORY areas and target counts:
+1. businessProcesses: 8-10 tasks (coreTaskType: "businessProcessManagement") - recurring ops, CRM, reporting, vendor management, SOPs
+2. personalLife: 5-6 tasks (coreTaskType: "personalLifeManagement") - travel, family, personal admin, errands
+3. calendar: 4-5 tasks (coreTaskType: "calendarManagement") - scheduling, meeting prep, energy management
+4. email: 3-4 tasks (coreTaskType: "emailManagement") - inbox processing, response drafting, follow-ups
 
 Requirements:
-- At least 15 tasks delegatable to EA (63%)
-- Task titles should be personal and relatable (e.g. "Getting your inbox to zero every day", not "Priority Inbox Zero Maintenance"). Use "your" and "you" - write like you're talking to the founder.
+- Task titles: conversational, specific, use "your" and "you"
+- Descriptions: 2-3 sentences with specific actions
 - NEVER use em-dashes. Use regular hyphens only.
-- Every task must be unique - no duplicates or near-duplicates.
-- 2-3 sentence descriptions with specific actions
-- Professional HTML format with sections
-- Executive summary and conclusion
+- Every task must be unique - no duplicates.
+- All tasks: owner "EA", isEA true
+- Include category field (Communication|Scheduling|Operations|Strategy|Marketing|Finance|Personal|Management)
 
-Focus on practical, actionable tasks that save the most time when delegated.`;
+Output ONLY valid JSON:
+{
+  "tasks": {
+    "businessProcesses": [{"title":"...","description":"...","category":"Operations","coreTaskType":"businessProcessManagement","owner":"EA","isEA":true}],
+    "personalLife": [...],
+    "calendar": [...],
+    "email": [...]
+  },
+  "analysis_summary": "Brief paragraph about delegation opportunities for this founder",
+  "total_task_count": 22
+}`;
 }
 
 /**
  * Build emergency fallback prompt (minimal context)
  *
- * Ported from aiPromptBuilder.ts (lines 313-326)
- * Used as last resort when no lead context is available.
- *
- * @returns An emergency fallback prompt string
+ * Last resort when no lead context is available.
  */
 export function buildEmergencyPrompt(): string {
   log.warn('Using emergency fallback prompt - minimal context available');
 
-  return `Generate a standard EA Time Freedom Report with 24 tasks.
+  return `Generate an EA Task Delegation Report with ~22 tasks organized by Core Four area.
+
+All tasks are EA-delegatable (owner: "EA", isEA: true).
 
 Structure:
-- 8 daily tasks (include email management, calendar management)
-- 8 weekly tasks (include personal life management)
-- 8 monthly tasks (include business process management)
+- businessProcesses: 8 tasks (coreTaskType: "businessProcessManagement")
+- personalLife: 5 tasks (coreTaskType: "personalLifeManagement")
+- calendar: 4 tasks (coreTaskType: "calendarManagement")
+- email: 3 tasks (coreTaskType: "emailManagement")
 
-At least 15 tasks must be EA-delegatable (isEA: true).
-Every task must include coreTaskType: emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement.
-Include professional HTML formatting with executive summary.
-Focus on common business owner pain points and delegation opportunities.`;
+Task titles should be conversational (e.g., "Getting your inbox to zero every day").
+NEVER use em-dashes. Use regular hyphens only.
+Include category field on each task.
+Focus on common business owner delegation opportunities.
+
+Output ONLY valid JSON:
+{
+  "tasks": {
+    "businessProcesses": [{"title":"...","description":"...","category":"Operations","coreTaskType":"businessProcessManagement","owner":"EA","isEA":true}],
+    "personalLife": [...],
+    "calendar": [...],
+    "email": [...]
+  },
+  "analysis_summary": "Brief summary",
+  "total_task_count": 20
+}`;
 }
 
 /**
- * Build streamlined prompt for new forms (custom/simple)
- * Optimized for speed with reduced complexity
- *
- * Ported from aiPromptBuilder.ts (lines 332-360)
- * Used for simple and standard lead types where a faster
- * response is preferred over deep personalization.
- *
- * @param leadData - The unified lead data
- * @returns A streamlined prompt string
+ * Build streamlined prompt for simple/standard lead types
  */
 export function buildStreamlinedPrompt(leadData: UnifiedLeadData): string {
   const businessContext = leadData.businessType || 'business';
@@ -115,29 +115,19 @@ export function buildStreamlinedPrompt(leadData: UnifiedLeadData): string {
     [leadData.firstName, leadData.lastName].filter(Boolean).join(' ') ||
     'Business Owner';
 
-  // Use streamlined approach for new form types
-  const isNewForm =
-    leadData.leadType === 'standard' || leadData.leadType === 'simple';
+  log.info('Using streamlined prompt', { leadType: leadData.leadType });
 
-  log.info('Using ultra-streamlined AI prompt for performance optimization', {
-    leadType: leadData.leadType,
-    businessType: leadData.businessType,
-    isNewForm,
-    optimizationLevel: 'high-performance',
-  });
+  return `${name} - ${businessContext} owner. Generate ~22 EA delegation tasks by Core Four area.
 
-  // If it's a new form, use the ultra-optimized version (under 200 chars)
-  if (isNewForm) {
-    return `${name} EA Report - ${businessContext}:
+Focus: ${challengeContext}
 
-24 tasks (8 each: daily/weekly/monthly). 63%+ EA-owned.
+businessProcesses: 8 tasks (coreTaskType: "businessProcessManagement")
+personalLife: 5 tasks (coreTaskType: "personalLifeManagement")
+calendar: 4 tasks (coreTaskType: "calendarManagement")
+email: 3 tasks (coreTaskType: "emailManagement")
 
-Include coreTaskType on each task: emailManagement, calendarManagement, personalLifeManagement, or businessProcessManagement.
-Include: Email Mgmt (daily EA), Calendar (daily EA), Personal Life (weekly EA), Process Mgmt (monthly EA).
+All tasks: owner "EA", isEA true, include category field.
+Conversational titles. 2-3 sentence descriptions. No em-dashes.
 
-Focus: ${challengeContext}. HTML format.`;
-  }
-
-  // Default to simplified prompt for other types
-  return buildSimplifiedPrompt(leadData);
+Output ONLY valid JSON with structure: { "tasks": { "businessProcesses": [...], "personalLife": [...], "calendar": [...], "email": [...] }, "analysis_summary": "...", "total_task_count": 20 }`;
 }
