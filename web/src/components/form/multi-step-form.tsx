@@ -42,9 +42,20 @@ const TOTAL_SCREENS = 4;
 
 export function MultiStepForm() {
   const [currentScreen, setCurrentScreen] = React.useState(1);
-  const [leadId, setLeadId] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(false);
   const pendingLeadIdRef = React.useRef<Promise<string | null> | null>(null);
+
+  // LeadId with sessionStorage backup — survives page refresh
+  const [leadId, setLeadIdState] = React.useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('al_leadId') || '';
+    }
+    return '';
+  });
+  const setLeadId = React.useCallback((id: string) => {
+    setLeadIdState(id);
+    try { sessionStorage.setItem('al_leadId', id); } catch { /* SSR or private mode */ }
+  }, []);
 
   // Get Meta tracking cookies (_fbc and _fbp) for Close CRM attribution
   const { fbc, fbp } = useMetaTracking();
@@ -185,6 +196,8 @@ export function MultiStepForm() {
           onPrevious={goToPreviousScreen}
           isFinalStep={true}
           onSubmit={async (revenue, painPoints) => {
+            setIsLoading(true);
+
             // Await pending lead creation if leadId isn't set yet (same pattern as Screen 3)
             let currentLeadId = leadId;
             if (!currentLeadId && pendingLeadIdRef.current) {
@@ -207,8 +220,7 @@ export function MultiStepForm() {
               meta_fbp: fbp,
             };
 
-            // Close CRM update (business details) - MUST happen before navigation
-            // Using keepalive: true ensures the request completes even if page navigates away
+            // Close CRM update (business details) — fire-and-forget with keepalive
             if (currentLeadId) {
               fetch('/api/close/update-lead', {
                 method: 'PUT',
@@ -218,9 +230,26 @@ export function MultiStepForm() {
                   revenue,
                   painPoints,
                 }),
-                keepalive: true, // Ensures request completes even after navigation
+                keepalive: true,
               }).catch(error => console.error('Error updating lead with business details:', error));
             }
+
+            // Fire server-side report generation pipeline — runs to completion
+            // even if user closes tab, switches apps, or navigates away
+            fetch('/api/generate-report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phone: formData.phone,
+                revenue,
+                painPoints,
+                leadId: currentLeadId,
+              }),
+              keepalive: true, // Survives page navigation
+            }).catch(error => console.error('Error triggering report generation:', error));
 
             // Navigate to report page with Unicode-safe base64 encoding
             // btoa() throws on non-Latin1 chars (accented names, emojis in pain points)

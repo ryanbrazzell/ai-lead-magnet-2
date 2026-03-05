@@ -2,8 +2,9 @@
  * ThankYouContent Component
  * Main report page composition
  *
- * Page reveals after 8s analyzing animation. Report generates in background
- * and arrives via email — page focuses user on booking the strategy call.
+ * Page reveals after 8s analyzing animation. Report generation is handled
+ * server-side via /api/generate-report (fired from form submit).
+ * This page is display-only — it focuses the user on booking the strategy call.
  *
  * Sections in order:
  * 1. Navigation Header (navy bar with logo)
@@ -49,10 +50,7 @@ export function ThankYouContent() {
   const searchParams = useSearchParams();
 
   const [showAnalyzing, setShowAnalyzing] = React.useState(true);
-  const [emailSent, setEmailSent] = React.useState(false);
-  const [emailError, setEmailError] = React.useState<string | null>(null);
   const [showEmailToast, setShowEmailToast] = React.useState(true);
-  const generationStarted = React.useRef(false);
 
   // Parse form data from URL params (base64 encoded with Unicode-safe decoding)
   const formData = React.useMemo<FormDataFromURL | null>(() => {
@@ -119,123 +117,7 @@ export function ThankYouContent() {
     }, 100);
   }, []);
 
-  // Generate PDF and send email - runs entirely in background, decoupled from page reveal
-  const generateAndSendReport = React.useCallback(async () => {
-    if (!formData?.email) return;
-
-    setEmailSent(false);
-    setEmailError(null);
-
-    try {
-      // Step 1: Generate tasks via AI
-      const tasksResponse = await fetch('/api/generate-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          revenue: formData.revenue,
-          painPoints: formData.painPoints,
-          leadType: 'main',
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      const tasksResult = await tasksResponse.json();
-
-      if (!tasksResult.success) {
-        console.error('Failed to generate tasks:', tasksResult.error);
-        setEmailError('Failed to generate report');
-        return;
-      }
-
-      // Step 2: Generate PDF
-      const pdfResponse = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tasks: tasksResult.data?.tasks || { businessProcesses: [], personalLife: [], calendar: [], email: [] },
-          eaPercentage: tasksResult.data?.ea_task_percent || 0,
-          userData: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
-            stage: 4,
-            stageName: 'Prioritize',
-          },
-          taskHours: taskHours,
-          revenueRange: revenueRange,
-        }),
-      });
-
-      const pdfResult = await pdfResponse.json();
-
-      if (!pdfResult.success || !pdfResult.pdf) {
-        console.error('Failed to generate PDF');
-        setEmailError('Failed to generate PDF');
-        return;
-      }
-
-      // Step 3: Send email with PDF attached
-      try {
-        const emailResponse = await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: formData.email,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            pdfBuffer: pdfResult.pdf,
-            downloadUrl: pdfResult.blobUrl || undefined,
-          }),
-        });
-
-        const emailResult = await emailResponse.json();
-
-        if (emailResult.success) {
-          setEmailSent(true);
-        } else {
-          console.error('Failed to send email:', emailResult.error);
-          setEmailError(emailResult.error || 'Failed to send email');
-        }
-      } catch (emailErr) {
-        console.error('Email send error:', emailErr);
-      }
-
-      // Step 4: Update Close CRM
-      if (formData.leadId && pdfResult.blobUrl) {
-        try {
-          await fetch('/api/close/update-lead', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              leadId: formData.leadId,
-              reportUrl: pdfResult.blobUrl,
-            }),
-          });
-        } catch (err) {
-          console.error('Failed to update Close CRM:', err);
-        }
-      }
-    } catch (err) {
-      console.error('Error generating/sending report:', err);
-      setEmailError('Failed to generate report');
-    }
-  }, [formData, taskHours, revenueRange]);
-
-  // Start report generation immediately on mount (runs in parallel with animation)
-  React.useEffect(() => {
-    if (!generationStarted.current) {
-      generationStarted.current = true;
-      generateAndSendReport();
-    }
-  }, [generateAndSendReport]);
-
-  // Auto-dismiss email toast 5s after page reveals
+  // Auto-dismiss email toast after page reveals
   React.useEffect(() => {
     if (!showAnalyzing && showEmailToast) {
       const timer = setTimeout(() => setShowEmailToast(false), 8000);

@@ -26,6 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { findLeadByEmail } from '@/lib/close/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,6 +55,13 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Close CRM API key not configured. Please check your .env.local file and restart the dev server.' },
         { status: 500 }
       );
+    }
+
+    // Deduplicate: if a lead with this email already exists, return it
+    const existingLeadId = await findLeadByEmail(email);
+    if (existingLeadId) {
+      console.log('Lead already exists for email, returning existing:', { email, leadId: existingLeadId });
+      return NextResponse.json({ success: true, leadId: existingLeadId });
     }
 
     // Log API key status for debugging (first 10 chars only for security)
