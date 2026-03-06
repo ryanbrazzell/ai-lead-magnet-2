@@ -108,8 +108,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function notifyPipelineResult(result: PipelineResult) {
-  // Only alert on failures — successes are tracked in CRM notes
-  if (result.success) return;
+  // TODO: After monitoring period, set REPORT_SLACK_FAILURES_ONLY=true in Vercel env
+  // to stop success notifications and only alert on failures.
+  const failuresOnly = process.env.REPORT_SLACK_FAILURES_ONLY === 'true';
 
   const steps = [
     result.tasksGenerated ? ':white_check_mark: Tasks' : ':x: Tasks',
@@ -119,22 +120,37 @@ async function notifyPipelineResult(result: PipelineResult) {
     result.crmUpdated ? ':white_check_mark: CRM' : ':warning: CRM',
   ];
 
-  const resendCmd = result.leadId
-    ? `curl -X POST https://report.assistantlaunch.com/api/resend-report -H "Content-Type: application/json" -d '{"leadId":"${result.leadId}"}'`
-    : `curl -X POST https://report.assistantlaunch.com/api/generate-report -H "Content-Type: application/json" -d '{"email":"${result.email}","firstName":"","lastName":"","phone":"","revenue":"","painPoints":""}'`;
+  const stepsLine = `\n> *Steps:* ${steps.join(' | ')}\n> *Duration:* ${(result.durationMs / 1000).toFixed(1)}s`;
 
-  const fixInstructions = result.leadId
-    ? `\n> *To re-send:* Open Close CRM → find lead → or run:\n> \`${resendCmd}\``
-    : `\n> *To retry:* No leadId — re-run full pipeline:\n> \`${resendCmd}\``;
+  if (result.success) {
+    if (failuresOnly) return;
 
-  void sendSlackAlert(`Report FAILED at ${result.failedStep}`, {
-    emoji: ':red_circle:',
-    error: `${result.error}\n> *Steps:* ${steps.join(' | ')}\n> *Duration:* ${(result.durationMs / 1000).toFixed(1)}s${fixInstructions}`,
-    endpoint: '/api/generate-report',
-    userEmail: result.email,
-    leadId: result.leadId,
-    timestamp: new Date().toISOString(),
-  });
+    void sendSlackAlert('Report Delivered', {
+      emoji: ':white_check_mark:',
+      error: `Report generated and emailed successfully.${stepsLine}`,
+      endpoint: '/api/generate-report',
+      userEmail: result.email,
+      leadId: result.leadId,
+      timestamp: new Date().toISOString(),
+    });
+  } else {
+    const resendCmd = result.leadId
+      ? `curl -X POST https://report.assistantlaunch.com/api/resend-report -H "Content-Type: application/json" -d '{"leadId":"${result.leadId}"}'`
+      : `curl -X POST https://report.assistantlaunch.com/api/generate-report -H "Content-Type: application/json" -d '{"email":"${result.email}","firstName":"","lastName":"","phone":"","revenue":"","painPoints":""}'`;
+
+    const fixInstructions = result.leadId
+      ? `\n> *To re-send:* Open Close CRM → find lead → or run:\n> \`${resendCmd}\``
+      : `\n> *To retry:* No leadId — re-run full pipeline:\n> \`${resendCmd}\``;
+
+    void sendSlackAlert(`Report FAILED at ${result.failedStep}`, {
+      emoji: ':red_circle:',
+      error: `${result.error}${stepsLine}${fixInstructions}`,
+      endpoint: '/api/generate-report',
+      userEmail: result.email,
+      leadId: result.leadId,
+      timestamp: new Date().toISOString(),
+    });
+  }
 }
 
 async function runPipeline(data: GenerateReportRequest): Promise<PipelineResult> {
