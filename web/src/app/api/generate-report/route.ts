@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function notifyPipelineResult(result: PipelineResult) {
+  // Only alert on failures — successes are tracked in CRM notes
+  if (result.success) return;
+
   const steps = [
     result.tasksGenerated ? ':white_check_mark: Tasks' : ':x: Tasks',
     result.pdfGenerated ? ':white_check_mark: PDF' : ':x: PDF',
@@ -116,25 +119,22 @@ async function notifyPipelineResult(result: PipelineResult) {
     result.crmUpdated ? ':white_check_mark: CRM' : ':warning: CRM',
   ];
 
-  if (result.success) {
-    void sendSlackAlert('Report Delivered', {
-      emoji: ':white_check_mark:',
-      error: `Pipeline completed in ${(result.durationMs / 1000).toFixed(1)}s`,
-      endpoint: '/api/generate-report',
-      userEmail: result.email,
-      leadId: result.leadId,
-      timestamp: new Date().toISOString(),
-    });
-  } else {
-    void sendSlackAlert(`Report FAILED at ${result.failedStep}`, {
-      emoji: ':red_circle:',
-      error: `${result.error}\n> *Steps:* ${steps.join(' | ')}\n> *Duration:* ${(result.durationMs / 1000).toFixed(1)}s`,
-      endpoint: '/api/generate-report',
-      userEmail: result.email,
-      leadId: result.leadId,
-      timestamp: new Date().toISOString(),
-    });
-  }
+  const resendCmd = result.leadId
+    ? `curl -X POST https://report.assistantlaunch.com/api/resend-report -H "Content-Type: application/json" -d '{"leadId":"${result.leadId}"}'`
+    : `curl -X POST https://report.assistantlaunch.com/api/generate-report -H "Content-Type: application/json" -d '{"email":"${result.email}","firstName":"","lastName":"","phone":"","revenue":"","painPoints":""}'`;
+
+  const fixInstructions = result.leadId
+    ? `\n> *To re-send:* Open Close CRM → find lead → or run:\n> \`${resendCmd}\``
+    : `\n> *To retry:* No leadId — re-run full pipeline:\n> \`${resendCmd}\``;
+
+  void sendSlackAlert(`Report FAILED at ${result.failedStep}`, {
+    emoji: ':red_circle:',
+    error: `${result.error}\n> *Steps:* ${steps.join(' | ')}\n> *Duration:* ${(result.durationMs / 1000).toFixed(1)}s${fixInstructions}`,
+    endpoint: '/api/generate-report',
+    userEmail: result.email,
+    leadId: result.leadId,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 async function runPipeline(data: GenerateReportRequest): Promise<PipelineResult> {
