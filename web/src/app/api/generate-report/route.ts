@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
   const result = await runPipeline({ email, firstName, lastName, phone, revenue, painPoints, leadId });
 
   // Send Slack notification for every pipeline run (success or failure)
-  void notifyPipelineResult(result);
+  // Must await so Vercel doesn't kill the function before the webhook completes
+  await notifyPipelineResult(result);
 
   return NextResponse.json({
     success: result.success,
