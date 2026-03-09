@@ -71,6 +71,12 @@ export function MultiStepForm() {
 
   const [errors, setErrors] = React.useState<FormErrors>({});
 
+  // Clear stale leadId on new form flow to prevent cross-submission contamination
+  React.useEffect(() => {
+    try { sessionStorage.removeItem('al_leadId'); } catch { /* SSR or private mode */ }
+    setLeadIdState('');
+  }, []);
+
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user types
