@@ -88,7 +88,7 @@ export function HeroEarnings({
             onClick={onBookCall}
             className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
           >
-            Book Your Discovery Call
+            Book Your EA Delegation Roadmap Call
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

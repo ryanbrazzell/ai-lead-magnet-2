@@ -87,7 +87,7 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData, 
     <p style="margin: 0 0 4px 0;">&#10003; Which EA profile matches your business</p>
     <p style="margin: 0 0 16px 0;">&#10003; Your 30-day delegation map to get you performing at the highest level</p>
 
-    <p style="margin: 0 0 24px 0;"><a href="${bookingUrl}" style="display: inline-block; background: #f59e0b; color: #0f172a; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">Book your free time strategy call</a></p>
+    <p style="margin: 0 0 24px 0;"><a href="${bookingUrl}" style="display: inline-block; background: #f59e0b; color: #0f172a; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">Book Your EA Delegation Roadmap Call</a></p>
 
     <p style="margin: 0 0 4px 0;">Talk soon,</p>
     <p style="margin: 0 0 4px 0;"><strong>Ryan Brazzell</strong></p>
@@ -136,7 +136,7 @@ On this call, we'll cover:
 ✓ Which EA profile matches your business
 ✓ Your 30-day delegation map to get you performing at the highest level
 
-Book your free time strategy call: ${bookingUrl}
+Book your EA Delegation Roadmap Call: ${bookingUrl}
 
 Talk soon,
 Ryan Brazzell

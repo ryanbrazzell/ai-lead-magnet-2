@@ -9,7 +9,7 @@ import { Suspense } from 'react';
 import { BookCallContent } from '@/components/book-call/book-call-content';
 
 export const metadata = {
-  title: 'Book Your Free Time Strategy Call | Assistant Launch',
+  title: 'Book Your EA Delegation Roadmap Call | Assistant Launch',
 };
 
 export default function BookCallPage() {

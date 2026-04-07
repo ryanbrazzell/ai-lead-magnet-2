@@ -319,7 +319,7 @@ function renderCTAButton(
   // Button text
   doc.setTextColor(...C.ctaText);
   setSansBold(doc, 12);
-  doc.text('Book a Discovery Call', PAGE_WIDTH / 2, y + btnHeight / 2 + 1, { align: 'center' });
+  doc.text('Book Your EA Delegation Roadmap Call', PAGE_WIDTH / 2, y + btnHeight / 2 + 1, { align: 'center' });
 
   // Clickable link
   doc.link(btnX, y, btnWidth, btnHeight, { url: bookingUrl });

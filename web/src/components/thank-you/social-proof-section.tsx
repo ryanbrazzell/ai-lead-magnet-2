@@ -272,7 +272,7 @@ export function SocialProofSection({ onCTAClick }: SocialProofSectionProps) {
                 e.currentTarget.style.boxShadow = '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)';
               }}
             >
-              Book your FREE Time Strategy Call
+              Book Your EA Delegation Roadmap Call
             </button>
           </div>
         )}

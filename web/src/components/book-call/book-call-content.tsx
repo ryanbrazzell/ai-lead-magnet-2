@@ -139,7 +139,7 @@ export function BookCallContent() {
               marginBottom: '0',
             }}
           >
-            Schedule your free time strategy call
+            Schedule your EA Delegation Roadmap Call
           </p>
         </div>
       </section>
@@ -162,7 +162,7 @@ export function BookCallContent() {
               marginBottom: '8px',
             }}
           >
-            What Happens on Your Free Time Strategy Call
+            What Happens on Your EA Delegation Roadmap Call
           </h2>
           <p
             style={{
@@ -255,7 +255,7 @@ export function BookCallContent() {
               marginBottom: '8px',
             }}
           >
-            Book Your FREE Time Strategy Call
+            Book Your EA Delegation Roadmap Call
           </h3>
           <svg
             width="24"

@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
                 Ready to reclaim your time?
               </p>
               <a href="https://assistantlaunch.com" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                Book Your Discovery Call
+                Book Your EA Delegation Roadmap Call
               </a>
             </td>
           </tr>

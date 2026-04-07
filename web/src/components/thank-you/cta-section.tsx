@@ -306,7 +306,7 @@ export function CTASection({
             marginBottom: '8px',
           }}
         >
-          Schedule your Free Time Strategy Call
+          Schedule Your EA Delegation Roadmap Call
         </h3>
         <svg
           width="24"
