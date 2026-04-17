@@ -44,7 +44,10 @@ import {
   CLOSE_FIELDS,
 } from '@/lib/close/client';
 
-export const maxDuration = 180;
+// Pipeline = lead resolution + grounded research + two-prompt chain +
+// sanity check + PDF generation + S3 upload + email send + CRM update.
+// Bumped from 180s for headroom after adding grounded research.
+export const maxDuration = 300;
 
 const log = {
   info: (submissionId: string, message: string, context?: Record<string, unknown>) => {

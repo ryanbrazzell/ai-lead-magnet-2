@@ -15,7 +15,7 @@
  * 6. Social Proof (testimonials)
  * 7. FAQ
  * 8. Final CTA
- * + Floating toast: "Your report will arrive at {email} in about 60 seconds"
+ * + Floating toast: "Your personalized report is being written and will arrive at {email} in 2-3 minutes"
  */
 
 "use client";
@@ -237,9 +237,9 @@ export function ThankYouContent() {
             <path d="M22 4L12 13L2 4" />
           </svg>
           <span>
-            Your report will arrive at{' '}
+            Your personalized report is being written and will arrive at{' '}
             <span style={{ color: '#0f172a', fontWeight: 600 }}>{formData.email}</span>
-            {' '}in about 60 seconds
+            {' '}in 2-3 minutes
           </span>
           <button
             onClick={() => setShowEmailToast(false)}

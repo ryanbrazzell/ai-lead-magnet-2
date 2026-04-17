@@ -7,7 +7,16 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { Task, TaskGenerationResult, BusinessAnalysisBrief, CoreTaskType } from '@/types';
+import type { Task, TaskGenerationResult, BusinessAnalysisBrief, CoreTaskType, UnifiedLeadData } from '@/types';
+import type { LeadBrief } from './lead-brief';
+import {
+  BUSINESS_ANALYSIS_SYSTEM,
+  buildBusinessAnalysisUser,
+} from './prompts/business-analysis-prompt';
+import {
+  CORE_FOUR_GENERATION_SYSTEM,
+  buildCoreFourGenerationUser,
+} from './prompts/core-four-generation-prompt';
 
 /**
  * Retry wrapper for transient API failures
@@ -271,7 +280,11 @@ export function parseClaudeResponse(responseText: string): TaskGenerationResult 
 }
 
 /**
- * Make a Claude API call with given config
+ * Make a Claude API call with given config (single-string prompt).
+ *
+ * Used by legacy callers that haven't been migrated to the system+user
+ * split. Prompt caching does not apply here because the whole prompt is a
+ * single user-turn string with dynamic content interspersed.
  */
 async function callClaude(
   prompt: string,
@@ -306,11 +319,63 @@ async function callClaude(
 }
 
 /**
- * Call 1: Business Analysis
- * Lower tokens, focused reasoning about the business
+ * Make a Claude API call with split system + user messages.
+ *
+ * The system message is marked cacheable so the stable instruction text is
+ * served from Anthropic's prompt cache when multiple requests land within
+ * the 5-minute TTL window. At low volume (5-20 reports/day) this mostly
+ * helps during bursts; at higher volumes it's meaningful cost savings.
+ */
+async function callClaudeCached(
+  systemPrompt: string,
+  userPrompt: string,
+  config: typeof ANALYSIS_CONFIG | typeof GENERATION_CONFIG
+): Promise<string> {
+  const apiKey = getApiKey();
+  const anthropic = new Anthropic({ apiKey });
+
+  const response = await callWithRetry(
+    () =>
+      anthropic.messages.create({
+        model: config.model,
+        max_tokens: config.maxTokens,
+        temperature: config.temperature,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    config.maxRetries
+  );
+
+  const textContent = response.content.find((block) => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('Claude API returned empty or invalid response structure');
+  }
+
+  console.log('Claude API call complete', {
+    model: config.model,
+    inputTokens: response.usage?.input_tokens,
+    outputTokens: response.usage?.output_tokens,
+    cacheReadInputTokens: response.usage?.cache_read_input_tokens,
+    cacheCreationInputTokens: response.usage?.cache_creation_input_tokens,
+  });
+
+  return textContent.text;
+}
+
+/**
+ * Call 1: Business Analysis (legacy single-prompt signature)
+ *
+ * Kept for backward compat with any caller still building a single
+ * concatenated prompt. New callers should use generateAnalysisCached.
  */
 export async function generateAnalysis(prompt: string): Promise<BusinessAnalysisBrief> {
-  console.log('Claude API: Starting business analysis (Call 1)', {
+  console.log('Claude API: Starting business analysis (Call 1, legacy path)', {
     promptLength: prompt.length,
     model: ANALYSIS_CONFIG.model,
     maxTokens: ANALYSIS_CONFIG.maxTokens,
@@ -329,11 +394,47 @@ export async function generateAnalysis(prompt: string): Promise<BusinessAnalysis
 }
 
 /**
- * Call 2: Core Four Task Generation
- * Higher tokens for full task output
+ * Call 1: Business Analysis with prompt caching (preferred).
+ *
+ * Splits the stable instruction text (system) from the per-request lead
+ * data (user), marking the system block cacheable. First request in a
+ * 5-minute window pays a small write premium; subsequent requests pay ~10%
+ * of the normal input price on the cached portion.
+ */
+export async function generateAnalysisCached(
+  leadData: UnifiedLeadData,
+  brief: LeadBrief
+): Promise<BusinessAnalysisBrief> {
+  const userPrompt = buildBusinessAnalysisUser(leadData, brief);
+
+  console.log('Claude API: Starting business analysis (Call 1, cached)', {
+    systemLength: BUSINESS_ANALYSIS_SYSTEM.length,
+    userLength: userPrompt.length,
+    model: ANALYSIS_CONFIG.model,
+    maxTokens: ANALYSIS_CONFIG.maxTokens,
+  });
+
+  const startTime = Date.now();
+  const responseText = await callClaudeCached(
+    BUSINESS_ANALYSIS_SYSTEM,
+    userPrompt,
+    ANALYSIS_CONFIG
+  );
+  const result = parseAnalysisResponse(responseText);
+
+  console.log('Claude API: Business analysis complete', {
+    duration: Date.now() - startTime,
+    processCount: result.recurring_processes.length,
+  });
+
+  return result;
+}
+
+/**
+ * Call 2: Core Four Task Generation (legacy single-prompt signature)
  */
 export async function generateCoreFourTasks(prompt: string): Promise<TaskGenerationResult> {
-  console.log('Claude API: Starting Core Four task generation (Call 2)', {
+  console.log('Claude API: Starting Core Four task generation (Call 2, legacy path)', {
     promptLength: prompt.length,
     model: GENERATION_CONFIG.model,
     maxTokens: GENERATION_CONFIG.maxTokens,
@@ -341,6 +442,46 @@ export async function generateCoreFourTasks(prompt: string): Promise<TaskGenerat
 
   const startTime = Date.now();
   const responseText = await callClaude(prompt, GENERATION_CONFIG);
+  const result = parseGenerationResponse(responseText);
+
+  console.log('Claude API: Task generation complete', {
+    duration: Date.now() - startTime,
+    totalTasks: result.total_task_count,
+    businessProcesses: result.tasks.businessProcesses.length,
+    personalLife: result.tasks.personalLife.length,
+    calendar: result.tasks.calendar.length,
+    email: result.tasks.email.length,
+  });
+
+  return result;
+}
+
+/**
+ * Call 2: Core Four Task Generation with prompt caching (preferred).
+ *
+ * Splits the stable generation rules + few-shot examples (system) from the
+ * per-request analysis brief (user). Same caching behavior as
+ * generateAnalysisCached.
+ */
+export async function generateCoreFourTasksCached(
+  analysisBrief: BusinessAnalysisBrief,
+  leadBrief: LeadBrief
+): Promise<TaskGenerationResult> {
+  const userPrompt = buildCoreFourGenerationUser(analysisBrief, leadBrief);
+
+  console.log('Claude API: Starting Core Four task generation (Call 2, cached)', {
+    systemLength: CORE_FOUR_GENERATION_SYSTEM.length,
+    userLength: userPrompt.length,
+    model: GENERATION_CONFIG.model,
+    maxTokens: GENERATION_CONFIG.maxTokens,
+  });
+
+  const startTime = Date.now();
+  const responseText = await callClaudeCached(
+    CORE_FOUR_GENERATION_SYSTEM,
+    userPrompt,
+    GENERATION_CONFIG
+  );
   const result = parseGenerationResponse(responseText);
 
   console.log('Claude API: Task generation complete', {

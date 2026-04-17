@@ -108,66 +108,65 @@ export function parsePainPoints(leadData: UnifiedLeadData): string[] {
 }
 
 /**
- * Industry signal keywords mapped to inferred industries
- */
-const INDUSTRY_SIGNALS: Record<string, string[]> = {
-  'healthcare/medical': ['patient', 'clinic', 'medical', 'health', 'therapy', 'dental', 'doctor', 'nurse', 'practice'],
-  'legal': ['attorney', 'legal', 'law firm', 'lawyer', 'litigation', 'paralegal', 'case'],
-  'real estate': ['property', 'real estate', 'listing', 'broker', 'agent', 'mls', 'showing', 'escrow'],
-  'e-commerce': ['shopify', 'ecommerce', 'e-commerce', 'online store', 'product listing', 'inventory', 'shipping'],
-  'SaaS/tech': ['saas', 'software', 'app', 'platform', 'api', 'developer', 'tech', 'startup', 'onboarding'],
-  'agency/marketing': ['agency', 'marketing', 'campaign', 'creative', 'client work', 'retainer', 'ads'],
-  'coaching/consulting': ['coaching', 'consulting', 'client', 'session', 'workshop', 'course', 'program', 'certification'],
-  'financial services': ['financial', 'accounting', 'bookkeeping', 'tax', 'insurance', 'investment', 'advisor', 'portfolio'],
-  'construction/trades': ['contractor', 'construction', 'plumbing', 'electrical', 'hvac', 'landscaping', 'roofing', 'subcontractor', 'bid'],
-  'professional services': ['firm', 'engagement', 'proposal', 'deliverable', 'scope', 'retainer'],
-  'fitness/wellness': ['gym', 'fitness', 'personal training', 'nutrition', 'wellness', 'class'],
-  'food/restaurant': ['restaurant', 'menu', 'catering', 'food', 'chef', 'kitchen'],
-};
-
-/**
- * Infer industry from pain points and business type when no website data exists
+ * Return an industry label only when we have a trustworthy source.
+ *
+ * Previously this function scanned pain-point text for keywords and mapped
+ * matches to industry labels — e.g. "Marketing" in pain points became
+ * "agency/marketing", which cascaded into fabricated agency-themed reports
+ * for prospects who were not in marketing at all. The keyword map has been
+ * removed.
+ *
+ * Trustworthy sources (in order):
+ *   1. Explicit `businessType` field from the form
+ *   2. Grounded industry from website research (set on the leadData before
+ *      this function is called by the enrichment step)
+ *
+ * Pain points, revenue band, email domain, and role title are NOT industry
+ * signals. If neither trustworthy source is populated, return null and let
+ * downstream prompts fall back to industry-neutral language.
  */
 export function inferIndustry(leadData: UnifiedLeadData): string | null {
-  // If we have business type, that's the best signal
   if (leadData.businessType) {
     return leadData.businessType;
   }
 
-  // Check pain points and other text fields for industry signals
-  const textFields = [
-    leadData.challenges,
-    leadData.painPoints,
-    leadData.timeBottleneck,
-    leadData.supportNotes,
-  ].filter(Boolean).join(' ').toLowerCase();
-
-  if (!textFields) return null;
-
-  let bestMatch: string | null = null;
-  let bestCount = 0;
-
-  for (const [industry, keywords] of Object.entries(INDUSTRY_SIGNALS)) {
-    const count = keywords.filter(kw => textFields.includes(kw)).length;
-    if (count > bestCount) {
-      bestCount = count;
-      bestMatch = industry;
+  if (leadData.companyAnalysis?.industry) {
+    const industry = leadData.companyAnalysis.industry.trim();
+    // Guard against placeholder strings the legacy scraper emitted
+    if (industry && industry !== 'To be analyzed' && industry !== 'Unknown') {
+      return industry;
     }
   }
 
-  return bestMatch;
+  return null;
 }
 
 /**
- * Score data richness based on available information
+ * Score data richness based on available information.
+ *
+ * "high" requires grounded industry knowledge — not just a successful
+ * website fetch. The legacy regex scraper's analysisSuccess flag is true
+ * whenever the page returns any HTML, but the industry field can still be
+ * a placeholder ("To be analyzed" / "Unknown"). Letting those through as
+ * "high" pushed the downstream prompt to demand "70% business-specific
+ * context" while the industry was in fact unknown — which is exactly the
+ * trap that produced the Jonathan Lewis agency hallucination.
  */
 export function scoreDataRichness(leadData: UnifiedLeadData): DataRichness {
-  const hasWebsite = !!leadData.companyAnalysis;
   const hasPainPoints = !!(leadData.challenges || leadData.painPoints || leadData.timeBottleneck);
   const hasBusinessType = !!leadData.businessType;
   const hasRevenue = !!leadData.revenue;
 
-  if (hasWebsite && hasPainPoints) return 'high';
+  const analysis = leadData.companyAnalysis;
+  const industry = analysis?.industry?.trim();
+  const hasGroundedIndustry =
+    !!analysis &&
+    analysis.analysisSuccess === true &&
+    !!industry &&
+    industry !== 'Unknown' &&
+    industry !== 'To be analyzed';
+
+  if (hasGroundedIndustry && hasPainPoints) return 'high';
   if (hasPainPoints && (hasBusinessType || hasRevenue)) return 'medium';
   if (hasPainPoints) return 'medium';
   return 'low';

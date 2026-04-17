@@ -15,11 +15,40 @@ import type {
   BusinessAnalysisBrief,
 } from '@/types';
 
-// Mock the Claude client module
+// Mock the Claude client module.
+// task-generator now uses the cached variants by default; legacy variants
+// remain for backward compatibility and are still mocked here.
 vi.mock('../claude-client', () => ({
   generateAnalysis: vi.fn(),
+  generateAnalysisCached: vi.fn(),
   generateCoreFourTasks: vi.fn(),
+  generateCoreFourTasksCached: vi.fn(),
   generateWithClaude: vi.fn(),
+}));
+
+// Mock the new research + sanity-check modules so tests don't hit the API
+vi.mock('../research', () => ({
+  researchWebsite: vi.fn().mockResolvedValue({
+    url: '',
+    fetchSucceeded: false,
+    industry: 'Unknown',
+    industryConfidence: 'unknown',
+    businessDescription: 'Unknown',
+    services: [],
+    teamSize: 'Unknown',
+    notes: '',
+    processingTime: 0,
+  }),
+  toWebsiteAnalysis: vi.fn(),
+}));
+
+vi.mock('../sanity-check', () => ({
+  sanityCheckReport: vi.fn().mockResolvedValue({
+    passed: true,
+    issues: [],
+    ran: false,
+    processingTime: 0,
+  }),
 }));
 
 // Mock website analyzer to prevent real HTTP calls
@@ -63,7 +92,13 @@ vi.mock('../prompts', () => ({
 }));
 
 import { generateTasks } from '../task-generator';
-import { generateAnalysis, generateCoreFourTasks, generateWithClaude } from '../claude-client';
+import {
+  generateAnalysis,
+  generateAnalysisCached,
+  generateCoreFourTasks,
+  generateCoreFourTasksCached,
+  generateWithClaude,
+} from '../claude-client';
 import { buildBusinessAnalysisPrompt } from '../prompts/business-analysis-prompt';
 import { buildCoreFourGenerationPrompt } from '../prompts/core-four-generation-prompt';
 import { buildLeadBrief } from '../lead-brief';
@@ -108,8 +143,8 @@ describe('Task Generator Service', () => {
       const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
@@ -126,8 +161,8 @@ describe('Task Generator Service', () => {
       const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
@@ -142,8 +177,8 @@ describe('Task Generator Service', () => {
       const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
@@ -174,11 +209,11 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       const callOrder: string[] = [];
-      vi.mocked(generateAnalysis).mockImplementation(async () => {
+      vi.mocked(generateAnalysisCached).mockImplementation(async () => {
         callOrder.push('analysis');
         return mockAnalysis;
       });
-      vi.mocked(generateCoreFourTasks).mockImplementation(async () => {
+      vi.mocked(generateCoreFourTasksCached).mockImplementation(async () => {
         callOrder.push('coreFourTasks');
         return mockResult;
       });
@@ -209,43 +244,47 @@ describe('Task Generator Service', () => {
         const mockAnalysis = createMockAnalysisBrief();
         const mockResult = createMockTaskResult();
 
-        vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-        vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+        vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+        vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
         const mockLeadData = createMockLeadData(leadType);
         await generateTasks(mockLeadData);
 
-        expect(generateAnalysis).toHaveBeenCalledTimes(1);
-        expect(generateCoreFourTasks).toHaveBeenCalledTimes(1);
+        expect(generateAnalysisCached).toHaveBeenCalledTimes(1);
+        expect(generateCoreFourTasksCached).toHaveBeenCalledTimes(1);
       }
     });
 
-    it('passes analysis prompt to generateAnalysis', async () => {
+    it('passes lead data and brief to generateAnalysisCached', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(buildBusinessAnalysisPrompt).mockReturnValue('custom-analysis-prompt');
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
-      expect(generateAnalysis).toHaveBeenCalledWith('custom-analysis-prompt');
+      expect(generateAnalysisCached).toHaveBeenCalledTimes(1);
+      const [leadArg, briefArg] = vi.mocked(generateAnalysisCached).mock.calls[0];
+      expect(leadArg).toMatchObject({ leadType: mockLeadData.leadType });
+      expect(briefArg).toMatchObject({ revenueTier: 'scaling' });
     });
 
-    it('passes generation prompt to generateCoreFourTasks', async () => {
+    it('passes analysis brief and lead brief to generateCoreFourTasksCached', async () => {
       const mockLeadData = createMockLeadData('main');
       const mockAnalysis = createMockAnalysisBrief();
       const mockResult = createMockTaskResult();
 
-      vi.mocked(buildCoreFourGenerationPrompt).mockReturnValue('custom-generation-prompt');
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       await generateTasks(mockLeadData);
 
-      expect(generateCoreFourTasks).toHaveBeenCalledWith('custom-generation-prompt');
+      expect(generateCoreFourTasksCached).toHaveBeenCalledTimes(1);
+      const [analysisArg, briefArg] = vi.mocked(generateCoreFourTasksCached).mock.calls[0];
+      expect(analysisArg).toEqual(mockAnalysis);
+      expect(briefArg).toMatchObject({ revenueTier: 'scaling' });
     });
   });
 
@@ -257,7 +296,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const apiError = new Error('Claude API error: rate limit exceeded');
 
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(apiError);
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(apiError);
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(apiError)
         .mockRejectedValueOnce(apiError);
@@ -271,7 +310,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const apiKeyError = new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable');
 
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(apiKeyError);
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(apiKeyError);
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(apiKeyError)
         .mockRejectedValueOnce(apiKeyError);
@@ -283,7 +322,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
       const timeoutError = new Error('Claude API request timed out after 90000ms');
 
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(timeoutError);
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(timeoutError);
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(timeoutError)
         .mockRejectedValueOnce(timeoutError);
@@ -295,7 +334,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('simple');
       const networkError = new Error('Network error');
 
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(networkError);
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(networkError);
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(networkError);
@@ -320,7 +359,7 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       // Two-prompt chain fails (generateAnalysis throws)
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(new Error('Analysis failed'));
       // Simplified fallback succeeds
       vi.mocked(generateWithClaude).mockResolvedValueOnce(mockResult);
 
@@ -335,7 +374,7 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       // Two-prompt chain fails
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(new Error('Analysis failed'));
       // Simplified fallback fails, then emergency succeeds
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('Simplified failed'))
@@ -351,7 +390,7 @@ describe('Task Generator Service', () => {
       const mockLeadData = createMockLeadData('main');
 
       // All attempts fail
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(new Error('Analysis failed'));
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(new Error('Analysis failed'));
       vi.mocked(generateWithClaude)
         .mockRejectedValueOnce(new Error('Simplified failed'))
         .mockRejectedValueOnce(new Error('Emergency failed'));
@@ -367,7 +406,7 @@ describe('Task Generator Service', () => {
 
       const callOrder: string[] = [];
 
-      vi.mocked(generateAnalysis).mockImplementation(async () => {
+      vi.mocked(generateAnalysisCached).mockImplementation(async () => {
         callOrder.push('two-prompt-chain');
         throw new Error('Chain failed');
       });
@@ -398,8 +437,8 @@ describe('Task Generator Service', () => {
       const mockResult = createMockTaskResult();
 
       // Call 1 succeeds but Call 2 fails
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysis);
-      vi.mocked(generateCoreFourTasks).mockRejectedValueOnce(
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysis);
+      vi.mocked(generateCoreFourTasksCached).mockRejectedValueOnce(
         new Error('Generation failed')
       );
       // Simplified fallback succeeds

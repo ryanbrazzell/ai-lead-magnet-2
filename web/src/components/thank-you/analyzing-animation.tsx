@@ -16,13 +16,13 @@ interface AnalyzingAnimationProps {
 }
 
 const stages = [
-  { icon: Brain, text: "Analyzing your responses..." },
-  { icon: ChartBar, text: "Calculating time savings..." },
-  { icon: Sparkles, text: "Building your personalized report..." },
-  { icon: Brain, text: "Mapping your task delegation plan..." },
-  { icon: ChartBar, text: "Identifying high-impact opportunities..." },
-  { icon: Sparkles, text: "Generating your ROI analysis..." },
-  { icon: CheckCircle, text: "Finalizing your results..." },
+  { icon: Brain, text: "Reading through your responses..." },
+  { icon: ChartBar, text: "Pulling context from your website..." },
+  { icon: Sparkles, text: "Mapping the recurring work in your business..." },
+  { icon: Brain, text: "Identifying delegation opportunities..." },
+  { icon: ChartBar, text: "Calibrating to your revenue stage..." },
+  { icon: Sparkles, text: "Writing your personalized roadmap..." },
+  { icon: CheckCircle, text: "Putting the final report together..." },
 ];
 
 function capitalizeFirst(str: string): string {
@@ -33,7 +33,7 @@ function capitalizeFirst(str: string): string {
 export function AnalyzingAnimation({
   firstName = "there",
   onComplete,
-  duration = 8000,
+  duration = 15000,
 }: AnalyzingAnimationProps) {
   const displayName = capitalizeFirst(firstName);
   const [currentStage, setCurrentStage] = React.useState(0);
