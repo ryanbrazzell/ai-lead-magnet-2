@@ -18,7 +18,11 @@ import { fixReportIssues, ensureCoreEATasks, padThinAreas } from '@/lib/ai/repor
 import { mapRevenueTier } from '@/lib/ai/lead-brief';
 import { sendCriticalAlert } from '@/lib/alerts/critical-alert';
 
-export const maxDuration = 120;
+// Pipeline = grounded research (web_fetch + analysis) + two-prompt chain
+// (analysis + generation) + sanity check. Real-world total: 90-150s.
+// Hard cap 300s is the Vercel Pro ceiling — gives us buffer and still
+// lets the route fail clearly rather than hanging indefinitely.
+export const maxDuration = 300;
 
 function generateCorrelationId(): string {
   return `gen-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
