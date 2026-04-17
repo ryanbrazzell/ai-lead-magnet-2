@@ -18,7 +18,9 @@ import type { UnifiedLeadData, TaskGenerationResult, Task, TasksByCoreFour } fro
 vi.mock('../claude-client', () => ({
   generateWithClaude: vi.fn(),
   generateAnalysis: vi.fn(),
+  generateAnalysisCached: vi.fn(),
   generateCoreFourTasks: vi.fn(),
+  generateCoreFourTasksCached: vi.fn(),
   getApiKey: vi.fn(),
   parseClaudeResponse: vi.fn(),
   parseGenerationResponse: vi.fn(),
@@ -51,6 +53,31 @@ vi.mock('@/lib/website/analyzer', () => ({
   scrapeWebsiteContent: vi.fn(),
 }));
 
+// Mock research + sanity-check so tests don't hit real APIs
+vi.mock('../research', () => ({
+  researchWebsite: vi.fn().mockResolvedValue({
+    url: '',
+    fetchSucceeded: false,
+    industry: 'Unknown',
+    industryConfidence: 'unknown',
+    businessDescription: 'Unknown',
+    services: [],
+    teamSize: 'Unknown',
+    notes: '',
+    processingTime: 0,
+  }),
+  toWebsiteAnalysis: vi.fn(),
+}));
+
+vi.mock('../sanity-check', () => ({
+  sanityCheckReport: vi.fn().mockResolvedValue({
+    passed: true,
+    issues: [],
+    ran: false,
+    processingTime: 0,
+  }),
+}));
+
 import { generateTasks } from '../task-generator';
 import { validateReport, analyzeReport } from '../report-validator';
 import {
@@ -62,7 +89,9 @@ import {
 import {
   generateWithClaude,
   generateAnalysis,
+  generateAnalysisCached,
   generateCoreFourTasks,
+  generateCoreFourTasksCached,
   getApiKey,
   parseClaudeResponse,
   parseGenerationResponse,
@@ -89,8 +118,8 @@ describe('Integration Tests: AI Task Generation Service (Core Four)', () => {
       const mockAnalysisBrief = createMockAnalysisBrief();
       const mockResult = createValidCoreFourReport();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(mockLeadData);
 
@@ -197,8 +226,8 @@ describe('Integration Tests: AI Task Generation Service (Core Four)', () => {
       const mockAnalysisBrief = createMockAnalysisBrief();
       const mockResult = createReportWithMinorIssues();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       // Step 1: Generate tasks
       const generatedResult = await generateTasks(mockLeadData);
@@ -244,8 +273,8 @@ describe('Integration Tests: AI Task Generation Service (Core Four)', () => {
       const mockAnalysisBrief = createMockAnalysisBrief();
       const mockResult = createValidCoreFourReport();
 
-      vi.mocked(generateAnalysis).mockResolvedValueOnce(mockAnalysisBrief);
-      vi.mocked(generateCoreFourTasks).mockResolvedValueOnce(mockResult);
+      vi.mocked(generateAnalysisCached).mockResolvedValueOnce(mockAnalysisBrief);
+      vi.mocked(generateCoreFourTasksCached).mockResolvedValueOnce(mockResult);
 
       const result = await generateTasks(minimalLead);
 
@@ -329,7 +358,7 @@ describe('Integration Tests: AI Task Generation Service (Core Four)', () => {
 
       // All three fallback levels must fail for generateTasks to throw
       // Attempt 1: Two-prompt chain fails
-      vi.mocked(generateAnalysis).mockRejectedValueOnce(
+      vi.mocked(generateAnalysisCached).mockRejectedValueOnce(
         new Error('Missing API key: Set ANTHROPIC_API_KEY environment variable')
       );
       // Attempt 2: Simplified fallback fails
