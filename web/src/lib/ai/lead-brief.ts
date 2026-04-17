@@ -142,15 +142,31 @@ export function inferIndustry(leadData: UnifiedLeadData): string | null {
 }
 
 /**
- * Score data richness based on available information
+ * Score data richness based on available information.
+ *
+ * "high" requires grounded industry knowledge — not just a successful
+ * website fetch. The legacy regex scraper's analysisSuccess flag is true
+ * whenever the page returns any HTML, but the industry field can still be
+ * a placeholder ("To be analyzed" / "Unknown"). Letting those through as
+ * "high" pushed the downstream prompt to demand "70% business-specific
+ * context" while the industry was in fact unknown — which is exactly the
+ * trap that produced the Jonathan Lewis agency hallucination.
  */
 export function scoreDataRichness(leadData: UnifiedLeadData): DataRichness {
-  const hasWebsite = !!leadData.companyAnalysis;
   const hasPainPoints = !!(leadData.challenges || leadData.painPoints || leadData.timeBottleneck);
   const hasBusinessType = !!leadData.businessType;
   const hasRevenue = !!leadData.revenue;
 
-  if (hasWebsite && hasPainPoints) return 'high';
+  const analysis = leadData.companyAnalysis;
+  const industry = analysis?.industry?.trim();
+  const hasGroundedIndustry =
+    !!analysis &&
+    analysis.analysisSuccess === true &&
+    !!industry &&
+    industry !== 'Unknown' &&
+    industry !== 'To be analyzed';
+
+  if (hasGroundedIndustry && hasPainPoints) return 'high';
   if (hasPainPoints && (hasBusinessType || hasRevenue)) return 'medium';
   if (hasPainPoints) return 'medium';
   return 'low';

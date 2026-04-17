@@ -175,7 +175,7 @@ Revenue Tier Context: ${analysisBrief.revenue_tier_context}
 ===== LEAD CONTEXT =====
 Name: ${leadBrief.name}
 Revenue: ${leadBrief.revenue} (${leadBrief.revenueTier} stage)
-${leadBrief.inferredIndustry ? `Industry (grounded - from explicit field or website research): ${leadBrief.inferredIndustry}` : 'Industry: UNKNOWN — write tasks with industry-neutral language. Use "your team" not "your media buyers", "your customers" not "your retainer clients", "your reporting" not "your Google Ads dashboards".'}
+${leadBrief.inferredIndustry ? `Industry (grounded - from explicit field or website research): ${leadBrief.inferredIndustry}` : 'Industry: UNKNOWN - write tasks with industry-neutral language. Use "your team" not "your media buyers", "your customers" not "your retainer clients", "your reporting" not "your Google Ads dashboards".'}
 Data Richness: ${leadBrief.dataRichness}
 Specificity Target: ${leadBrief.specificityExpectation}
 

@@ -30,11 +30,16 @@ const CHECK_MAX_TOKENS = 500;
 const CHECK_TIMEOUT_MS = 15_000;
 
 export interface SanityCheckResult {
-  /** True when no serious issues were found */
-  passed: boolean;
-  /** Concerns found, each a short string */
+  /**
+   * Pass/fail result. `null` means the check could not be run at all (API
+   * failure, timeout, unparseable output). Callers MUST check `ran` before
+   * acting on `passed` — do not treat a null/true value from a non-run
+   * check as a pass.
+   */
+  passed: boolean | null;
+  /** Concerns found, each a short string. Always empty when ran=false. */
   issues: string[];
-  /** Whether we were able to run the check at all */
+  /** Whether the check actually ran. Check this first. */
   ran: boolean;
   processingTime: number;
 }
@@ -132,7 +137,7 @@ No markdown fences, no explanation, just JSON.`;
     );
     if (!textBlock) {
       log.warn('Sanity check returned no text block');
-      return { passed: true, issues: [], ran: false, processingTime: Date.now() - startTime };
+      return { passed: null, issues: [], ran: false, processingTime: Date.now() - startTime };
     }
 
     const parsed = parseCheckOutput(textBlock.text);
@@ -140,7 +145,7 @@ No markdown fences, no explanation, just JSON.`;
       log.warn('Sanity check returned unparseable JSON', {
         preview: textBlock.text.slice(0, 200),
       });
-      return { passed: true, issues: [], ran: false, processingTime: Date.now() - startTime };
+      return { passed: null, issues: [], ran: false, processingTime: Date.now() - startTime };
     }
 
     const passed = parsed.passed === true;

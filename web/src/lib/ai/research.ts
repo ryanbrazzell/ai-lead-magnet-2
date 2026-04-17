@@ -136,53 +136,65 @@ export async function researchWebsite(
 
   try {
     const deadline = startTime + RESEARCH_TIMEOUT_MS;
+    // One AbortController for the whole research call. Any iteration that
+    // runs past the wall-clock budget is cut off at the SDK/fetch layer —
+    // not just between iterations.
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), RESEARCH_TIMEOUT_MS);
 
-    for (let attempt = 0; attempt <= RESEARCH_MAX_PAUSE_RESUMES; attempt++) {
-      if (Date.now() > deadline) {
-        log.warn('Research deadline exceeded before API call', { url });
-        return buildUnknown(url, 'deadline exceeded', startTime);
-      }
+    try {
+      for (let attempt = 0; attempt <= RESEARCH_MAX_PAUSE_RESUMES; attempt++) {
+        if (Date.now() > deadline) {
+          log.warn('Research deadline exceeded before API call', { url });
+          return buildUnknown(url, 'deadline exceeded', startTime);
+        }
 
-      log.info('Calling Claude for research', {
-        url,
-        attempt: attempt + 1,
-        messageTurns: messages.length,
-      });
+        log.info('Calling Claude for research', {
+          url,
+          attempt: attempt + 1,
+          messageTurns: messages.length,
+        });
 
-      response = await client.messages.create({
-        model: RESEARCH_MODEL,
-        max_tokens: RESEARCH_MAX_TOKENS,
-        system: RESEARCH_PROMPT_SYSTEM,
-        messages: messages as Anthropic.Messages.MessageParam[],
-        tools: [
+        response = await client.messages.create(
           {
-            type: 'web_fetch_20260209',
-            name: 'web_fetch',
-            max_uses: WEB_FETCH_MAX_USES,
+            model: RESEARCH_MODEL,
+            max_tokens: RESEARCH_MAX_TOKENS,
+            system: RESEARCH_PROMPT_SYSTEM,
+            messages: messages as Anthropic.Messages.MessageParam[],
+            tools: [
+              {
+                type: 'web_fetch_20260209',
+                name: 'web_fetch',
+                max_uses: WEB_FETCH_MAX_USES,
+              },
+            ] as unknown as Anthropic.Messages.Tool[],
           },
-        ] as unknown as Anthropic.Messages.Tool[],
-      });
+          { signal: controller.signal }
+        );
 
-      log.info('Research response received', {
-        url,
-        stopReason: response.stop_reason,
-        inputTokens: response.usage?.input_tokens,
-        outputTokens: response.usage?.output_tokens,
-        cacheReadInputTokens: response.usage?.cache_read_input_tokens,
-      });
+        log.info('Research response received', {
+          url,
+          stopReason: response.stop_reason,
+          inputTokens: response.usage?.input_tokens,
+          outputTokens: response.usage?.output_tokens,
+          cacheReadInputTokens: response.usage?.cache_read_input_tokens,
+        });
 
-      if (response.stop_reason !== 'pause_turn') break;
+        if (response.stop_reason !== 'pause_turn') break;
 
-      resumeCount++;
-      if (resumeCount > RESEARCH_MAX_PAUSE_RESUMES) {
-        log.warn('Research exceeded max pause resumes', { url });
-        return buildUnknown(url, 'too many pauses', startTime);
+        resumeCount++;
+        if (resumeCount > RESEARCH_MAX_PAUSE_RESUMES) {
+          log.warn('Research exceeded max pause resumes', { url });
+          return buildUnknown(url, 'too many pauses', startTime);
+        }
+
+        messages = [
+          { role: 'user', content: userPrompt },
+          { role: 'assistant', content: response.content },
+        ];
       }
-
-      messages = [
-        { role: 'user', content: userPrompt },
-        { role: 'assistant', content: response.content },
-      ];
+    } finally {
+      clearTimeout(timeoutHandle);
     }
 
     if (!response) {
@@ -228,6 +240,11 @@ export async function researchWebsite(
     };
   } catch (error) {
     const err = error as Error;
+    const isAbort = err.name === 'AbortError' || /aborted/i.test(err.message);
+    if (isAbort) {
+      log.warn('Research timed out', { url, elapsedMs: Date.now() - startTime });
+      return buildUnknown(url, 'timeout', startTime);
+    }
     log.error('Research call threw', { url, error: err.message });
     return buildUnknown(url, `exception: ${err.message.slice(0, 120)}`, startTime);
   }
@@ -245,10 +262,18 @@ export function toWebsiteAnalysis(research: GroundedResearch): WebsiteAnalysis {
     unknown: 0.1,
   };
 
+  // Only emit an industry line when we actually have a trustworthy one.
+  // Low/unknown confidence gets omitted so the downstream prompt doesn't
+  // see a label and treat it as ground truth.
+  const industryTrustworthy =
+    research.fetchSucceeded &&
+    (research.industryConfidence === 'high' || research.industryConfidence === 'medium') &&
+    research.industry !== 'Unknown';
+
   const keyContent = research.fetchSucceeded
     ? [
         `Business: ${research.businessDescription}`,
-        `Industry: ${research.industry} [confidence: ${research.industryConfidence}]`,
+        industryTrustworthy ? `Industry: ${research.industry}` : '',
         research.services.length ? `Services: ${research.services.join(', ')}` : '',
         research.teamSize !== 'Unknown' ? `Team size: ${research.teamSize}` : '',
         research.notes ? `Notes: ${research.notes}` : '',

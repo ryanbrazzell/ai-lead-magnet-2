@@ -10,19 +10,12 @@
 
 import type { UnifiedLeadData, TaskGenerationResult } from '@/types';
 import {
-  generateAnalysis,
   generateAnalysisCached,
-  generateCoreFourTasks,
   generateCoreFourTasksCached,
   generateWithClaude,
 } from './claude-client';
-import { buildBusinessAnalysisPrompt } from './prompts/business-analysis-prompt';
-import { buildCoreFourGenerationPrompt } from './prompts/core-four-generation-prompt';
 import { buildLeadBrief } from './lead-brief';
-import {
-  buildSimplifiedPrompt,
-  buildEmergencyPrompt,
-} from './prompts';
+import { buildSimplifiedPrompt, buildEmergencyPrompt } from './prompts';
 import { extractDomainFromEmail, scrapeWebsiteContent } from '@/lib/website/analyzer';
 import { researchWebsite, toWebsiteAnalysis } from './research';
 import { sanityCheckReport } from './sanity-check';
@@ -78,7 +71,13 @@ async function enrichWithWebsiteAnalysis(
   try {
     const research = await researchWebsite(target);
 
-    if (research.fetchSucceeded && research.industryConfidence !== 'unknown') {
+    // Only accept high/medium confidence research as the primary path.
+    // Low-confidence guesses get demoted to the legacy-scrape fallback so
+    // they don't leak a fabricated industry into downstream prompts.
+    if (
+      research.fetchSucceeded &&
+      (research.industryConfidence === 'high' || research.industryConfidence === 'medium')
+    ) {
       log.info('Grounded research succeeded', {
         target,
         industry: research.industry,
