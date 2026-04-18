@@ -46,18 +46,26 @@ export interface EmailUserData {
  *
  * @param firstName - Optional first name for personalization (falls back to "there")
  * @param userData - Optional user data for pre-filling the booking URL
+ * @param downloadUrl - Optional URL to view/download the PDF
+ * @param apologyIntro - Optional opener paragraph that replaces the default
+ *   "Your Time Freedom Report is ready..." line. Used when re-sending to leads
+ *   whose original report failed (e.g. after an API outage).
  * @returns Complete HTML email string
- *
- * @example
- * const html = generateEmailHtml('John', { firstName: 'John', email: 'john@example.com', phone: '+15551234567' });
- * // Returns HTML with "Hi John," greeting and pre-filled booking URL
  */
-export function generateEmailHtml(firstName?: string, userData?: EmailUserData, downloadUrl?: string): string {
+export function generateEmailHtml(
+  firstName?: string,
+  userData?: EmailUserData,
+  downloadUrl?: string,
+  apologyIntro?: string
+): string {
   const greeting = firstName || 'there';
   const bookingUrl = buildBookingUrl(userData);
   const downloadLink = downloadUrl
     ? `<p style="margin: 0 0 20px 0;"><a href="${downloadUrl}" style="color: #f59e0b; font-weight: bold;">View and download your report here</a></p>`
     : '';
+  const opener = apologyIntro?.trim()
+    ? apologyIntro.trim()
+    : `Your Time Freedom Report is ready. It's also attached to this email as a PDF.`;
 
   return `<!DOCTYPE html>
 <html>
@@ -69,7 +77,7 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData, 
   <div style="max-width: 600px;">
     <p style="margin: 0 0 16px 0;">Hey ${greeting},</p>
 
-    <p style="margin: 0 0 16px 0;">Your Time Freedom Report is ready. It's also attached to this email as a PDF.</p>
+    <p style="margin: 0 0 16px 0;">${opener}</p>
 
     ${downloadLink}<p style="margin: 0 0 16px 0;">This report was built specifically for you based on the information you shared. Inside you'll find a breakdown of tasks in your business and personal life that could be handed off to an Executive Assistant, organized by the four core areas where delegation creates the most leverage:</p>
 
@@ -111,14 +119,22 @@ export function generateEmailHtml(firstName?: string, userData?: EmailUserData, 
  * const text = generateEmailText('Jane', { firstName: 'Jane', email: 'jane@example.com', phone: '+15551234567' });
  * // Returns plain text with "Hi Jane," greeting and pre-filled booking URL
  */
-export function generateEmailText(firstName?: string, userData?: EmailUserData, downloadUrl?: string): string {
+export function generateEmailText(
+  firstName?: string,
+  userData?: EmailUserData,
+  downloadUrl?: string,
+  apologyIntro?: string
+): string {
   const greeting = firstName || 'there';
   const bookingUrl = buildBookingUrl(userData);
   const downloadLine = downloadUrl ? `\nView and download your report here: ${downloadUrl}\n` : '';
+  const opener = apologyIntro?.trim()
+    ? apologyIntro.trim()
+    : `Your Time Freedom Report is ready. It's also attached to this email as a PDF.`;
 
   return `Hey ${greeting},
 
-Your Time Freedom Report is ready. It's also attached to this email as a PDF.
+${opener}
 ${downloadLine}
 This report was built specifically for you based on the information you shared. Inside you'll find a breakdown of tasks in your business and personal life that could be handed off to an Executive Assistant, organized by the four core areas where delegation creates the most leverage:
 
