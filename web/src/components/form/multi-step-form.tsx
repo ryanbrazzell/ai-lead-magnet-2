@@ -17,6 +17,7 @@ import { EmailScreen } from './screens/email-screen';
 import { PhoneScreen } from './screens/phone-screen';
 import { BusinessDetailsScreen } from './screens/business-details-screen';
 import { useMetaTracking } from '@/hooks/use-meta-tracking';
+import { useUtmTracking } from '@/hooks/use-utm-tracking';
 
 export interface FormData {
   firstName: string;
@@ -59,6 +60,7 @@ export function MultiStepForm() {
 
   // Get Meta tracking cookies (_fbc and _fbp) for Close CRM attribution
   const { fbc, fbp } = useMetaTracking();
+  const { utm } = useUtmTracking();
 
   const [formData, setFormData] = React.useState<FormData>({
     firstName: '',
@@ -132,6 +134,11 @@ export function MultiStepForm() {
                     email,
                     meta_fbc: fbc,
                     meta_fbp: fbp,
+                    utm_source: utm.utm_source,
+                    utm_medium: utm.utm_medium,
+                    utm_campaign: utm.utm_campaign,
+                    utm_content: utm.utm_content,
+                    utm_term: utm.utm_term,
                   }),
                 });
 
@@ -253,6 +260,11 @@ export function MultiStepForm() {
                 revenue,
                 painPoints,
                 leadId: currentLeadId,
+                utm_source: utm.utm_source,
+                utm_medium: utm.utm_medium,
+                utm_campaign: utm.utm_campaign,
+                utm_content: utm.utm_content,
+                utm_term: utm.utm_term,
               }),
               keepalive: true, // Survives page navigation
             }).catch(error => console.error('Error triggering report generation:', error));
