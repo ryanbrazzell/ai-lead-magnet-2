@@ -23,6 +23,13 @@ export const CLOSE_FIELDS = {
   painPoints: 'cf_8Y2FFKdfC1RFNPPJrf0KSXmhteiUBKE7mVphDEufevm',
   revenue: 'cf_3ZBZfCabFHWwranwv1nyY1aPU2oLd6TuAcWGlZepQpZ',
   timeFreedomReportUrl: 'cf_qiHCe6NXTEKZQHLU1rxM091VUQGfMTlpMefEx1tSQAI',
+  // UTM attribution fields — populated from the landing URL so Close can
+  // filter leads by campaign source (Meta ads, Klaviyo emails, etc.)
+  utmSource: 'cf_ciNxSPV9fRw7e5h10jy1L4JbL2w3XnARYIoCCWuZW6U',
+  utmMedium: 'cf_e1gOI0eSIKu2QZma9j5SaDDEXRRroaEvkOKHGp9KZtB',
+  utmCampaign: 'cf_VekhjQNgpgrm6VOy4H3nwZNsUoaUrYm17pG97USZBYi',
+  utmContent: 'cf_vzRNBtrBGdCwkjZaWDD5Wx1BlcInSydp3CNZEvZnUSv',
+  utmTerm: 'cf_sF2NSTraPl94cEGUZ2hixGaQO48PLWm9e4DucnX2JKC',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -330,6 +337,11 @@ export async function resolveLeadByEmail(
     painPoints?: string;
     meta_fbc?: string;
     meta_fbp?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    utm_term?: string;
   }
 ): Promise<string | null> {
   if (!email) {
@@ -369,6 +381,21 @@ export async function resolveLeadByEmail(
   }
   if (formData.meta_fbp) {
     leadPayload[`custom.${CLOSE_FIELDS.metaFbp}`] = formData.meta_fbp;
+  }
+  if (formData.utm_source) {
+    leadPayload[`custom.${CLOSE_FIELDS.utmSource}`] = formData.utm_source;
+  }
+  if (formData.utm_medium) {
+    leadPayload[`custom.${CLOSE_FIELDS.utmMedium}`] = formData.utm_medium;
+  }
+  if (formData.utm_campaign) {
+    leadPayload[`custom.${CLOSE_FIELDS.utmCampaign}`] = formData.utm_campaign;
+  }
+  if (formData.utm_content) {
+    leadPayload[`custom.${CLOSE_FIELDS.utmContent}`] = formData.utm_content;
+  }
+  if (formData.utm_term) {
+    leadPayload[`custom.${CLOSE_FIELDS.utmTerm}`] = formData.utm_term;
   }
 
   try {

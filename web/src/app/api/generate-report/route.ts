@@ -36,6 +36,7 @@ import { Resend } from 'resend';
 import { generateEmailHtml } from '@/lib/email/template';
 import { sendCriticalAlert, sendSlackAlert } from '@/lib/alerts/critical-alert';
 import { getTaskHoursByRevenue } from '@/lib/roi-calculator';
+import { normalizeValue, UTM_KEYS } from '@/lib/tracking/utm-params';
 import {
   addDurableNote,
   updateLeadFields,
@@ -58,6 +59,24 @@ const log = {
   },
 };
 
+/**
+ * Map a UTM key name to its Close custom field ID.
+ */
+function utmFieldForKey(key: (typeof UTM_KEYS)[number]): string {
+  switch (key) {
+    case 'utm_source':
+      return CLOSE_FIELDS.utmSource;
+    case 'utm_medium':
+      return CLOSE_FIELDS.utmMedium;
+    case 'utm_campaign':
+      return CLOSE_FIELDS.utmCampaign;
+    case 'utm_content':
+      return CLOSE_FIELDS.utmContent;
+    case 'utm_term':
+      return CLOSE_FIELDS.utmTerm;
+  }
+}
+
 interface GenerateReportRequest {
   email: string;
   firstName: string;
@@ -66,6 +85,13 @@ interface GenerateReportRequest {
   revenue: string;
   painPoints: string;
   leadId?: string;
+  // UTM attribution — captured from the landing URL on the client side
+  // and forwarded so we can tag the Close lead with its campaign source.
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
 }
 
 type LeadResolution = 'provided' | 'verified' | 'found' | 'created' | 'failed';
@@ -221,6 +247,11 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
       phone,
       revenue,
       painPoints,
+      utm_source: data.utm_source,
+      utm_medium: data.utm_medium,
+      utm_campaign: data.utm_campaign,
+      utm_content: data.utm_content,
+      utm_term: data.utm_term,
     });
 
     if (resolvedId) {
@@ -245,6 +276,32 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
   }
 
   status.leadId = leadId;
+
+  // Defense in depth: patch UTM attribution onto the lead even when it
+  // was already created by an earlier step without UTMs (e.g. returning
+  // visitor whose Step 1 lead was created before this code shipped).
+  // UTMs that arrived in the request body already passed bot-UA filtering
+  // upstream at /api/close/create-lead, so no second filter needed here.
+  if (leadId) {
+    const utmPatch: Record<string, unknown> = {};
+    for (const key of UTM_KEYS) {
+      const raw = (data as unknown as Record<string, unknown>)[key];
+      if (typeof raw === 'string') {
+        const norm = normalizeValue(raw);
+        if (norm) {
+          utmPatch[`custom.${utmFieldForKey(key)}`] = norm;
+        }
+      }
+    }
+    if (Object.keys(utmPatch).length > 0) {
+      const ok = await updateLeadFields(leadId, utmPatch);
+      log.info(submissionId, 'UTM attribution patched onto lead', {
+        leadId,
+        fieldCount: Object.keys(utmPatch).length,
+        patchedOk: ok,
+      });
+    }
+  }
 
   // Write a "pipeline started" note so even if the pipeline crashes, there's evidence
   if (leadId) {

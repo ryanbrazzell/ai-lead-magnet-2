@@ -26,12 +26,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { findLeadByEmail } from '@/lib/close/client';
+import { findLeadByEmail, updateLeadFields, CLOSE_FIELDS } from '@/lib/close/client';
+import { isLikelyBot, normalizeValue, UTM_KEYS } from '@/lib/tracking/utm-params';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email, meta_fbc, meta_fbp } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      meta_fbc,
+      meta_fbp,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_content,
+      utm_term,
+    } = body;
 
     // Get client IP and User Agent from request headers
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -57,10 +69,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deduplicate: if a lead with this email already exists, return it
+    // Suppress UTMs from known bot / link-preview / email-scanner
+    // user-agents so phantom clicks don't pollute campaign counts.
+    const shouldTagUtm = !isLikelyBot(clientUserAgent);
+
+    // Normalize incoming UTM values. normalizeValue handles lowercasing,
+    // trimming, length capping, and em-dash scrubbing.
+    const normalizedUtm: Record<string, string> = {};
+    if (shouldTagUtm) {
+      const raw = {
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        utm_term,
+      } as Record<string, unknown>;
+      for (const key of UTM_KEYS) {
+        const val = raw[key];
+        if (typeof val === 'string') {
+          const norm = normalizeValue(val);
+          if (norm) normalizedUtm[key] = norm;
+        }
+      }
+    }
+
+    // Deduplicate: if a lead with this email already exists, return it.
+    // We also opportunistically patch UTM fields onto the existing lead so
+    // a re-submit with fresh campaign attribution updates Close.
     const existingLeadId = await findLeadByEmail(email);
     if (existingLeadId) {
       console.log('Lead already exists for email, returning existing:', { email, leadId: existingLeadId });
+
+      const utmPatch: Record<string, unknown> = {};
+      if (normalizedUtm.utm_source) utmPatch[`custom.${CLOSE_FIELDS.utmSource}`] = normalizedUtm.utm_source;
+      if (normalizedUtm.utm_medium) utmPatch[`custom.${CLOSE_FIELDS.utmMedium}`] = normalizedUtm.utm_medium;
+      if (normalizedUtm.utm_campaign) utmPatch[`custom.${CLOSE_FIELDS.utmCampaign}`] = normalizedUtm.utm_campaign;
+      if (normalizedUtm.utm_content) utmPatch[`custom.${CLOSE_FIELDS.utmContent}`] = normalizedUtm.utm_content;
+      if (normalizedUtm.utm_term) utmPatch[`custom.${CLOSE_FIELDS.utmTerm}`] = normalizedUtm.utm_term;
+      if (Object.keys(utmPatch).length > 0) {
+        await updateLeadFields(existingLeadId, utmPatch);
+      }
+
       return NextResponse.json({ success: true, leadId: existingLeadId });
     }
 
@@ -101,6 +150,24 @@ export async function POST(request: NextRequest) {
     }
     if (clientUserAgent) {
       leadPayload[`custom.${CUSTOM_FIELDS.clientUserAgent}`] = clientUserAgent;
+    }
+
+    // Add UTM attribution fields when present and the request doesn't
+    // look like an automated scanner.
+    if (normalizedUtm.utm_source) {
+      leadPayload[`custom.${CLOSE_FIELDS.utmSource}`] = normalizedUtm.utm_source;
+    }
+    if (normalizedUtm.utm_medium) {
+      leadPayload[`custom.${CLOSE_FIELDS.utmMedium}`] = normalizedUtm.utm_medium;
+    }
+    if (normalizedUtm.utm_campaign) {
+      leadPayload[`custom.${CLOSE_FIELDS.utmCampaign}`] = normalizedUtm.utm_campaign;
+    }
+    if (normalizedUtm.utm_content) {
+      leadPayload[`custom.${CLOSE_FIELDS.utmContent}`] = normalizedUtm.utm_content;
+    }
+    if (normalizedUtm.utm_term) {
+      leadPayload[`custom.${CLOSE_FIELDS.utmTerm}`] = normalizedUtm.utm_term;
     }
 
     // Create lead in Close CRM
