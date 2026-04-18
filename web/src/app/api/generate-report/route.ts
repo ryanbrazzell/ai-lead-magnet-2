@@ -92,6 +92,10 @@ interface GenerateReportRequest {
   utm_campaign?: string;
   utm_content?: string;
   utm_term?: string;
+  // Optional apology opener. When present, replaces the default
+  // "Your Time Freedom Report is ready..." paragraph in the email body.
+  // Used to resend reports for leads whose original run failed.
+  apologyIntro?: string;
 }
 
 type LeadResolution = 'provided' | 'verified' | 'found' | 'created' | 'failed';
@@ -128,7 +132,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, firstName, lastName, phone, revenue, painPoints, leadId } = body;
+  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro } = body;
 
   if (!email) {
     return NextResponse.json(
@@ -142,7 +146,7 @@ export async function POST(request: NextRequest) {
   // Run pipeline and await completion. The client fires this with keepalive:true
   // and navigates away, so they don't wait for this response. But the server
   // must await to prevent early termination.
-  const result = await runPipeline(submissionId, { email, firstName, lastName, phone, revenue, painPoints, leadId });
+  const result = await runPipeline(submissionId, { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro });
 
   // Send Slack notification for every pipeline run (success or failure)
   // Must await so Vercel doesn't kill the function before the webhook completes
@@ -439,7 +443,7 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const userData = { firstName, lastName, email, phone };
-    const htmlContent = generateEmailHtml(firstName, userData, blobUrl || undefined);
+    const htmlContent = generateEmailHtml(firstName, userData, blobUrl || undefined, data.apologyIntro);
     const emailSubject = `${firstName || 'Hi'}, Your Time Freedom Report is Ready`;
 
     const { data: emailData, error } = await resend.emails.send({
