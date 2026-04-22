@@ -19,6 +19,7 @@ import { buildSimplifiedPrompt, buildEmergencyPrompt } from './prompts';
 import { extractDomainFromEmail, scrapeWebsiteContent } from '@/lib/website/analyzer';
 import { researchWebsite, toWebsiteAnalysis } from './research';
 import { sanityCheckReport } from './sanity-check';
+import { UsageCapExceededError, isUsageCapError } from './anthropic-errors';
 
 const log = {
   info: (message: string, context?: Record<string, unknown>) => {
@@ -235,6 +236,13 @@ export async function generateTasks(
     return result;
   } catch (error) {
     const err = error as Error;
+    if (isUsageCapError(err)) {
+      log.error('Anthropic usage cap hit on primary attempt; skipping fallbacks', {
+        leadType,
+        error: err.message,
+      });
+      throw new UsageCapExceededError(err.message, err);
+    }
     errors.push(`Two-prompt chain: ${err.message}`);
     log.warn('Two-prompt chain failed, falling back to simplified', {
       leadType,
@@ -249,6 +257,13 @@ export async function generateTasks(
     return await generateWithClaude(simplifiedPrompt);
   } catch (error) {
     const err = error as Error;
+    if (isUsageCapError(err)) {
+      log.error('Anthropic usage cap hit on simplified attempt; skipping emergency', {
+        leadType,
+        error: err.message,
+      });
+      throw new UsageCapExceededError(err.message, err);
+    }
     errors.push(`Simplified attempt: ${err.message}`);
     log.warn('Simplified prompt failed, escalating to emergency', {
       error: err.message,
@@ -262,6 +277,9 @@ export async function generateTasks(
     return await generateWithClaude(emergencyPrompt);
   } catch (error) {
     const err = error as Error;
+    if (isUsageCapError(err)) {
+      throw new UsageCapExceededError(err.message, err);
+    }
     errors.push(`Emergency attempt: ${err.message}`);
     log.error('All task generation attempts failed', { errors });
   }

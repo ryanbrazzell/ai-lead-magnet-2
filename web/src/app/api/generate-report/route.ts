@@ -44,6 +44,8 @@ import {
   resolveLeadByEmail,
   CLOSE_FIELDS,
 } from '@/lib/close/client';
+import { UsageCapExceededError } from '@/lib/ai/anthropic-errors';
+import { enqueue as enqueueRetry, type QueuedForm } from '@/lib/retry-queue';
 
 // Pipeline = lead resolution + grounded research + two-prompt chain +
 // sanity check + PDF generation + S3 upload + email send + CRM update.
@@ -96,6 +98,10 @@ interface GenerateReportRequest {
   // "Your Time Freedom Report is ready..." paragraph in the email body.
   // Used to resend reports for leads whose original run failed.
   apologyIntro?: string;
+  // True when the retry-queue cron is invoking this route. Skips re-enqueueing
+  // on cap hit (the cron already holds the entry and manages attempt counts)
+  // so we don't create a second queue entry for the same lead.
+  fromCron?: boolean;
 }
 
 type LeadResolution = 'provided' | 'verified' | 'found' | 'created' | 'failed';
@@ -117,6 +123,12 @@ interface PipelineResult {
   blobUrl?: string;
   resendMessageId?: string;
   durationMs: number;
+  /**
+   * True when the pipeline stopped because the Anthropic usage cap was hit
+   * and the lead was enqueued for silent retry. Distinct from a real failure
+   * so we can send an informational Slack alert instead of a red alarm.
+   */
+  queuedForRetry?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -132,7 +144,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro } = body;
+  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro, fromCron } = body;
 
   if (!email) {
     return NextResponse.json(
@@ -146,17 +158,22 @@ export async function POST(request: NextRequest) {
   // Run pipeline and await completion. The client fires this with keepalive:true
   // and navigates away, so they don't wait for this response. But the server
   // must await to prevent early termination.
-  const result = await runPipeline(submissionId, { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro });
+  const result = await runPipeline(submissionId, { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro, fromCron });
 
-  // Send Slack notification for every pipeline run (success or failure)
-  // Must await so Vercel doesn't kill the function before the webhook completes
-  await notifyPipelineResult(result);
+  // Send Slack notification for every pipeline run (success or failure).
+  // Must await so Vercel doesn't kill the function before the webhook completes.
+  // Cron-driven retries skip this — the cron emits its own summary alert so we
+  // don't spam Slack with one message per queue drain attempt.
+  if (!fromCron) {
+    await notifyPipelineResult(result);
+  }
 
   return NextResponse.json({
     success: result.success,
     queued: true,
     submissionId: result.submissionId,
     failedStep: result.failedStep,
+    queuedForRetry: result.queuedForRetry === true,
   });
 }
 
@@ -180,6 +197,21 @@ async function notifyPipelineResult(result: PipelineResult) {
     await sendSlackAlert('Report Delivered', {
       emoji: ':white_check_mark:',
       error: `Report generated and emailed successfully.${stepsLine}`,
+      endpoint: '/api/generate-report',
+      userEmail: result.email,
+      leadId: result.leadId,
+      timestamp: new Date().toISOString(),
+    });
+  } else if (result.queuedForRetry) {
+    // Informational: the lead hasn't failed, it's queued for the hourly cron
+    // to drain once the Anthropic cap lifts. One soft alert per hit — no PagerDuty-
+    // style red alarm, and no separate sendCriticalAlert email, so we avoid the
+    // multi-alert flood we saw before.
+    await sendSlackAlert('Report Queued (Anthropic cap)', {
+      emoji: ':hourglass_flowing_sand:',
+      error:
+        `Anthropic usage cap hit — lead stashed for silent retry. ` +
+        `Hourly cron will drain once cap resets.${stepsLine}`,
       endpoint: '/api/generate-report',
       userEmail: result.email,
       leadId: result.leadId,
@@ -337,6 +369,81 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
   try {
     result = await generateTasks(leadData);
   } catch (err) {
+    // Usage-cap case: Anthropic's monthly spend cap was hit. Every retry will
+    // fail with the same error until the cap resets. Enqueue the lead silently
+    // and return — a cron drains the queue after the cap lifts. No critical
+    // alert: the lead isn't lost, just delayed.
+    if (err instanceof UsageCapExceededError) {
+      log.error(submissionId, 'Task generation hit usage cap — enqueueing for retry', {
+        email,
+        leadId,
+      });
+
+      if (leadId && !data.fromCron) {
+        const queuedForm: QueuedForm = {
+          email,
+          firstName,
+          lastName,
+          phone,
+          revenue,
+          painPoints,
+          utm_source: data.utm_source,
+          utm_medium: data.utm_medium,
+          utm_campaign: data.utm_campaign,
+          utm_content: data.utm_content,
+          utm_term: data.utm_term,
+        };
+
+        try {
+          await enqueueRetry(leadId, submissionId, queuedForm);
+          log.info(submissionId, 'Lead enqueued for retry after cap reset', { leadId });
+        } catch (enqueueErr) {
+          // Enqueue failure is bad — user would otherwise be lost. Raise a
+          // critical alert in this narrow case.
+          const e = enqueueErr as Error;
+          log.error(submissionId, 'Retry enqueue FAILED — lead will not be auto-recovered', {
+            email,
+            leadId,
+            error: e.message,
+          });
+          void sendCriticalAlert('Retry Queue Enqueue Failed', {
+            error: `[${submissionId}] Could not stash lead for retry: ${e.message}`,
+            endpoint: '/api/generate-report',
+            userEmail: email,
+            leadId,
+          });
+        }
+      } else {
+        // No leadId means no durable handle for the cron to re-drive. Raise
+        // a critical alert so we can manually recover.
+        log.error(submissionId, 'Cap hit but no leadId — cannot enqueue for retry', { email });
+        void sendCriticalAlert('Usage Cap Hit Without LeadId', {
+          error: `[${submissionId}] Anthropic cap hit and no leadId resolved — manual recovery needed`,
+          endpoint: '/api/generate-report',
+          userEmail: email,
+        });
+      }
+
+      status.failedStep = 'Queued for retry (usage cap)';
+      status.error = err.message;
+      status.queuedForRetry = leadId ? true : false;
+      status.durationMs = Date.now() - startTime;
+
+      // Audit trail: leave a note on first enqueue only. Cron retries skip
+      // this to avoid spamming the activity feed with identical "still capped"
+      // notes — the cron's own Slack summary covers retry visibility.
+      if (leadId && !data.fromCron) {
+        const queuedNoteHtml =
+          `<p><strong>Report Queued (Anthropic usage cap)</strong></p>` +
+          `<p>Submission: <code>${submissionId}</code></p>` +
+          `<p>The monthly Anthropic spend cap was hit. Lead has been stashed in ` +
+          `the retry queue and will be delivered automatically after the cap resets.</p>`;
+        await addDurableNote(leadId, queuedNoteHtml);
+      }
+
+      return status;
+    }
+
     const error = err as Error;
     log.error(submissionId, 'Task generation failed', { email, error: error.message });
     void sendCriticalAlert('Server-Side Task Generation Failed', {
