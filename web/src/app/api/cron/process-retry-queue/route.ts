@@ -83,7 +83,16 @@ async function drainOne(
       userEmail: form.email,
       leadId,
     });
-    return { leadId, email: form.email, result: 'gave_up' };
+    // When the remove itself failed, return storage_error so the summary math
+    // and the `remaining` count reflect that the blob is still in the queue.
+    // Otherwise the next cron run will give up on the same entry again and
+    // spam alerts until it's manually deleted.
+    return {
+      leadId,
+      email: form.email,
+      result: removed.ok ? 'gave_up' : 'storage_error',
+      detail: removed.ok ? undefined : `gave_up; remove failed: ${removed.error}`,
+    };
   }
 
   const retrySubmissionId = crypto.randomUUID();
