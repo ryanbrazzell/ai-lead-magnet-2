@@ -190,28 +190,62 @@ const LOCK_PATH = `${QUEUE_PREFIX}_lock.json`;
 const LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes — well past our 300s maxDuration
 
 /**
+ * Distinguishes a real storage failure from "lock is held". A held lock is
+ * expected (two cron runs overlap) — a storage failure is an operator
+ * problem and must not silently skip the drain.
+ */
+export class LockAcquireFailure extends Error {
+  readonly cause?: unknown;
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = 'LockAcquireFailure';
+    this.cause = cause;
+  }
+}
+
+/**
  * Best-effort mutex using the blob itself. Not atomic (Vercel Blob doesn't
  * offer CAS) but good enough: readers check timestamp freshness, and the
  * ~10 minute stale window prevents a dead holder from blocking forever.
  * Two concurrent runs could still race on first acquire — acceptable at
  * our scale (hourly cron, short drain windows).
+ *
+ * Returns:
+ *   true  — lock freshly acquired, caller must call releaseLock()
+ *   false — lock held by another live run, caller should skip quietly
+ *
+ * Throws LockAcquireFailure on storage errors. Callers MUST distinguish
+ * that from a `false` return — a storage failure should surface to
+ * operators, not silently absorb like contention.
  */
 export async function acquireLock(): Promise<boolean> {
+  let existingBlobs;
   try {
-    const { blobs } = await list({ prefix: LOCK_PATH });
-    const existing = blobs.find((b) => b.pathname === LOCK_PATH);
-    if (existing) {
-      const res = await fetch(existing.url).catch(() => null);
-      if (res?.ok) {
-        const body = (await res.json().catch(() => null)) as
-          | { acquiredAt?: string }
-          | null;
-        if (body?.acquiredAt) {
-          const age = Date.now() - new Date(body.acquiredAt).getTime();
-          if (age < LOCK_STALE_MS) return false;
-        }
+    existingBlobs = await list({ prefix: LOCK_PATH });
+  } catch (err) {
+    throw new LockAcquireFailure(
+      `list() failed: ${err instanceof Error ? err.message : String(err)}`,
+      err
+    );
+  }
+
+  const existing = existingBlobs.blobs.find((b) => b.pathname === LOCK_PATH);
+  if (existing) {
+    // Fetching the existing lock body is best-effort. If that fetch fails
+    // we fall through to overwrite — stale-lock recovery beats a stuck cron.
+    const res = await fetch(existing.url).catch(() => null);
+    if (res?.ok) {
+      const body = (await res.json().catch(() => null)) as
+        | { acquiredAt?: string }
+        | null;
+      if (body?.acquiredAt) {
+        const age = Date.now() - new Date(body.acquiredAt).getTime();
+        if (age < LOCK_STALE_MS) return false;
       }
     }
+  }
+
+  try {
     await put(
       LOCK_PATH,
       JSON.stringify({ acquiredAt: new Date().toISOString() }),
@@ -223,8 +257,11 @@ export async function acquireLock(): Promise<boolean> {
       }
     );
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    throw new LockAcquireFailure(
+      `put() failed: ${err instanceof Error ? err.message : String(err)}`,
+      err
+    );
   }
 }
 

@@ -7,11 +7,12 @@ import {
   moveToDeadLetter,
   acquireLock,
   releaseLock,
+  LockAcquireFailure,
   MAX_RETRY_ATTEMPTS,
   QUEUE_AGE_ALERT_MS,
 } from '@/lib/retry-queue';
 import { sendSlackAlert, sendCriticalAlert } from '@/lib/alerts/critical-alert';
-import { runPipeline } from '@/app/api/generate-report/route';
+import { runPipeline } from '@/lib/report-pipeline';
 
 export const maxDuration = 300;
 
@@ -33,8 +34,37 @@ interface DrainOutcome {
     | 'still_capped'
     | 'transient_failure'
     | 'gave_up'
-    | 'error';
+    | 'error'
+    | 'storage_error';
   detail?: string;
+}
+
+/**
+ * Safely persist a queue-state change. We wrap enqueue/remove so a single
+ * Blob hiccup doesn't abort the whole drain or, worse, silently escape the
+ * drainOne return and let the caller think the lead is still safely queued.
+ */
+async function safeEnqueue(
+  leadId: string,
+  submissionId: string,
+  form: Parameters<typeof enqueue>[2],
+  attempts: number
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await enqueue(leadId, submissionId, form, attempts);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function safeRemove(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await remove(url);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 async function drainOne(
@@ -43,11 +73,12 @@ async function drainOne(
   const { leadId, form, attempts, submissionId, url } = entry;
 
   if (attempts > MAX_RETRY_ATTEMPTS) {
-    await remove(url);
+    const removed = await safeRemove(url);
     void sendCriticalAlert('Retry Queue: Gave Up', {
       error:
         `Lead ${leadId} (${form.email}) exceeded ${MAX_RETRY_ATTEMPTS} retry attempts. ` +
-        `Queue entry deleted. Manual recovery required. Original submission: ${submissionId}`,
+        `${removed.ok ? 'Queue entry deleted.' : `Remove failed: ${removed.error}.`} ` +
+        `Manual recovery required. Original submission: ${submissionId}`,
       endpoint: '/api/cron/process-retry-queue',
       userEmail: form.email,
       leadId,
@@ -80,37 +111,64 @@ async function drainOne(
     );
   } catch (runErr) {
     // Hard runtime failure — keep entry, bump attempts, try again next hour.
-    await enqueue(leadId, submissionId, form, attempts + 1);
+    const reenq = await safeEnqueue(leadId, submissionId, form, attempts + 1);
     return {
       leadId,
       email: form.email,
-      result: 'error',
-      detail: runErr instanceof Error ? runErr.message : String(runErr),
+      result: reenq.ok ? 'error' : 'storage_error',
+      detail:
+        (runErr instanceof Error ? runErr.message : String(runErr)) +
+        (reenq.ok ? '' : ` [enqueue failed: ${reenq.error}]`),
     };
   }
 
   // Success path: email actually sent. Safe to remove from queue.
   if (result.success) {
-    await remove(url);
+    const removed = await safeRemove(url);
+    if (!removed.ok) {
+      // Double-send risk: the user got the email, but we couldn't drop the
+      // entry. The next cron run could re-deliver. Alert so we can clean up
+      // manually before that happens.
+      void sendCriticalAlert('Retry Queue: Delete After Delivery Failed', {
+        error:
+          `Lead ${leadId} (${form.email}) was delivered but the queue entry could ` +
+          `not be removed: ${removed.error}. Next cron run may re-send. ` +
+          `Delete manually: ${url}`,
+        endpoint: '/api/cron/process-retry-queue',
+        userEmail: form.email,
+        leadId,
+      });
+      return {
+        leadId,
+        email: form.email,
+        result: 'storage_error',
+        detail: `delivered but remove failed: ${removed.error}`,
+      };
+    }
     return { leadId, email: form.email, result: 'delivered' };
   }
 
   // Cap still hit — bump attempts, leave entry for next hour.
   if (result.queuedForRetry || /usage cap/i.test(result.failedStep || '')) {
-    await enqueue(leadId, submissionId, form, attempts + 1);
-    return { leadId, email: form.email, result: 'still_capped' };
+    const reenq = await safeEnqueue(leadId, submissionId, form, attempts + 1);
+    return {
+      leadId,
+      email: form.email,
+      result: reenq.ok ? 'still_capped' : 'storage_error',
+      detail: reenq.ok ? undefined : `still capped; enqueue bump failed: ${reenq.error}`,
+    };
   }
 
-  // Any other failure (PDF, Resend, CRM update): could be transient (Resend
-  // hiccup, Vercel Blob latency, etc). Leave in queue, bump attempts. The
-  // MAX_RETRY_ATTEMPTS gate above will eventually give up and alert if the
-  // lead never succeeds.
-  await enqueue(leadId, submissionId, form, attempts + 1);
+  // Any other failure (PDF, Resend, CRM update): could be transient. Leave in
+  // queue, bump attempts. MAX_RETRY_ATTEMPTS eventually gives up and alerts.
+  const reenq = await safeEnqueue(leadId, submissionId, form, attempts + 1);
   return {
     leadId,
     email: form.email,
-    result: 'transient_failure',
-    detail: result.failedStep || 'unknown',
+    result: reenq.ok ? 'transient_failure' : 'storage_error',
+    detail:
+      (result.failedStep || 'unknown') +
+      (reenq.ok ? '' : ` [enqueue failed: ${reenq.error}]`),
   };
 }
 
@@ -119,8 +177,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const gotLock = await acquireLock();
+  // Distinguish three cases: lock is freshly acquired (proceed), lock is held
+  // by a live run (skip, no alert), or the Blob store itself broke (alert).
+  let gotLock: boolean;
+  try {
+    gotLock = await acquireLock();
+  } catch (err) {
+    if (err instanceof LockAcquireFailure) {
+      void sendCriticalAlert('Retry Queue: Lock Store Error', {
+        error:
+          `Could not acquire retry-queue lock due to storage failure: ${err.message}. ` +
+          `Queue drain skipped this run. If this persists, queued leads stall.`,
+        endpoint: '/api/cron/process-retry-queue',
+      });
+    }
+    return NextResponse.json(
+      { ok: false, skipped: 'lock_error', error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
+  }
+
   if (!gotLock) {
+    // Another cron run is active. Return 200 so Vercel doesn't retry us.
     return NextResponse.json(
       { ok: true, skipped: 'lock_held', drained: 0 },
       { status: 200 }
@@ -130,20 +208,31 @@ export async function GET(req: NextRequest) {
   try {
     const { entries, corrupted } = await listQueue();
 
-    // Handle corrupted entries first — move to dead-letter + alert, don't
-    // let them pollute successive drain runs.
+    // Handle corrupted entries first — move to dead-letter + alert. Track
+    // moved vs failed separately so the alert reflects what actually happened.
+    let deadLetteredOk = 0;
+    const deadLetterFailures: Array<{ pathname: string; error: string }> = [];
     if (corrupted.length > 0) {
       for (const bad of corrupted) {
         try {
           await moveToDeadLetter(bad.url, bad.pathname, bad.reason);
+          deadLetteredOk++;
         } catch (moveErr) {
-          console.error('[cron:retry-queue] dead-letter move failed', moveErr);
+          const msg = moveErr instanceof Error ? moveErr.message : String(moveErr);
+          console.error('[cron:retry-queue] dead-letter move failed', bad.pathname, msg);
+          deadLetterFailures.push({ pathname: bad.pathname, error: msg });
         }
       }
+      const failureSuffix =
+        deadLetterFailures.length > 0
+          ? ` | Failed to move ${deadLetterFailures.length}: ${deadLetterFailures
+              .map((f) => `${f.pathname} (${f.error})`)
+              .join('; ')}`
+          : '';
       void sendCriticalAlert('Retry Queue: Corrupted Entries', {
         error:
-          `Moved ${corrupted.length} unreadable queue entries to dead-letter. ` +
-          `Paths: ${corrupted.map((c) => c.pathname).join(', ')}`,
+          `Found ${corrupted.length} unreadable queue entries. ` +
+          `Moved ${deadLetteredOk} to dead-letter.${failureSuffix}`,
         endpoint: '/api/cron/process-retry-queue',
       });
     }
@@ -154,6 +243,8 @@ export async function GET(req: NextRequest) {
         drained: 0,
         remaining: 0,
         corrupted: corrupted.length,
+        dead_lettered_ok: deadLetteredOk,
+        dead_letter_failures: deadLetterFailures.length,
       });
     }
 
@@ -162,8 +253,7 @@ export async function GET(req: NextRequest) {
 
     const outcomes: DrainOutcome[] = [];
     let internalFailures = 0;
-    for (let i = 0; i < settled.length; i++) {
-      const r = settled[i];
+    for (const r of settled) {
       if (r.status === 'fulfilled') {
         outcomes.push(r.value);
       } else {
@@ -179,6 +269,7 @@ export async function GET(req: NextRequest) {
       transient_failure: outcomes.filter((o) => o.result === 'transient_failure').length,
       gave_up: outcomes.filter((o) => o.result === 'gave_up').length,
       error: outcomes.filter((o) => o.result === 'error').length,
+      storage_error: outcomes.filter((o) => o.result === 'storage_error').length,
       internal_exception: internalFailures,
     };
 
@@ -205,8 +296,10 @@ export async function GET(req: NextRequest) {
       error:
         `Delivered: ${summary.delivered} | Still capped: ${summary.still_capped} | ` +
         `Transient: ${summary.transient_failure} | Gave up: ${summary.gave_up} | ` +
-        `Errors: ${summary.error} | Internal exc: ${internalFailures} | ` +
-        `Corrupted: ${corrupted.length} | Remaining: ${remaining}`,
+        `Errors: ${summary.error} | Storage errors: ${summary.storage_error} | ` +
+        `Internal exc: ${internalFailures} | ` +
+        `Corrupted: ${corrupted.length} (${deadLetteredOk} moved, ${deadLetterFailures.length} failed) | ` +
+        `Remaining: ${remaining}`,
       endpoint: '/api/cron/process-retry-queue',
     });
 
@@ -214,6 +307,8 @@ export async function GET(req: NextRequest) {
       ok: true,
       ...summary,
       corrupted: corrupted.length,
+      dead_lettered_ok: deadLetteredOk,
+      dead_letter_failures: deadLetterFailures.length,
       remaining,
     });
   } finally {
