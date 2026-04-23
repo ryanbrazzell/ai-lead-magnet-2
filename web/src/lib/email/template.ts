@@ -8,8 +8,14 @@
 /** Base URL for the standalone booking page */
 const BOOKING_PAGE_URL = 'https://report.assistantlaunch.com/book-call';
 
-/** Company website URL */
-const COMPANY_URL = 'https://assistantlaunch.com';
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 /**
  * Builds booking page URL with pre-filled user data.
@@ -58,13 +64,13 @@ export function generateEmailHtml(
   downloadUrl?: string,
   apologyIntro?: string
 ): string {
-  const greeting = firstName || 'there';
+  const greeting = firstName ? escapeHtml(firstName) : 'there';
   const bookingUrl = buildBookingUrl(userData);
   const downloadLink = downloadUrl
     ? `<p style="margin: 0 0 20px 0;"><a href="${downloadUrl}" style="color: #f59e0b; font-weight: bold;">View and download your report here</a></p>`
     : '';
   const opener = apologyIntro?.trim()
-    ? apologyIntro.trim()
+    ? escapeHtml(apologyIntro.trim())
     : `Your Time Freedom Report is ready. It's also attached to this email as a PDF.`;
 
   return `<!DOCTYPE html>
@@ -125,11 +131,11 @@ export function generateEmailText(
   downloadUrl?: string,
   apologyIntro?: string
 ): string {
-  const greeting = firstName || 'there';
+  const greeting = firstName ? escapeHtml(firstName) : 'there';
   const bookingUrl = buildBookingUrl(userData);
   const downloadLine = downloadUrl ? `\nView and download your report here: ${downloadUrl}\n` : '';
   const opener = apologyIntro?.trim()
-    ? apologyIntro.trim()
+    ? escapeHtml(apologyIntro.trim())
     : `Your Time Freedom Report is ready. It's also attached to this email as a PDF.`;
 
   return `Hey ${greeting},

@@ -1,22 +1,10 @@
-/**
- * Retry queue for reports that failed due to Anthropic usage-cap exhaustion.
- *
- * Backed by Vercel Blob at path `retry-queue/{leadId}.json`. We picked Blob
- * because it's already in the stack for report PDFs — no new infrastructure.
- *
- * Entries are small JSON payloads with the original form submission plus
- * an attempt counter. A cron (`/api/cron/process-retry-queue`) drains the
- * queue hourly once the cap resets.
- *
- * Not for general-purpose retries. Only the cap-exceeded path writes here,
- * because (a) we know the underlying call will succeed after reset without
- * any code change, and (b) the user is waiting for the original report.
- */
-
 import { put, list, del } from '@vercel/blob';
 
 const QUEUE_PREFIX = 'retry-queue/';
+const DEAD_LETTER_PREFIX = 'retry-queue-deadletter/';
 export const MAX_RETRY_ATTEMPTS = 3;
+/** Queue entries older than this surface in the age-alert. */
+export const QUEUE_AGE_ALERT_MS = 24 * 60 * 60 * 1000; // 24h
 
 export interface QueuedForm {
   email: string;
@@ -40,29 +28,49 @@ export interface QueueEntry {
   form: QueuedForm;
 }
 
-/**
- * Path used to store the entry. Deterministic on leadId so re-queueing the
- * same lead (e.g. retried again on cap, cron picks it up, caps again) just
- * overwrites the previous entry with an incremented attempt count.
- */
+export interface ListQueueResult {
+  entries: Array<QueueEntry & { url: string; pathname: string }>;
+  /** Corrupted/unreadable blobs — surface these as dead-letter work. */
+  corrupted: Array<{ url: string; pathname: string; reason: string }>;
+}
+
 function pathFor(leadId: string): string {
   return `${QUEUE_PREFIX}${leadId}.json`;
 }
 
+async function readExistingAttempts(leadId: string): Promise<number> {
+  try {
+    const { blobs } = await list({ prefix: pathFor(leadId) });
+    const match = blobs.find((b) => b.pathname === pathFor(leadId));
+    if (!match) return 0;
+    const res = await fetch(match.url);
+    if (!res.ok) return 0;
+    const entry = (await res.json()) as Partial<QueueEntry>;
+    return typeof entry.attempts === 'number' ? entry.attempts : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /**
- * Enqueue or re-enqueue a lead. Overwrites the existing entry if any.
+ * Enqueue or re-enqueue a lead. Preserves the prior attempts count when an
+ * entry already exists so concurrent writers (route.ts + cron) can't reset
+ * retry accounting. If `attempts` is provided explicitly, that wins.
  */
 export async function enqueue(
   leadId: string,
   submissionId: string,
   form: QueuedForm,
-  previousAttempts = 0
+  attempts?: number
 ): Promise<void> {
+  const resolvedAttempts =
+    typeof attempts === 'number' ? attempts : (await readExistingAttempts(leadId)) + 1;
+
   const entry: QueueEntry = {
     leadId,
     submissionId,
     enqueuedAt: new Date().toISOString(),
-    attempts: previousAttempts + 1,
+    attempts: resolvedAttempts,
     form,
   };
 
@@ -75,32 +83,155 @@ export async function enqueue(
 }
 
 /**
- * List all queue entries. Each includes the URL so the caller can delete
- * the blob after processing.
+ * Walk every page of the queue prefix and classify each blob as a valid
+ * entry or a corrupted one. Corrupted entries are NOT filtered silently —
+ * callers must handle them (dead-letter, alert, etc).
  */
-export async function listQueue(): Promise<Array<QueueEntry & { url: string }>> {
-  const { blobs } = await list({ prefix: QUEUE_PREFIX });
+export async function listQueue(): Promise<ListQueueResult> {
+  const entries: ListQueueResult['entries'] = [];
+  const corrupted: ListQueueResult['corrupted'] = [];
 
-  const entries = await Promise.all(
-    blobs.map(async (blob) => {
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: QUEUE_PREFIX, cursor });
+    for (const blob of page.blobs) {
+      // Skip the lock sentinel (see acquireLock below).
+      if (blob.pathname === LOCK_PATH) continue;
+
       try {
         const res = await fetch(blob.url);
-        if (!res.ok) return null;
-        const entry = (await res.json()) as QueueEntry;
-        return { ...entry, url: blob.url };
-      } catch {
-        return null;
+        if (!res.ok) {
+          corrupted.push({
+            url: blob.url,
+            pathname: blob.pathname,
+            reason: `fetch ${res.status}`,
+          });
+          continue;
+        }
+        const parsed = (await res.json()) as QueueEntry;
+        if (
+          !parsed ||
+          typeof parsed.leadId !== 'string' ||
+          typeof parsed.submissionId !== 'string' ||
+          typeof parsed.attempts !== 'number' ||
+          !parsed.form
+        ) {
+          corrupted.push({
+            url: blob.url,
+            pathname: blob.pathname,
+            reason: 'schema mismatch',
+          });
+          continue;
+        }
+        entries.push({ ...parsed, url: blob.url, pathname: blob.pathname });
+      } catch (err) {
+        corrupted.push({
+          url: blob.url,
+          pathname: blob.pathname,
+          reason: err instanceof Error ? err.message : String(err),
+        });
       }
-    })
-  );
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
 
-  return entries.filter((e): e is QueueEntry & { url: string } => e !== null);
+  return { entries, corrupted };
+}
+
+export async function remove(urlOrLeadId: string): Promise<void> {
+  const target = urlOrLeadId.startsWith('http') ? urlOrLeadId : pathFor(urlOrLeadId);
+  await del(target);
 }
 
 /**
- * Delete a queue entry after successful processing (or permanent give-up).
+ * Move a corrupted blob out of the active queue so it stops polluting
+ * drain runs. We copy by writing a new blob under the dead-letter prefix,
+ * then delete the original.
  */
-export async function remove(leadIdOrUrl: string): Promise<void> {
-  const target = leadIdOrUrl.startsWith('http') ? leadIdOrUrl : pathFor(leadIdOrUrl);
-  await del(target);
+export async function moveToDeadLetter(
+  url: string,
+  pathname: string,
+  reason: string
+): Promise<void> {
+  const name = pathname.startsWith(QUEUE_PREFIX)
+    ? pathname.slice(QUEUE_PREFIX.length)
+    : pathname;
+  const target = `${DEAD_LETTER_PREFIX}${Date.now()}-${name}`;
+
+  let bodyText = '';
+  try {
+    const res = await fetch(url);
+    bodyText = await res.text().catch(() => '');
+  } catch {
+    bodyText = '';
+  }
+
+  const wrapper = JSON.stringify({
+    movedAt: new Date().toISOString(),
+    reason,
+    original: { url, pathname },
+    originalBody: bodyText,
+  });
+
+  await put(target, wrapper, {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+  await del(url);
+}
+
+// ---------------------------------------------------------------------------
+// Lock for overlapping cron runs (finding #8)
+// ---------------------------------------------------------------------------
+
+const LOCK_PATH = `${QUEUE_PREFIX}_lock.json`;
+const LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes — well past our 300s maxDuration
+
+/**
+ * Best-effort mutex using the blob itself. Not atomic (Vercel Blob doesn't
+ * offer CAS) but good enough: readers check timestamp freshness, and the
+ * ~10 minute stale window prevents a dead holder from blocking forever.
+ * Two concurrent runs could still race on first acquire — acceptable at
+ * our scale (hourly cron, short drain windows).
+ */
+export async function acquireLock(): Promise<boolean> {
+  try {
+    const { blobs } = await list({ prefix: LOCK_PATH });
+    const existing = blobs.find((b) => b.pathname === LOCK_PATH);
+    if (existing) {
+      const res = await fetch(existing.url).catch(() => null);
+      if (res?.ok) {
+        const body = (await res.json().catch(() => null)) as
+          | { acquiredAt?: string }
+          | null;
+        if (body?.acquiredAt) {
+          const age = Date.now() - new Date(body.acquiredAt).getTime();
+          if (age < LOCK_STALE_MS) return false;
+        }
+      }
+    }
+    await put(
+      LOCK_PATH,
+      JSON.stringify({ acquiredAt: new Date().toISOString() }),
+      {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+      }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function releaseLock(): Promise<void> {
+  try {
+    await del(LOCK_PATH);
+  } catch {
+    // release is best-effort — stale lock self-expires
+  }
 }

@@ -98,10 +98,6 @@ interface GenerateReportRequest {
   // "Your Time Freedom Report is ready..." paragraph in the email body.
   // Used to resend reports for leads whose original run failed.
   apologyIntro?: string;
-  // True when the retry-queue cron is invoking this route. Skips re-enqueueing
-  // on cap hit (the cron already holds the entry and manages attempt counts)
-  // so we don't create a second queue entry for the same lead.
-  fromCron?: boolean;
 }
 
 type LeadResolution = 'provided' | 'verified' | 'found' | 'created' | 'failed';
@@ -144,7 +140,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro, fromCron } = body;
+  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro } = body;
+
+  // Belt and suspenders: apologyIntro is normally set by the cron with a
+  // known-safe string. But since it's accepted on the public request body
+  // today (via /api/resend-report or manual admin calls) we strip HTML
+  // before it enters the pipeline.
+  const safeApologyIntro = apologyIntro
+    ? apologyIntro.replace(/<[^>]*>/g, '').slice(0, 500)
+    : undefined;
 
   if (!email) {
     return NextResponse.json(
@@ -158,15 +162,25 @@ export async function POST(request: NextRequest) {
   // Run pipeline and await completion. The client fires this with keepalive:true
   // and navigates away, so they don't wait for this response. But the server
   // must await to prevent early termination.
-  const result = await runPipeline(submissionId, { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro, fromCron });
+  const result = await runPipeline(submissionId, {
+    email,
+    firstName,
+    lastName,
+    phone,
+    revenue,
+    painPoints,
+    leadId,
+    utm_source: body.utm_source,
+    utm_medium: body.utm_medium,
+    utm_campaign: body.utm_campaign,
+    utm_content: body.utm_content,
+    utm_term: body.utm_term,
+    apologyIntro: safeApologyIntro,
+  });
 
-  // Send Slack notification for every pipeline run (success or failure).
-  // Must await so Vercel doesn't kill the function before the webhook completes.
-  // Cron-driven retries skip this — the cron emits its own summary alert so we
-  // don't spam Slack with one message per queue drain attempt.
-  if (!fromCron) {
-    await notifyPipelineResult(result);
-  }
+  // Send Slack notification for every pipeline run (success or failure)
+  // Must await so Vercel doesn't kill the function before the webhook completes
+  await notifyPipelineResult(result);
 
   return NextResponse.json({
     success: result.success,
@@ -237,7 +251,16 @@ async function notifyPipelineResult(result: PipelineResult) {
   }
 }
 
-async function runPipeline(submissionId: string, data: GenerateReportRequest): Promise<PipelineResult> {
+interface PipelineOptions {
+  /** True when invoked from the retry cron. Skips enqueue + notification. */
+  fromCron?: boolean;
+}
+
+export async function runPipeline(
+  submissionId: string,
+  data: GenerateReportRequest,
+  options: PipelineOptions = {}
+): Promise<PipelineResult> {
   const startTime = Date.now();
   const { email, firstName, lastName, phone, revenue, painPoints } = data;
   let { leadId } = data;
@@ -369,17 +392,13 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
   try {
     result = await generateTasks(leadData);
   } catch (err) {
-    // Usage-cap case: Anthropic's monthly spend cap was hit. Every retry will
-    // fail with the same error until the cap resets. Enqueue the lead silently
-    // and return — a cron drains the queue after the cap lifts. No critical
-    // alert: the lead isn't lost, just delayed.
     if (err instanceof UsageCapExceededError) {
-      log.error(submissionId, 'Task generation hit usage cap — enqueueing for retry', {
-        email,
-        leadId,
-      });
+      log.error(submissionId, 'Task generation hit usage cap', { email, leadId });
 
-      if (leadId && !data.fromCron) {
+      // Enqueue FIRST. Only on confirmed success do we mark the pipeline as
+      // "queued for retry" — anything else falls through to a real critical alert.
+      let enqueued = false;
+      if (leadId && !options.fromCron) {
         const queuedForm: QueuedForm = {
           email,
           firstName,
@@ -393,54 +412,58 @@ async function runPipeline(submissionId: string, data: GenerateReportRequest): P
           utm_content: data.utm_content,
           utm_term: data.utm_term,
         };
-
         try {
           await enqueueRetry(leadId, submissionId, queuedForm);
+          enqueued = true;
           log.info(submissionId, 'Lead enqueued for retry after cap reset', { leadId });
         } catch (enqueueErr) {
-          // Enqueue failure is bad — user would otherwise be lost. Raise a
-          // critical alert in this narrow case.
           const e = enqueueErr as Error;
-          log.error(submissionId, 'Retry enqueue FAILED — lead will not be auto-recovered', {
+          log.error(submissionId, 'Retry enqueue FAILED', {
             email,
             leadId,
             error: e.message,
           });
-          void sendCriticalAlert('Retry Queue Enqueue Failed', {
-            error: `[${submissionId}] Could not stash lead for retry: ${e.message}`,
-            endpoint: '/api/generate-report',
-            userEmail: email,
-            leadId,
-          });
         }
-      } else {
-        // No leadId means no durable handle for the cron to re-drive. Raise
-        // a critical alert so we can manually recover.
-        log.error(submissionId, 'Cap hit but no leadId — cannot enqueue for retry', { email });
-        void sendCriticalAlert('Usage Cap Hit Without LeadId', {
-          error: `[${submissionId}] Anthropic cap hit and no leadId resolved — manual recovery needed`,
+      }
+
+      if (enqueued) {
+        status.failedStep = 'Queued for retry (usage cap)';
+        status.error = err.message;
+        status.queuedForRetry = true;
+        status.durationMs = Date.now() - startTime;
+
+        // Audit note only when we actually queued — anything else misrepresents state.
+        if (leadId) {
+          const queuedNoteHtml =
+            `<p><strong>Report Queued (Anthropic usage cap)</strong></p>` +
+            `<p>Submission: <code>${submissionId}</code></p>` +
+            `<p>The monthly Anthropic spend cap was hit. Lead is stashed in the ` +
+            `retry queue and will be delivered automatically after the cap resets.</p>`;
+          await addDurableNote(leadId, queuedNoteHtml);
+        }
+
+        return status;
+      }
+
+      // Either no leadId, or enqueue failed, or fromCron (cron manages its own
+      // retry state — don't re-enqueue). In all three cases treat as a real
+      // pipeline failure so we page an operator.
+      if (!options.fromCron) {
+        void sendCriticalAlert('Task Generation: Cap + Enqueue Failure', {
+          error:
+            `[${submissionId}] Anthropic usage cap hit AND queue enqueue ` +
+            `failed (or no leadId). User will NOT get their report without ` +
+            `manual recovery. Underlying: ${err.message}`,
           endpoint: '/api/generate-report',
           userEmail: email,
+          leadId,
         });
       }
 
-      status.failedStep = 'Queued for retry (usage cap)';
+      status.failedStep = 'Task Generation (cap, not queued)';
       status.error = err.message;
-      status.queuedForRetry = leadId ? true : false;
+      status.queuedForRetry = false;
       status.durationMs = Date.now() - startTime;
-
-      // Audit trail: leave a note on first enqueue only. Cron retries skip
-      // this to avoid spamming the activity feed with identical "still capped"
-      // notes — the cron's own Slack summary covers retry visibility.
-      if (leadId && !data.fromCron) {
-        const queuedNoteHtml =
-          `<p><strong>Report Queued (Anthropic usage cap)</strong></p>` +
-          `<p>Submission: <code>${submissionId}</code></p>` +
-          `<p>The monthly Anthropic spend cap was hit. Lead has been stashed in ` +
-          `the retry queue and will be delivered automatically after the cap resets.</p>`;
-        await addDurableNote(leadId, queuedNoteHtml);
-      }
-
       return status;
     }
 

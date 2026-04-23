@@ -1,67 +1,44 @@
-/**
- * API Route: GET /api/cron/process-retry-queue
- *
- * Hourly Vercel cron that drains the retry queue. Queue entries are leads
- * whose report failed because the Anthropic monthly spend cap was hit.
- * Once the cap resets (or is raised), this cron re-runs the full pipeline
- * for each queued lead and delivers the report they were promised.
- *
- * Auth: Vercel cron requests include `authorization: Bearer ${CRON_SECRET}`.
- *
- * Per-run behaviour for each queued entry:
- *   - success  → delete the queue entry
- *   - cap still hit → re-enqueue with attempts + 1 (or give up after MAX)
- *   - other failure → delete + Slack alert (permanent, won't succeed on retry)
- *
- * The cron is capped at a small batch size per run; remaining entries are
- * picked up on the next hour. Hourly is more than fast enough — the only
- * time this queue fills is when a cap is hit, and the cap reset cadence
- * is daily at best.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { listQueue, remove, enqueue, MAX_RETRY_ATTEMPTS } from '@/lib/retry-queue';
+import crypto from 'crypto';
+import {
+  listQueue,
+  remove,
+  enqueue,
+  moveToDeadLetter,
+  acquireLock,
+  releaseLock,
+  MAX_RETRY_ATTEMPTS,
+  QUEUE_AGE_ALERT_MS,
+} from '@/lib/retry-queue';
 import { sendSlackAlert, sendCriticalAlert } from '@/lib/alerts/critical-alert';
+import { runPipeline } from '@/app/api/generate-report/route';
 
-// Each drain POST hits the pipeline for ~80s. Cap the batch so the cron
-// function stays within Vercel's max duration. Remaining entries wait an hour.
-const MAX_DRAIN_PER_RUN = 8;
-
-// Pipeline can take ~90s per lead; give ourselves headroom for 8 in parallel.
 export const maxDuration = 300;
 
+const MAX_DRAIN_PER_RUN = 15;
 const APOLOGY_INTRO =
   'Thanks for being patient - the report took a second to deliver, but here it is.';
 
-function baseUrl(req: NextRequest): string {
-  // Prefer the request origin (works in all Vercel envs). Fall back to the
-  // hardcoded production URL only as a last resort.
-  const host = req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  if (host) return `${proto}://${host}`;
-  return 'https://report.assistantlaunch.com';
-}
-
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    // No secret configured — refuse rather than leaving the endpoint open.
-    return false;
-  }
-  const header = req.headers.get('authorization');
-  return header === `Bearer ${secret}`;
+  if (!secret) return false;
+  return req.headers.get('authorization') === `Bearer ${secret}`;
 }
 
 interface DrainOutcome {
   leadId: string;
   email: string;
-  result: 'delivered' | 'still_capped' | 'gave_up' | 'permanent_failure' | 'error';
+  result:
+    | 'delivered'
+    | 'still_capped'
+    | 'transient_failure'
+    | 'gave_up'
+    | 'error';
   detail?: string;
 }
 
 async function drainOne(
-  entry: Awaited<ReturnType<typeof listQueue>>[number],
-  origin: string
+  entry: Awaited<ReturnType<typeof listQueue>>['entries'][number]
 ): Promise<DrainOutcome> {
   const { leadId, form, attempts, submissionId, url } = entry;
 
@@ -69,8 +46,8 @@ async function drainOne(
     await remove(url);
     void sendCriticalAlert('Retry Queue: Gave Up', {
       error:
-        `Lead ${leadId} (${form.email}) exceeded ${MAX_RETRY_ATTEMPTS} retry attempts ` +
-        `without delivering. Manual recovery needed. Original submission: ${submissionId}`,
+        `Lead ${leadId} (${form.email}) exceeded ${MAX_RETRY_ATTEMPTS} retry attempts. ` +
+        `Queue entry deleted. Manual recovery required. Original submission: ${submissionId}`,
       endpoint: '/api/cron/process-retry-queue',
       userEmail: form.email,
       leadId,
@@ -78,12 +55,13 @@ async function drainOne(
     return { leadId, email: form.email, result: 'gave_up' };
   }
 
-  let response: Response;
+  const retrySubmissionId = crypto.randomUUID();
+
+  let result: Awaited<ReturnType<typeof runPipeline>>;
   try {
-    response = await fetch(`${origin}/api/generate-report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    result = await runPipeline(
+      retrySubmissionId,
+      {
         email: form.email,
         firstName: form.firstName,
         lastName: form.lastName,
@@ -97,45 +75,42 @@ async function drainOne(
         utm_content: form.utm_content,
         utm_term: form.utm_term,
         apologyIntro: APOLOGY_INTRO,
-        fromCron: true,
-      }),
-    });
-  } catch (fetchErr) {
-    const e = fetchErr as Error;
-    // Leave in queue; next cron run will try again.
+      },
+      { fromCron: true }
+    );
+  } catch (runErr) {
+    // Hard runtime failure — keep entry, bump attempts, try again next hour.
+    await enqueue(leadId, submissionId, form, attempts + 1);
     return {
       leadId,
       email: form.email,
       result: 'error',
-      detail: `fetch failed: ${e.message}`,
+      detail: runErr instanceof Error ? runErr.message : String(runErr),
     };
   }
 
-  const body = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    queuedForRetry?: boolean;
-    failedStep?: string;
-  };
-
-  if (body.success) {
+  // Success path: email actually sent. Safe to remove from queue.
+  if (result.success) {
     await remove(url);
     return { leadId, email: form.email, result: 'delivered' };
   }
 
-  if (body.queuedForRetry || /usage cap/i.test(body.failedStep || '')) {
-    // Cap is still hit. Bump the attempt count and leave for next run.
-    await enqueue(leadId, submissionId, form, attempts);
+  // Cap still hit — bump attempts, leave entry for next hour.
+  if (result.queuedForRetry || /usage cap/i.test(result.failedStep || '')) {
+    await enqueue(leadId, submissionId, form, attempts + 1);
     return { leadId, email: form.email, result: 'still_capped' };
   }
 
-  // Other failure — regeneration broke for a non-cap reason. Clear the entry
-  // and raise a critical alert so we can recover manually.
-  await remove(url);
+  // Any other failure (PDF, Resend, CRM update): could be transient (Resend
+  // hiccup, Vercel Blob latency, etc). Leave in queue, bump attempts. The
+  // MAX_RETRY_ATTEMPTS gate above will eventually give up and alert if the
+  // lead never succeeds.
+  await enqueue(leadId, submissionId, form, attempts + 1);
   return {
     leadId,
     email: form.email,
-    result: 'permanent_failure',
-    detail: body.failedStep || 'unknown',
+    result: 'transient_failure',
+    detail: result.failedStep || 'unknown',
   };
 }
 
@@ -144,60 +119,104 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const origin = baseUrl(req);
-
-  let queue: Awaited<ReturnType<typeof listQueue>>;
-  try {
-    queue = await listQueue();
-  } catch (err) {
-    const e = err as Error;
-    console.error('[cron:retry-queue] Failed to list queue', e.message);
+  const gotLock = await acquireLock();
+  if (!gotLock) {
     return NextResponse.json(
-      { ok: false, error: `list failed: ${e.message}` },
-      { status: 500 }
+      { ok: true, skipped: 'lock_held', drained: 0 },
+      { status: 200 }
     );
   }
 
-  if (queue.length === 0) {
-    return NextResponse.json({ ok: true, drained: 0, remaining: 0 });
-  }
+  try {
+    const { entries, corrupted } = await listQueue();
 
-  const batch = queue.slice(0, MAX_DRAIN_PER_RUN);
-  const outcomes = await Promise.all(batch.map((entry) => drainOne(entry, origin)));
-
-  const summary = {
-    delivered: outcomes.filter((o) => o.result === 'delivered').length,
-    still_capped: outcomes.filter((o) => o.result === 'still_capped').length,
-    gave_up: outcomes.filter((o) => o.result === 'gave_up').length,
-    permanent_failure: outcomes.filter((o) => o.result === 'permanent_failure').length,
-    error: outcomes.filter((o) => o.result === 'error').length,
-  };
-
-  // Raise alerts for permanent failures so they're visible.
-  for (const o of outcomes) {
-    if (o.result === 'permanent_failure') {
-      void sendCriticalAlert('Retry Queue: Permanent Failure', {
+    // Handle corrupted entries first — move to dead-letter + alert, don't
+    // let them pollute successive drain runs.
+    if (corrupted.length > 0) {
+      for (const bad of corrupted) {
+        try {
+          await moveToDeadLetter(bad.url, bad.pathname, bad.reason);
+        } catch (moveErr) {
+          console.error('[cron:retry-queue] dead-letter move failed', moveErr);
+        }
+      }
+      void sendCriticalAlert('Retry Queue: Corrupted Entries', {
         error:
-          `Lead ${o.leadId} (${o.email}) failed at "${o.detail}" during queued retry. ` +
-          `Queue entry deleted. Manual intervention required.`,
+          `Moved ${corrupted.length} unreadable queue entries to dead-letter. ` +
+          `Paths: ${corrupted.map((c) => c.pathname).join(', ')}`,
         endpoint: '/api/cron/process-retry-queue',
-        userEmail: o.email,
-        leadId: o.leadId,
       });
     }
+
+    if (entries.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        drained: 0,
+        remaining: 0,
+        corrupted: corrupted.length,
+      });
+    }
+
+    const batch = entries.slice(0, MAX_DRAIN_PER_RUN);
+    const settled = await Promise.allSettled(batch.map((e) => drainOne(e)));
+
+    const outcomes: DrainOutcome[] = [];
+    let internalFailures = 0;
+    for (let i = 0; i < settled.length; i++) {
+      const r = settled[i];
+      if (r.status === 'fulfilled') {
+        outcomes.push(r.value);
+      } else {
+        internalFailures++;
+        const err = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        console.error('[cron:retry-queue] drainOne threw', err);
+      }
+    }
+
+    const summary = {
+      delivered: outcomes.filter((o) => o.result === 'delivered').length,
+      still_capped: outcomes.filter((o) => o.result === 'still_capped').length,
+      transient_failure: outcomes.filter((o) => o.result === 'transient_failure').length,
+      gave_up: outcomes.filter((o) => o.result === 'gave_up').length,
+      error: outcomes.filter((o) => o.result === 'error').length,
+      internal_exception: internalFailures,
+    };
+
+    // Queue-age alert: any entry older than QUEUE_AGE_ALERT_MS that we haven't
+    // drained is a sign we're stuck.
+    const now = Date.now();
+    const stale = entries.filter(
+      (e) => now - new Date(e.enqueuedAt).getTime() > QUEUE_AGE_ALERT_MS
+    );
+    if (stale.length > 0) {
+      void sendCriticalAlert('Retry Queue: Stale Entries', {
+        error:
+          `${stale.length} queue entries are older than 24h. ` +
+          `Oldest leadId: ${stale[0]?.leadId}, enqueued: ${stale[0]?.enqueuedAt}. ` +
+          `Drain may be stuck (cap still hit? pipeline degraded?).`,
+        endpoint: '/api/cron/process-retry-queue',
+      });
+    }
+
+    const remaining = entries.length - summary.delivered - summary.gave_up;
+
+    void sendSlackAlert('Retry Queue Drain', {
+      emoji: summary.delivered > 0 ? ':package:' : ':hourglass_flowing_sand:',
+      error:
+        `Delivered: ${summary.delivered} | Still capped: ${summary.still_capped} | ` +
+        `Transient: ${summary.transient_failure} | Gave up: ${summary.gave_up} | ` +
+        `Errors: ${summary.error} | Internal exc: ${internalFailures} | ` +
+        `Corrupted: ${corrupted.length} | Remaining: ${remaining}`,
+      endpoint: '/api/cron/process-retry-queue',
+    });
+
+    return NextResponse.json({
+      ok: true,
+      ...summary,
+      corrupted: corrupted.length,
+      remaining,
+    });
+  } finally {
+    await releaseLock();
   }
-
-  const remaining = queue.length - batch.length + summary.still_capped + summary.error;
-
-  // One summary Slack message per run, only when the cron actually did work.
-  void sendSlackAlert('Retry Queue Drain', {
-    emoji: summary.delivered > 0 ? ':package:' : ':hourglass_flowing_sand:',
-    error:
-      `Delivered: ${summary.delivered} | Still capped: ${summary.still_capped} | ` +
-      `Gave up: ${summary.gave_up} | Permanent: ${summary.permanent_failure} | ` +
-      `Transient errors: ${summary.error} | Remaining in queue: ${remaining}`,
-    endpoint: '/api/cron/process-retry-queue',
-  });
-
-  return NextResponse.json({ ok: true, ...summary, remaining });
 }

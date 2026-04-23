@@ -1,3 +1,5 @@
+import { BadRequestError } from '@anthropic-ai/sdk';
+
 /**
  * Anthropic error classification helpers.
  *
@@ -21,16 +23,28 @@ export class UsageCapExceededError extends Error {
   }
 }
 
-/**
- * True if the error message indicates the Anthropic spend cap has been hit.
- * Matches the exact phrasing Anthropic returns today, with a fallback regex
- * for the invalid_request_error envelope in case formatting shifts.
- */
 export function isUsageCapError(err: unknown): boolean {
   if (!err) return false;
+
+  // Structured path: the Anthropic SDK throws typed errors. A cap hit
+  // surfaces as BadRequestError (400) with error.type === 'invalid_request_error'
+  // and a body message mentioning usage limits.
+  if (err instanceof BadRequestError) {
+    const body = (err as { error?: unknown }).error as
+      | { error?: { type?: string; message?: string } }
+      | undefined;
+    const inner = body?.error;
+    if (inner?.type === 'invalid_request_error') {
+      const msg = String(inner.message || '');
+      if (/usage limit/i.test(msg)) return true;
+    }
+  }
+
+  // Fallback: string-matching (handles wrapped/rethrown errors and SDK
+  // version drift). Keep existing patterns.
   const message = err instanceof Error ? err.message : String(err);
   return (
-    /reached your specified api usage limits/i.test(message) ||
-    /invalid_request_error[\s\S]*usage limits/i.test(message)
+    /reached your specified api usage limits?/i.test(message) ||
+    /invalid_request_error[\s\S]*usage limits?/i.test(message)
   );
 }
