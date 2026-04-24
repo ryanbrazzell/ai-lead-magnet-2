@@ -3,23 +3,41 @@ import { BadRequestError } from '@anthropic-ai/sdk';
 /**
  * Anthropic error classification helpers.
  *
- * We care about one specific condition: the monthly spend cap has been hit.
- * When that happens the API returns a 400 with
- *   type: "invalid_request_error"
- *   message: "You have reached your specified API usage limits..."
- * and every fallback model/prompt will return the exact same error.
+ * Two conditions surface as retryable from the user's perspective:
+ *   - Usage cap hit (400 invalid_request_error, "reached your specified API
+ *     usage limits"). Every fallback model/prompt returns the exact same
+ *     error, so short-circuit the fallback chain.
+ *   - Server overloaded (529 overloaded_error, "Overloaded"). Typically
+ *     clears in seconds-to-minutes — let the fallback chain run in case
+ *     a later attempt catches a free moment, but if all three still fail,
+ *     route to the retry queue.
  *
- * Detecting this lets us (a) skip the doomed fallback attempts, and (b) route
- * the lead into a silent retry queue instead of surfacing the failure.
+ * Both inherit from RetryableAnthropicError so the pipeline catch block
+ * can treat them uniformly: enqueue, skip the red alarm, return a
+ * "queued for retry" status.
  */
 
-export class UsageCapExceededError extends Error {
+export class RetryableAnthropicError extends Error {
   readonly underlying?: unknown;
 
   constructor(message: string, underlying?: unknown) {
     super(message);
-    this.name = 'UsageCapExceededError';
+    this.name = 'RetryableAnthropicError';
     this.underlying = underlying;
+  }
+}
+
+export class UsageCapExceededError extends RetryableAnthropicError {
+  constructor(message: string, underlying?: unknown) {
+    super(message, underlying);
+    this.name = 'UsageCapExceededError';
+  }
+}
+
+export class AnthropicOverloadError extends RetryableAnthropicError {
+  constructor(message: string, underlying?: unknown) {
+    super(message, underlying);
+    this.name = 'AnthropicOverloadError';
   }
 }
 
@@ -46,5 +64,28 @@ export function isUsageCapError(err: unknown): boolean {
   return (
     /reached your specified api usage limits?/i.test(message) ||
     /invalid_request_error[\s\S]*usage limits?/i.test(message)
+  );
+}
+
+/**
+ * True if the error is an Anthropic 529 Overloaded response. The SDK
+ * surfaces this as an APIError subclass with status 529 and
+ * error.type === 'overloaded_error'.
+ */
+export function isOverloadError(err: unknown): boolean {
+  if (!err) return false;
+
+  // Structured path via SDK APIError status.
+  if (err instanceof Error && 'status' in err) {
+    const status = (err as { status?: number }).status;
+    if (status === 529) return true;
+  }
+
+  // String fallback covers wrapped/rethrown errors and the literal body
+  // we've seen in live alerts.
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    /"type":\s*"overloaded_error"/i.test(message) ||
+    /\b529\b[\s\S]*overloaded/i.test(message)
   );
 }

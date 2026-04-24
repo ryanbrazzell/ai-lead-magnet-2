@@ -37,7 +37,10 @@ import {
   resolveLeadByEmail,
   CLOSE_FIELDS,
 } from '@/lib/close/client';
-import { UsageCapExceededError } from '@/lib/ai/anthropic-errors';
+import {
+  RetryableAnthropicError,
+  UsageCapExceededError,
+} from '@/lib/ai/anthropic-errors';
 import { enqueue as enqueueRetry, type QueuedForm } from '@/lib/retry-queue';
 
 const log = {
@@ -241,8 +244,15 @@ export async function runPipeline(
   try {
     result = await generateTasks(leadData);
   } catch (err) {
-    if (err instanceof UsageCapExceededError) {
-      log.error(submissionId, 'Task generation hit usage cap', { email, leadId });
+    if (err instanceof RetryableAnthropicError) {
+      // Sub-classify for logging + audit messaging. Both cap and overload
+      // share the same queue behavior — only the operator-facing copy differs.
+      const kind = err instanceof UsageCapExceededError ? 'usage cap' : 'overload';
+      const kindTitle = err instanceof UsageCapExceededError
+        ? 'Anthropic usage cap'
+        : 'Anthropic overload';
+
+      log.error(submissionId, `Task generation hit ${kindTitle}`, { email, leadId });
 
       // Enqueue FIRST. Only on confirmed success do we mark the pipeline as
       // "queued for retry" — anything else falls through to a real critical alert.
@@ -264,7 +274,7 @@ export async function runPipeline(
         try {
           await enqueueRetry(leadId, submissionId, queuedForm);
           enqueued = true;
-          log.info(submissionId, 'Lead enqueued for retry after cap reset', { leadId });
+          log.info(submissionId, `Lead enqueued for retry (${kind})`, { leadId });
         } catch (enqueueErr) {
           const e = enqueueErr as Error;
           log.error(submissionId, 'Retry enqueue FAILED', {
@@ -276,18 +286,22 @@ export async function runPipeline(
       }
 
       if (enqueued) {
-        status.failedStep = 'Queued for retry (usage cap)';
+        status.failedStep = `Queued for retry (${kind})`;
         status.error = err.message;
         status.queuedForRetry = true;
         status.durationMs = Date.now() - startTime;
 
         // Audit note only when we actually queued — anything else misrepresents state.
         if (leadId) {
+          const detailSentence =
+            kind === 'usage cap'
+              ? `The monthly Anthropic spend cap was hit.`
+              : `Anthropic's servers returned a 529 Overloaded response on every attempt.`;
           const queuedNoteHtml =
-            `<p><strong>Report Queued (Anthropic usage cap)</strong></p>` +
+            `<p><strong>Report Queued (${kindTitle})</strong></p>` +
             `<p>Submission: <code>${submissionId}</code></p>` +
-            `<p>The monthly Anthropic spend cap was hit. Lead is stashed in the ` +
-            `retry queue and will be delivered automatically after the cap resets.</p>`;
+            `<p>${detailSentence} Lead is stashed in the retry queue and will ` +
+            `be delivered automatically on the next hourly drain that succeeds.</p>`;
           await addDurableNote(leadId, queuedNoteHtml);
         }
 
@@ -298,18 +312,18 @@ export async function runPipeline(
       // retry state — don't re-enqueue). In all three cases treat as a real
       // pipeline failure so we page an operator.
       if (!options.fromCron) {
-        void sendCriticalAlert('Task Generation: Cap + Enqueue Failure', {
+        void sendCriticalAlert('Task Generation: Retryable + Enqueue Failure', {
           error:
-            `[${submissionId}] Anthropic usage cap hit AND queue enqueue ` +
-            `failed (or no leadId). User will NOT get their report without ` +
-            `manual recovery. Underlying: ${err.message}`,
+            `[${submissionId}] Anthropic ${kind} AND queue enqueue failed ` +
+            `(or no leadId). User will NOT get their report without manual ` +
+            `recovery. Underlying: ${err.message}`,
           endpoint: '/api/generate-report',
           userEmail: email,
           leadId,
         });
       }
 
-      status.failedStep = 'Task Generation (cap, not queued)';
+      status.failedStep = `Task Generation (retryable: ${kind}, not queued)`;
       status.error = err.message;
       status.queuedForRetry = false;
       status.durationMs = Date.now() - startTime;
