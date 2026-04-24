@@ -19,7 +19,11 @@ import { buildSimplifiedPrompt, buildEmergencyPrompt } from './prompts';
 import { extractDomainFromEmail, scrapeWebsiteContent } from '@/lib/website/analyzer';
 import { researchWebsite, toWebsiteAnalysis } from './research';
 import { sanityCheckReport } from './sanity-check';
-import { UsageCapExceededError, isUsageCapError } from './anthropic-errors';
+import {
+  UsageCapExceededError,
+  AnthropicOverloadError,
+  isUsageCapError,
+} from './anthropic-errors';
 
 const log = {
   info: (message: string, context?: Record<string, unknown>) => {
@@ -282,6 +286,21 @@ export async function generateTasks(
     }
     errors.push(`Emergency attempt: ${err.message}`);
     log.error('All task generation attempts failed', { errors });
+  }
+
+  // All three attempts failed. If every failure was an Anthropic overload
+  // (529) we surface a typed RetryableAnthropicError so the pipeline routes
+  // the lead into the retry queue instead of ghosting the user. Overloads
+  // typically clear in minutes — the hourly cron will pick this up.
+  //
+  // We don't short-circuit overloads mid-chain like we do for cap errors,
+  // because Anthropic can recover between attempts and a later fallback
+  // may succeed. Cap errors are deterministic until reset, overloads aren't.
+  if (errors.length > 0 && errors.every((e) => /overloaded_error|\b529\b/i.test(e))) {
+    log.error('All task generation attempts hit Anthropic overload', { errors });
+    throw new AnthropicOverloadError(
+      `All task generation attempts returned Anthropic overload (529) for lead type "${leadType}". Errors: ${errors.join('; ')}`
+    );
   }
 
   throw new Error(

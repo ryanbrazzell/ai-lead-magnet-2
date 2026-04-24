@@ -31,7 +31,7 @@ interface DrainOutcome {
   email: string;
   result:
     | 'delivered'
-    | 'still_capped'
+    | 'still_retryable'
     | 'transient_failure'
     | 'gave_up'
     | 'error'
@@ -157,14 +157,20 @@ async function drainOne(
     return { leadId, email: form.email, result: 'delivered' };
   }
 
-  // Cap still hit — bump attempts, leave entry for next hour.
-  if (result.queuedForRetry || /usage cap/i.test(result.failedStep || '')) {
+  // Retryable Anthropic error still hitting (cap or overload) — bump attempts,
+  // leave entry for next hour. queuedForRetry is true when route.ts enqueued
+  // fresh (never from cron); the failedStep regex catches the fromCron path
+  // where runPipeline recognized the retryable error but didn't re-enqueue.
+  if (
+    result.queuedForRetry ||
+    /retryable|usage cap|overload/i.test(result.failedStep || '')
+  ) {
     const reenq = await safeEnqueue(leadId, submissionId, form, attempts + 1);
     return {
       leadId,
       email: form.email,
-      result: reenq.ok ? 'still_capped' : 'storage_error',
-      detail: reenq.ok ? undefined : `still capped; enqueue bump failed: ${reenq.error}`,
+      result: reenq.ok ? 'still_retryable' : 'storage_error',
+      detail: reenq.ok ? undefined : `still retryable; enqueue bump failed: ${reenq.error}`,
     };
   }
 
@@ -274,7 +280,7 @@ export async function GET(req: NextRequest) {
 
     const summary = {
       delivered: outcomes.filter((o) => o.result === 'delivered').length,
-      still_capped: outcomes.filter((o) => o.result === 'still_capped').length,
+      still_retryable: outcomes.filter((o) => o.result === 'still_retryable').length,
       transient_failure: outcomes.filter((o) => o.result === 'transient_failure').length,
       gave_up: outcomes.filter((o) => o.result === 'gave_up').length,
       error: outcomes.filter((o) => o.result === 'error').length,
@@ -303,7 +309,7 @@ export async function GET(req: NextRequest) {
     void sendSlackAlert('Retry Queue Drain', {
       emoji: summary.delivered > 0 ? ':package:' : ':hourglass_flowing_sand:',
       error:
-        `Delivered: ${summary.delivered} | Still capped: ${summary.still_capped} | ` +
+        `Delivered: ${summary.delivered} | Still retryable: ${summary.still_retryable} | ` +
         `Transient: ${summary.transient_failure} | Gave up: ${summary.gave_up} | ` +
         `Errors: ${summary.error} | Storage errors: ${summary.storage_error} | ` +
         `Internal exc: ${internalFailures} | ` +
