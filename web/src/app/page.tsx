@@ -23,7 +23,7 @@ export default function Home() {
         subheadline={
           <>
             Discover how to buy back over 520 hours of your time in 30 seconds.
-            <span className="block mt-1" style={{ color: '#10b981', fontWeight: 700 }}>
+            <span className="mt-2 block font-semibold text-[var(--color-accent)]">
               $99 Value — Now Free
             </span>
           </>

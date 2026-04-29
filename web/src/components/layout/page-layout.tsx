@@ -102,34 +102,25 @@ export function PageLayout({
   return (
     <div
       className={cn(
-        // Flexbox column layout for stacking
         'flex flex-col',
-        // Min-height screen for viewport fill
         'min-h-screen',
         className
       )}
     >
-      {/* Header Section */}
       {showHeader && <Header logo={logo} href={logoHref} />}
 
-      {/* Main Content Area */}
       <main
         className={cn(
-          // Flex-grow to fill available space between header/footer
           'flex-1',
-          // White background on main content area
-          'bg-white',
-          // Vertical padding for content breathing room - reduced on mobile
+          'bg-[radial-gradient(circle_at_top,rgba(43,122,120,0.08),transparent_32%),var(--color-bg)]',
           'py-4 md:py-12'
         )}
       >
-        {/* Max-width container with horizontal padding */}
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {children}
         </div>
       </main>
 
-      {/* Footer Section */}
       {showFooter && <Footer disclaimer={footerDisclaimer} />}
     </div>
   );

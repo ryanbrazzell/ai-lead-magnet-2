@@ -41,70 +41,35 @@ import { cn } from '@/lib/utils';
  * - Hover lift animation with shadow
  */
 const pillButtonVariants = cva(
-  // Base classes - consistent across all variants
   [
-    // Shape and dimensions
     'inline-flex items-center justify-center',
-    'rounded-pill', // 50px border-radius from design tokens
-    'h-[64px]', // 64px height (exceeds 44px touch target minimum)
-    'w-full min-[428px]:w-[408px]', // Responsive: full width mobile, fixed desktop
-
-    // Typography - 24px bold uppercase per spec
-    'text-2xl tracking-wider',
-    'font-bold uppercase',
-
-    // Focus states for accessibility
+    'rounded-pill',
+    'h-button',
+    'w-full min-[428px]:w-[408px]',
+    'px-8 font-sans text-button-size font-semibold tracking-[0.01em]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-
-    // Transitions for hover effects
     'transition-all',
-
-    // Motion-safe hover animations (translateY lift + shadow)
-    // NO color change on hover per spec
-    'motion-safe:hover:-translate-y-[2px] motion-safe:hover:shadow-lg',
+    'motion-safe:hover:-translate-y-[1px] motion-safe:hover:shadow-[0_12px_24px_rgba(26,24,22,0.08)]',
     'motion-safe:active:translate-y-0 motion-safe:active:shadow-md',
-
-    // Reduced motion fallback - use opacity instead of transform
     'motion-reduce:hover:opacity-90 motion-reduce:active:opacity-80',
-
-    // Disable text selection
     'select-none',
-
-    // Duration and easing from design tokens
-    'duration-[200ms] ease-out', // --transition-button: 200ms, --ease-button: ease-out
+    'duration-[200ms] ease-out',
   ],
   {
     variants: {
-      /**
-       * Color variants for navy/gold brand scheme
-       */
       variant: {
-        /**
-         * Primary (Navy) - Main CTAs
-         * Used for Step 0 "LET'S START" and final actions
-         */
         primary: [
-          'bg-primary text-white',
-          'focus-visible:ring-primary',
+          'bg-[var(--color-accent)] text-white shadow-[0_8px_20px_rgba(43,122,120,0.22)]',
+          'hover:bg-[var(--color-accent-hover)] focus-visible:ring-[var(--color-accent)]',
         ],
-
-        /**
-         * Progress (Gold) - Mid-journey momentum
-         * Used for Steps 1-2 "CONTINUE" buttons
-         */
         progress: [
-          'bg-progress text-navy',
-          'focus-visible:ring-progress',
+          'bg-[var(--color-primary)] text-[var(--color-dark-text)] shadow-[0_8px_20px_rgba(26,24,22,0.14)]',
+          'hover:bg-[#2a2623] focus-visible:ring-[var(--color-primary)]',
         ],
-
-        /**
-         * Disabled (Light Gold) - Validation/error states
-         * Used when form has validation errors
-         */
         disabled: [
-          'bg-progress-disabled text-navy',
+          'bg-[var(--progress-disabled)] text-[var(--color-primary)]',
           'cursor-not-allowed',
-          'focus-visible:ring-progress-disabled',
+          'focus-visible:ring-[var(--progress-disabled)]',
         ],
       },
     },

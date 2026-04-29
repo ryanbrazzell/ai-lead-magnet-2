@@ -1,94 +1,59 @@
-/**
- * HeroSection Component
- * Task Group 3: HeroSection Component for landing pages
- *
- * Displays a large headline with optional product mockup image.
- * Supports bold keywords via JSX in the headline prop.
- *
- * Design specifications:
- * - Headline: text-question design token (32px, bold, line-height 1.2)
- * - Layout: flex-col on mobile, flex-row on desktop (md:+)
- * - Image: Right side on desktop, below text on mobile
- * - Optional subheadline with muted color
- */
-
-import React from 'react';
+import React from "react";
 
 export interface HeroSectionProps {
-  /** Main headline - supports JSX for bold keywords (e.g., <>Get <strong>Free</strong> Report</>) */
   headline: React.ReactNode;
-  /** Optional secondary copy below headline */
   subheadline?: React.ReactNode;
-  /** Product mockup image source URL */
   imageSrc?: string;
-  /** Alt text for product mockup image */
   imageAlt?: string;
 }
 
-/**
- * HeroSection displays a prominent headline with optional product mockup.
- *
- * Layout behavior:
- * - Always stacked layout (text above, image below) - matches acquisition.com/roadmap
- * - Image centered below header text on all screen sizes
- *
- * @example
- * <HeroSection
- *   headline={<>Get Your Free <strong>Personalized</strong> Report</>}
- *   subheadline="Discover insights in under 30 seconds"
- *   imageSrc="/product-mockup.png"
- *   imageAlt="Product mockup showing report"
- * />
- */
 export function HeroSection({
   headline,
   subheadline,
   imageSrc,
-  imageAlt = 'Product mockup',
+  imageAlt = "Product mockup",
 }: HeroSectionProps) {
   return (
     <section
-      className="w-full max-w-6xl mx-auto px-4 py-1 md:py-3"
+      className="mx-auto w-full max-w-6xl px-4 py-2 md:py-6"
       aria-label="Hero section"
     >
-      {/* VERIFICATION REQUIRED: Compare spacing with https://acquisition.com/roadmap in browser */}
       <div
         data-testid="hero-layout"
-        className="flex flex-col items-center gap-2 md:gap-3"
+        className="grid items-center gap-8 rounded-[28px] border border-border bg-white/80 p-6 shadow-[0_20px_60px_rgba(26,24,22,0.06)] md:grid-cols-[1.15fr_0.85fr] md:gap-10 md:p-10"
       >
-        {/* Text content - centered above image */}
-        <div className="w-full text-center">
-          <h1
-            data-testid="hero-headline"
-            className="text-hero text-foreground tracking-tight font-serif"
-            style={{
-              fontSize: 'clamp(28px, 5vw, 48px)',
-              fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
-            }}
-          >
+        <div className="w-full text-center md:text-left">
+          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+            Time Freedom Report
+          </p>
+          <h1 data-testid="hero-headline" className="text-hero text-foreground">
             {headline}
           </h1>
 
           {subheadline && (
             <p
               data-testid="hero-subheadline"
-              className="text-base md:text-lg text-gray-600 mt-3 font-semibold leading-snug"
+              className="mt-4 text-base leading-relaxed text-[color:var(--color-secondary)] md:text-lg"
             >
               {subheadline}
             </p>
           )}
         </div>
 
-        {/* Image slot - centered below text on all screen sizes, smaller size like acquisition.com/roadmap */}
-        {imageSrc && (
-          <div className="w-full flex justify-center px-4">
+        {imageSrc ? (
+          <div className="flex w-full justify-center">
             <img
               src={imageSrc}
               alt={imageAlt}
-              className="max-w-[500px] w-full h-auto object-contain block"
+              className="block h-auto w-full max-w-[460px] object-contain drop-shadow-[0_20px_40px_rgba(43,122,120,0.18)]"
               loading="lazy"
             />
           </div>
+        ) : (
+          <div
+            data-testid="hero-image-placeholder"
+            className="hidden min-h-[220px] rounded-[24px] border border-dashed border-border bg-[linear-gradient(135deg,rgba(43,122,120,0.08),rgba(240,238,234,0.9))] md:block"
+          />
         )}
       </div>
     </section>

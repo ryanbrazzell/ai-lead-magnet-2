@@ -44,31 +44,29 @@ export function Footer({
   disclaimer = DEFAULT_DISCLAIMER,
 }: FooterProps) {
   return (
-    <footer className="bg-blue-900 text-white w-full py-8 md:py-12">
+    <footer className="w-full border-t border-dark-border bg-dark-bg py-10 text-dark-text md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Navigation links */}
         <nav
           aria-label="Footer navigation"
           className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-6"
         >
           <a
             href={privacyHref}
-            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 rounded-md px-2 transition-colors"
+            className="min-h-11 flex items-center justify-center rounded-md px-2 text-dark-text/85 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-dark-bg)]"
           >
             Privacy Policy
           </a>
           <a
             href={termsHref}
-            className="min-h-11 flex items-center justify-center text-white hover:text-white/80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900 rounded-md px-2 transition-colors"
+            className="min-h-11 flex items-center justify-center rounded-md px-2 text-dark-text/85 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-dark-bg)]"
           >
             Terms of Service
           </a>
         </nav>
 
-        {/* Disclaimer text */}
         <p
           data-testid="footer-disclaimer"
-          className="text-xs sm:text-sm text-center text-white/90 max-w-4xl mx-auto leading-relaxed px-4"
+          className="mx-auto max-w-4xl px-4 text-center text-xs leading-relaxed text-dark-text/72 sm:text-sm"
         >
           {disclaimer}
         </p>

@@ -14,7 +14,7 @@ export const metadata = {
 
 export default function BookCallPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#f1f5f9' }} />}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--color-bg)' }} />}>
       <BookCallContent />
     </Suspense>
   );

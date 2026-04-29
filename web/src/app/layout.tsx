@@ -1,23 +1,25 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Serif_Display, Montserrat } from "next/font/google";
+import { Outfit, Work_Sans, Space_Mono } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "optional",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const dmSerifDisplay = DM_Serif_Display({
-  variable: "--font-dm-serif",
+const workSans = Work_Sans({
+  variable: "--font-work-sans",
   subsets: ["latin"],
-  weight: ["400"],
+  display: "optional",
+  weight: ["300", "400", "500", "600"],
 });
 
-// Montserrat as fallback for Helvetica Now Display (similar geometric sans-serif)
-const montserrat = Montserrat({
-  variable: "--font-nav",
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
   subsets: ["latin"],
+  display: "optional",
   weight: ["400", "700"],
 });
 
@@ -32,11 +34,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${dmSans.variable} ${dmSerifDisplay.variable} ${montserrat.variable} antialiased`}
-        style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
-      >
+    <html
+      lang="en"
+      className={`${outfit.variable} ${workSans.variable} ${spaceMono.variable} antialiased`}
+    >
+      <body className="min-h-screen bg-background text-foreground">
         {children}
       </body>
     </html>

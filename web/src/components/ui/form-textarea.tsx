@@ -31,32 +31,13 @@ const FormTextarea = React.forwardRef<HTMLTextAreaElement, FormTextareaProps>(
         <textarea
           ref={ref}
           className={cn(
-            // Background with focus transition
-            "bg-input-bg focus:bg-input-focus",
-            "transition-colors duration-[150ms] ease-in-out",
-            // Border radius from design tokens
-            "rounded-input",
-            // Font size from design tokens
-            "text-input-size",
-            // Padding
-            "p-[13px]",
-            // Minimum height for comfortable multi-line input
-            "min-h-[120px]",
-            // Placeholder styling
-            "placeholder:uppercase placeholder:text-gray-400",
-            // Border (default transparent, error shows red)
-            "border-2 border-transparent",
-            // Focus outline removal (using background change instead)
-            "focus:outline-none focus:ring-0",
-            // Full width
-            "w-full",
-            // Resize behavior
-            "resize-y",
-            // Error state
-            error && "border-red-500",
+            "min-h-[140px] w-full resize-y rounded-[var(--radius-md)] border border-border bg-[var(--color-surface)] p-4 text-base text-primary shadow-sm transition-all duration-[150ms] ease-in-out",
+            "placeholder:text-[color:var(--color-muted)]",
+            "focus:border-[var(--color-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[color:rgba(43,122,120,0.18)]",
+            error && "border-red-500 focus:border-red-500 focus:ring-red-200",
             className
           )}
-          placeholder={placeholder?.toUpperCase()}
+          placeholder={placeholder}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${props.id}-error` : undefined}
           {...props}
@@ -64,7 +45,7 @@ const FormTextarea = React.forwardRef<HTMLTextAreaElement, FormTextareaProps>(
         {error && (
           <p
             id={props.id ? `${props.id}-error` : undefined}
-            className="text-red-500 text-sm mt-1"
+            className="mt-2 text-sm text-red-600"
             role="alert"
           >
             {error}
