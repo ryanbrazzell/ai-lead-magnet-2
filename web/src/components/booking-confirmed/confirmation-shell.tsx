@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Mail, TriangleAlert } from "lucide-react";
+import { Instagram, Mail, MessageSquare, TriangleAlert } from "lucide-react";
+import { Footer } from "@/components/layout/footer";
 
 interface ConfirmationShellProps {
   firstName?: string;
@@ -118,6 +119,32 @@ export function ConfirmationShell({
           </div>
         </div>
       </div>
+
+      <section className="mx-auto max-w-2xl px-5 pb-12 text-center">
+        <p className="mb-6 text-base text-[color:var(--color-secondary)]">
+          Having trouble? Reach out:
+        </p>
+        <div className="flex flex-col items-center gap-3">
+          <a
+            href="https://instagram.com/ryanbrazzell"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-12 w-full max-w-sm items-center justify-center gap-2 rounded-md bg-[var(--color-accent)] px-6 font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)]"
+          >
+            <Instagram className="h-5 w-5" />
+            DM Ryan on Instagram
+          </a>
+          <a
+            href="sms:+14424163020"
+            className="inline-flex h-12 w-full max-w-sm items-center justify-center gap-2 rounded-md border border-border bg-white px-6 font-medium text-primary transition-colors hover:bg-[var(--color-surface)]"
+          >
+            <MessageSquare className="h-5 w-5 text-[var(--color-accent)]" />
+            Text (442) 416-3020
+          </a>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 }

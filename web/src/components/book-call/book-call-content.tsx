@@ -113,7 +113,16 @@ export function BookCallContent() {
         </div>
       </section>
 
-      <section className="px-5 py-16">
+      <section className="mx-auto max-w-3xl px-5 pt-16 pb-4 text-center">
+        <h2 className="text-3xl font-semibold tracking-[-0.03em] text-primary md:text-4xl">
+          What Happens on Your EA Delegation Roadmap Call
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-[color:var(--color-secondary)] md:text-lg">
+          In under 30 minutes, we&apos;ll show you how the top-performing founders and executives are operating differently.
+        </p>
+      </section>
+
+      <section className="px-5 pt-8 pb-16">
         <div className="mx-auto max-w-5xl">
           <IClosedEmbed
             dataUrl={iClosedUrl}

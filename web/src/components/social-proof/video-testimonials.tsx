@@ -12,6 +12,8 @@ const videos = [
   { id: "DVZfF43-56Q", title: "Business Growth" },
   { id: "KcIeDkeTC68", title: "EA Impact Story" },
   { id: "GMDKJsER37Q", title: "Founder Testimonial" },
+  { id: "WzCb8ow2g3w", title: "Founder Testimonial" },
+  { id: "KRruN3ojW-4", title: "Founder Testimonial" },
 ];
 
 const testimonials = [
