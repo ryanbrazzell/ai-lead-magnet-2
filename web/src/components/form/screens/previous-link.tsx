@@ -17,7 +17,7 @@ export function PreviousLink({ onClick }: PreviousLinkProps) {
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+        className="inline-flex items-center gap-1 text-sm font-medium text-[color:var(--color-secondary)] transition-colors duration-200 hover:text-primary"
       >
         <ChevronLeft className="h-4 w-4" />
         <span>Previous</span>

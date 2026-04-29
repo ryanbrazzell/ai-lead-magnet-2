@@ -5,7 +5,6 @@
  */
 
 import { Suspense } from 'react';
-import { PageLayout } from '@/components/layout/page-layout';
 import { BookingConfirmedContent } from '@/components/booking-confirmed/booking-confirmed-content';
 
 export const metadata = {
@@ -15,11 +14,9 @@ export const metadata = {
 
 export default function ThankYouPage() {
   return (
-    <PageLayout logo="/assistant-launch-logo.png" logoHref="https://www.assistantlaunch.com">
-      <Suspense fallback={<LoadingState />}>
-        <BookingConfirmedContent />
-      </Suspense>
-    </PageLayout>
+    <Suspense fallback={<LoadingState />}>
+      <BookingConfirmedContent />
+    </Suspense>
   );
 }
 

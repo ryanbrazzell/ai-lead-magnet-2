@@ -1,43 +1,14 @@
-/**
- * Header Component
- *
- * Header with logo and navigation
- * - Navy background (#0f172a)
- * - Montserrat font (fallback for Helvetica Now Display)
- * - Gold accent color (#f59e0b)
- * - Dropdown menu for "About" section
- */
-
 "use client";
 
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import * as React from "react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface HeaderProps {
-  /**
-   * Logo content - can be a React node or image src string
-   */
   logo?: React.ReactNode | string;
-
-  /**
-   * Optional href to make the logo clickable
-   */
   href?: string;
-
-  /**
-   * Whether to show navigation links (default: true)
-   */
   showNav?: boolean;
-
-  /**
-   * Additional className to merge with default styles
-   */
   className?: string;
-
-  /**
-   * Current active page path for highlighting
-   */
   activePath?: string;
 }
 
@@ -48,37 +19,34 @@ interface NavLink {
 }
 
 const navLinks: NavLink[] = [
-  { label: 'Home', href: 'https://www.assistantlaunch.com/' },
+  { label: "Home", href: "https://www.assistantlaunch.com/" },
   {
-    label: 'About',
-    href: '#',
+    label: "About",
+    href: "#",
     children: [
-      { label: 'What We Do', href: 'https://www.assistantlaunch.com/what-we-do' },
-      { label: 'FAQs', href: 'https://www.assistantlaunch.com/faq' },
-    ]
+      { label: "What We Do", href: "https://www.assistantlaunch.com/what-we-do" },
+      { label: "FAQs", href: "https://www.assistantlaunch.com/faq" },
+    ],
   },
-  { label: 'Services', href: 'https://www.assistantlaunch.com/services' },
-  { label: 'Success Stories', href: 'https://www.assistantlaunch.com/success-stories' },
+  { label: "Services", href: "https://www.assistantlaunch.com/services" },
+  { label: "Success Stories", href: "https://www.assistantlaunch.com/success-stories" },
 ];
 
 function LogoContent({ logo }: { logo?: React.ReactNode | string }) {
   if (!logo) {
     return (
-      <span
-        className="text-xl font-bold text-white tracking-wider"
-        style={{ fontFamily: 'var(--font-nav), Montserrat, sans-serif' }}
-      >
+      <span className="font-serif text-xl font-semibold tracking-[-0.02em] text-primary">
         Assistant Launch
       </span>
     );
   }
 
-  if (typeof logo === 'string') {
+  if (typeof logo === "string") {
     return (
       <img
         src={logo}
         alt="Assistant Launch"
-        className="h-8 md:h-10 w-auto object-contain"
+        className="h-8 w-auto object-contain md:h-10"
       />
     );
   }
@@ -89,7 +57,7 @@ function LogoContent({ logo }: { logo?: React.ReactNode | string }) {
 function DropdownMenu({
   items,
   isOpen,
-  onClose
+  onClose,
 }: {
   items: NavLink[];
   isOpen: boolean;
@@ -99,19 +67,14 @@ function DropdownMenu({
 
   return (
     <div
-      className="absolute top-full left-0 mt-2 py-2 min-w-[160px] bg-black/80 backdrop-blur-sm rounded-md shadow-lg z-50"
+      className="absolute left-0 top-full z-50 mt-2 min-w-[180px] rounded-[var(--radius-md)] border border-border bg-white p-2 shadow-[0_18px_32px_rgba(26,24,22,0.12)]"
       onMouseLeave={onClose}
     >
       {items.map((item) => (
         <a
           key={item.href}
           href={item.href}
-          className="block px-4 py-2 text-white hover:text-[#f59e0b] transition-colors"
-          style={{
-            fontFamily: 'var(--font-nav), Montserrat, sans-serif',
-            fontSize: '16px',
-            fontWeight: 400,
-          }}
+          className="block rounded-[8px] px-3 py-2 text-sm text-primary transition-colors hover:bg-[var(--color-accent-light)] hover:text-[var(--color-accent-hover)]"
         >
           {item.label}
         </a>
@@ -120,7 +83,13 @@ function DropdownMenu({
   );
 }
 
-export function Header({ logo, href, showNav = true, className, activePath }: HeaderProps) {
+export function Header({
+  logo,
+  href,
+  showNav = true,
+  className,
+  activePath,
+}: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
   const logoContent = <LogoContent logo={logo} />;
@@ -133,37 +102,21 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
   return (
     <header
       className={cn(
-        'w-full',
-        'bg-[#0f172a]',
-        'px-4 md:px-6',
-        'py-2 md:py-4',
-        'relative z-50',
+        "sticky top-0 z-50 w-full border-b border-border/80 bg-[rgba(250,250,247,0.94)] px-4 py-3 backdrop-blur-xl md:px-6",
         className
       )}
     >
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo */}
-        {href ? (
-          <a
-            href={href}
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-sm transition-opacity hover:opacity-90"
-            aria-label="Go to homepage"
-          >
-            {logoContent}
-          </a>
-        ) : (
-          <a
-            href="https://www.assistantlaunch.com/"
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-sm transition-opacity hover:opacity-90"
-            aria-label="Go to homepage"
-          >
-            {logoContent}
-          </a>
-        )}
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 rounded-[var(--radius-lg)] border border-border/80 bg-white/70 px-4 py-3 shadow-[0_6px_20px_rgba(26,24,22,0.05)]">
+        <a
+          href={href || "https://www.assistantlaunch.com/"}
+          className="rounded-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          aria-label="Go to homepage"
+        >
+          {logoContent}
+        </a>
 
-        {/* Desktop Navigation */}
         {showNav && (
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="hidden items-center gap-4 md:flex">
             {navLinks.map((link) => (
               <div
                 key={link.label}
@@ -172,47 +125,38 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                 onMouseLeave={() => setOpenDropdown(null)}
               >
                 {link.children ? (
-                  // Dropdown trigger
                   <button
                     className={cn(
-                      "flex items-center gap-1 transition-colors px-3 py-2",
-                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
+                      "flex items-center gap-1 px-3 py-2 text-[15px] font-medium transition-colors",
+                      isActive(link.href)
+                        ? "text-[var(--color-accent)]"
+                        : "text-[color:var(--color-secondary)] hover:text-primary"
                     )}
-                    style={{
-                      fontFamily: 'var(--font-nav), Montserrat, sans-serif',
-                      fontSize: '18px',
-                      fontWeight: 400,
-                    }}
                     aria-expanded={openDropdown === link.label}
                     aria-haspopup="true"
                   >
                     {link.label}
                     <ChevronDown
                       className={cn(
-                        "w-4 h-4 transition-transform",
+                        "h-4 w-4 transition-transform",
                         openDropdown === link.label && "rotate-180"
                       )}
                     />
                   </button>
                 ) : (
-                  // Regular link
                   <a
                     href={link.href}
                     className={cn(
-                      "transition-colors px-3 py-2 block",
-                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
+                      "block px-3 py-2 text-[15px] font-medium transition-colors",
+                      isActive(link.href)
+                        ? "text-[var(--color-accent)]"
+                        : "text-[color:var(--color-secondary)] hover:text-primary"
                     )}
-                    style={{
-                      fontFamily: 'var(--font-nav), Montserrat, sans-serif',
-                      fontSize: '18px',
-                      fontWeight: 400,
-                    }}
                   >
                     {link.label}
                   </a>
                 )}
 
-                {/* Dropdown menu */}
                 {link.children && (
                   <DropdownMenu
                     items={link.children}
@@ -222,35 +166,28 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                 )}
               </div>
             ))}
-
           </nav>
         )}
 
-        {/* Mobile Menu Button */}
         {showNav && (
           <button
-            className="md:hidden text-white p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 text-primary md:hidden"
+            onClick={() => setMobileMenuOpen((open) => !open)}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         )}
       </div>
 
-      {/* Mobile Navigation */}
       {showNav && mobileMenuOpen && (
-        <nav className="md:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-black/80 backdrop-blur-sm rounded-lg mx-2 px-4">
+        <nav className="mx-2 mt-4 rounded-[var(--radius-lg)] border border-border bg-white px-4 pb-4 pt-4 shadow-[0_12px_24px_rgba(26,24,22,0.08)] md:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <React.Fragment key={link.label}>
                 {link.children ? (
-                  // Mobile dropdown section
                   <div className="py-2">
-                    <span
-                      className="text-white/60 uppercase text-sm tracking-wider"
-                      style={{ fontFamily: 'var(--font-nav), Montserrat, sans-serif' }}
-                    >
+                    <span className="text-xs uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
                       {link.label}
                     </span>
                     <div className="mt-2 ml-4 flex flex-col gap-2">
@@ -258,12 +195,7 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                         <a
                           key={child.href}
                           href={child.href}
-                          className="text-white hover:text-[#f59e0b] transition-colors"
-                          style={{
-                            fontFamily: 'var(--font-nav), Montserrat, sans-serif',
-                            fontSize: '16px',
-                            fontWeight: 400,
-                          }}
+                          className="text-[15px] text-[color:var(--color-secondary)] transition-colors hover:text-primary"
                         >
                           {child.label}
                         </a>
@@ -271,25 +203,20 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
                     </div>
                   </div>
                 ) : (
-                  // Regular mobile link
                   <a
                     href={link.href}
                     className={cn(
-                      "py-2 transition-colors",
-                      isActive(link.href) ? "text-[#f59e0b]" : "text-white hover:text-[#f59e0b]"
+                      "py-2 text-[15px] font-medium transition-colors",
+                      isActive(link.href)
+                        ? "text-[var(--color-accent)]"
+                        : "text-[color:var(--color-secondary)] hover:text-primary"
                     )}
-                    style={{
-                      fontFamily: 'var(--font-nav), Montserrat, sans-serif',
-                      fontSize: '18px',
-                      fontWeight: 400,
-                    }}
                   >
                     {link.label}
                   </a>
                 )}
               </React.Fragment>
             ))}
-
           </div>
         </nav>
       )}
@@ -297,4 +224,4 @@ export function Header({ logo, href, showNav = true, className, activePath }: He
   );
 }
 
-Header.displayName = 'Header';
+Header.displayName = "Header";

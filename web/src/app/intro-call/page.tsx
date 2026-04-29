@@ -5,7 +5,6 @@
  */
 
 import { Suspense } from 'react';
-import { PageLayout } from '@/components/layout/page-layout';
 import { IntroCallContent } from '@/components/booking-confirmed/intro-call-content';
 
 export const metadata = {
@@ -15,11 +14,9 @@ export const metadata = {
 
 export default function IntroCallPage() {
   return (
-    <PageLayout logo="/assistant-launch-logo.png" logoHref="https://www.assistantlaunch.com">
-      <Suspense fallback={<LoadingState />}>
-        <IntroCallContent />
-      </Suspense>
-    </PageLayout>
+    <Suspense fallback={<LoadingState />}>
+      <IntroCallContent />
+    </Suspense>
   );
 }
 

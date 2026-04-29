@@ -104,25 +104,15 @@ export function FormLayout({
     <div
       data-testid="form-layout-container"
       className={cn(
-        // Max-width using design token (650px)
         'max-w-form',
-        // Centered horizontally
         'mx-auto',
-        // Full width on mobile (within max-width constraint)
         'w-full',
-        // VERIFICATION REQUIRED: Compare spacing with https://acquisition.com/roadmap in browser
-        // Tighter vertical padding to match acquisition.com/roadmap (py-2 = 8px, py-3 = 12px)
-        'py-2 md:py-3',
-        // Horizontal padding for mobile edge spacing
-        'px-4 sm:px-6',
-        // Additional classes
+        'rounded-[24px] border border-border bg-white/85 px-4 py-6 shadow-[0_18px_50px_rgba(26,24,22,0.05)] sm:px-6 md:px-8 md:py-8',
         className
       )}
     >
-      {/* Form step content */}
       {children}
 
-      {/* SocialProof component below form content */}
       {showSocialProof && (
         <SocialProof
           speedPromise={speedPromise}

@@ -1,68 +1,38 @@
-/**
- * SocialProof Component
- * Task Group 5: Social proof and consent component for forms
- *
- * Displays two sparkle bullet items (speed promise and social proof number)
- * with consent/legal text below. Positioned below the form on every step.
- */
-
 export interface SocialProofProps {
-  /** Speed promise text (e.g., "Get Your Roadmap in Less than 30 Seconds") */
   speedPromise: string;
-  /** Social proof count text (e.g., "Requested by over 250,000 Business Owners") */
   socialCount: string;
-  /** Consent/legal text to display below bullets */
   consentText: string;
 }
 
-/**
- * SocialProof displays trust indicators and legal consent text.
- *
- * Design specifications:
- * - Sparkle emojis as bullet icons (matching Acquisition.com)
- * - Bullet items: flex items-center gap-2
- * - Consent text: text-xs text-gray-500
- * - Persistent positioning below form on every step
- */
+function ProofRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-3 rounded-full border border-border bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-primary">
+      <span
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[var(--color-accent)]"
+        data-testid="social-proof-checkmark"
+        aria-hidden="true"
+      >
+        *
+      </span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
 export function SocialProof({
   speedPromise,
   socialCount,
   consentText,
 }: SocialProofProps) {
-  // VERIFICATION REQUIRED: Compare spacing with https://acquisition.com/roadmap in browser
   return (
-    <div className="flex flex-col items-center gap-2 mt-4">
-      {/* Social proof bullet items */}
-      <div className="flex flex-col items-center gap-2">
-        {/* Speed promise */}
-        <div className="flex items-center gap-2">
-          <span
-            className="text-lg flex-shrink-0"
-            data-testid="social-proof-icon"
-            aria-hidden="true"
-          >
-            ✨
-          </span>
-          <span className="text-base text-gray-900 font-semibold">
-            {speedPromise}
-          </span>
-        </div>
-
-        {/* Social proof count */}
-        <div className="flex items-center gap-2">
-          <span
-            className="text-lg flex-shrink-0"
-            data-testid="social-proof-icon"
-            aria-hidden="true"
-          >
-            ✨
-          </span>
-          <span className="text-base text-gray-900 font-semibold">
-            {socialCount}
-          </span>
-        </div>
+    <div className="mt-6 flex flex-col items-center gap-3 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <ProofRow>{speedPromise}</ProofRow>
+        <ProofRow>{socialCount}</ProofRow>
       </div>
-
+      <p className="max-w-xl text-xs leading-relaxed text-[color:var(--color-muted)]">
+        {consentText}
+      </p>
     </div>
   );
 }
