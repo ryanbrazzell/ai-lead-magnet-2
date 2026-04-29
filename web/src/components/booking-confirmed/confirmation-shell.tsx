@@ -34,14 +34,30 @@ export function ConfirmationShell({
 }: ConfirmationShellProps) {
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
-      <div className="border-b border-dark-border bg-primary px-5 py-4 text-center">
-        <a
-          href="https://www.assistantlaunch.com"
-          className="font-serif text-2xl font-semibold tracking-[-0.02em] text-[var(--color-accent)]"
-        >
-          Assistant Launch
-        </a>
-      </div>
+      <header className="border-b border-dark-border bg-primary px-5 py-4">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 md:flex-row">
+          <a
+            href="https://www.assistantlaunch.com"
+            className="font-serif text-2xl font-semibold tracking-[-0.02em] text-[var(--color-accent)]"
+          >
+            Assistant Launch
+          </a>
+          <nav className="flex items-center gap-5 text-sm text-dark-text/85">
+            <a href="https://www.assistantlaunch.com/" className="transition-colors hover:text-white">
+              Home
+            </a>
+            <a href="https://www.assistantlaunch.com/services" className="transition-colors hover:text-white">
+              Services
+            </a>
+            <a
+              href="https://www.assistantlaunch.com/success-stories"
+              className="transition-colors hover:text-white"
+            >
+              Success Stories
+            </a>
+          </nav>
+        </div>
+      </header>
 
       <div className="bg-[linear-gradient(90deg,#7f1d1d,#991b1b)] px-5 py-3 text-white">
         <div className="mx-auto flex max-w-4xl items-center justify-center gap-2 text-center text-sm font-semibold">
