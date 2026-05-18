@@ -2,6 +2,7 @@
  * Root Page - Main Form Multi-Step Progressive Disclosure
  */
 
+import Script from 'next/script';
 import { PageLayout } from '@/components/layout/page-layout';
 import { HeroSection } from '@/components/layout/hero-section';
 import { FormLayout } from '@/components/layout/form-layout';
@@ -12,6 +13,12 @@ import { BonusStack } from '@/components/bonus-stack';
 export default function Home() {
   return (
     <PageLayout logo="/assistant-launch-logo.png" logoHref="https://www.assistantlaunch.com">
+      <Script id="meta-pixel-view-lead-magnet" strategy="afterInteractive">
+        {`if (!sessionStorage.getItem('lead_magnet_view_fired')) {
+          fbq('trackCustom', 'ViewLeadMagnet');
+          sessionStorage.setItem('lead_magnet_view_fired', 'true');
+        }`}
+      </Script>
       {/* Persistent Hero Section with product mockup image */}
       <HeroSection
         headline={

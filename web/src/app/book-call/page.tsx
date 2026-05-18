@@ -6,6 +6,7 @@
  */
 
 import { Suspense } from 'react';
+import Script from 'next/script';
 import { BookCallContent } from '@/components/book-call/book-call-content';
 
 export const metadata = {
@@ -14,8 +15,16 @@ export const metadata = {
 
 export default function BookCallPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#f1f5f9' }} />}>
-      <BookCallContent />
-    </Suspense>
+    <>
+      <Script id="meta-pixel-view-calendar-email" strategy="afterInteractive">
+        {`if (!sessionStorage.getItem('calendar_page_view_fired_email')) {
+          fbq('trackCustom', 'ViewCalendar');
+          sessionStorage.setItem('calendar_page_view_fired_email', 'true');
+        }`}
+      </Script>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#f1f5f9' }} />}>
+        <BookCallContent />
+      </Suspense>
+    </>
   );
 }
