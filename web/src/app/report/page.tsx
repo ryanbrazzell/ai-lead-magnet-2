@@ -9,6 +9,7 @@
  */
 
 import { Suspense } from 'react';
+import Script from 'next/script';
 import { ThankYouContent } from '@/components/thank-you/thank-you-content';
 
 export const metadata = {
@@ -18,9 +19,17 @@ export const metadata = {
 
 export default function ReportPage() {
   return (
-    <Suspense fallback={<ReportLoading />}>
-      <ThankYouContent />
-    </Suspense>
+    <>
+      <Script id="meta-pixel-view-calendar" strategy="afterInteractive">
+        {`if (!sessionStorage.getItem('calendar_page_view_fired')) {
+          fbq('trackCustom', 'ViewCalendar');
+          sessionStorage.setItem('calendar_page_view_fired', 'true');
+        }`}
+      </Script>
+      <Suspense fallback={<ReportLoading />}>
+        <ThankYouContent />
+      </Suspense>
+    </>
   );
 }
 
