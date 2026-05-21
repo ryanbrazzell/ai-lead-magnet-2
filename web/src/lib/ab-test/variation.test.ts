@@ -42,6 +42,11 @@ describe('getReportVideoUrl', () => {
     vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', 'https://www.loom.com/embed/xyz');
     expect(getReportVideoUrl()).toBe('https://www.loom.com/embed/xyz');
   });
+
+  it('returns null for a non-embeddable youtube.com URL (playlist)', () => {
+    vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', 'https://www.youtube.com/playlist?list=PL123');
+    expect(getReportVideoUrl()).toBeNull();
+  });
 });
 
 describe('isReportTestLive', () => {
@@ -81,6 +86,7 @@ describe('assignVariation', () => {
     vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', 'https://youtu.be/ABC123');
     vi.spyOn(Math, 'random').mockReturnValue(0.8);
     expect(assignVariation()).toBe('video');
+    expect(document.cookie).toContain('al_report_variation=video');
   });
 
   it('reuses an existing cookie instead of re-rolling (stickiness)', () => {

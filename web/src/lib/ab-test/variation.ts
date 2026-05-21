@@ -40,8 +40,10 @@ export function getReportVideoUrl(): string | null {
       const id = url.searchParams.get('v');
       return id ? `https://www.youtube.com/embed/${id}` : null;
     }
-    // already an /embed/ URL, or some other youtube path - pass through
-    return raw;
+    // Already an /embed/ URL - pass through. Any other youtube.com path
+    // (playlist, channel, shorts) is not embeddable - keep the test dark.
+    if (url.pathname.startsWith('/embed/')) return raw;
+    return null;
   }
 
   // Loom, Vimeo, or anything else: pass the URL through as-is and let the
