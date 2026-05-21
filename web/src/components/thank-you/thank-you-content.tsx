@@ -31,7 +31,10 @@ import { FinalCTASection } from './final-cta-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { OverwhelmSection } from './overwhelm-section';
 import { AnalyzingAnimation } from './analyzing-animation';
+import { ConfirmationBanner } from './confirmation-banner';
+import { VideoSection } from './video-section';
 import { calculateROI, getTaskHoursByRevenue, type TaskHours } from '@/lib/roi-calculator';
+import { readVariationParam, getReportVideoUrl } from '@/lib/ab-test/variation';
 
 interface FormDataFromURL {
   firstName: string;
@@ -117,6 +120,9 @@ export function ThankYouContent() {
     }, 100);
   }, []);
 
+  const variation = readVariationParam(searchParams);
+  const reportVideoUrl = getReportVideoUrl();
+
   // Auto-dismiss email toast after page reveals
   React.useEffect(() => {
     if (!showAnalyzing && showEmailToast) {
@@ -141,63 +147,69 @@ export function ThankYouContent() {
     );
   }
 
+  const navHeader = (
+    <div
+      key="nav"
+      style={{
+        background: '#0f172a',
+        padding: '12px 20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <a href="https://www.assistantlaunch.com" style={{ textDecoration: 'none', display: 'inline-block' }}>
+        <span style={{ fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif', fontSize: '24px', color: '#f59e0b' }}>
+          Assistant Launch &#128640;
+        </span>
+      </a>
+    </div>
+  );
+
+  const heroPain = <HeroPain key="hero" firstName={formData?.firstName || 'there'} onCTAClick={handleCTAClick} />;
+  const costCard = (
+    <CostCard key="cost" taskHours={taskHours} revenueRange={revenueRange} onCTAClick={handleCTAClick} />
+  );
+  const overwhelm = <OverwhelmSection key="overwhelm" onCTAClick={handleCTAClick} />;
+  const howItWorks = <HowItWorksSection key="how" onCTAClick={handleCTAClick} />;
+  const ctaSection = (
+    <CTASection
+      key="cta"
+      firstName={formData?.firstName || ''}
+      lastName={formData?.lastName || ''}
+      email={formData?.email || ''}
+      phone={formData?.phone || ''}
+      painPoints={formData?.painPoints || ''}
+      leadId={formData?.leadId || ''}
+      meta_fbc={formData?.meta_fbc || ''}
+      meta_fbp={formData?.meta_fbp || ''}
+      revenue={revenueRange}
+    />
+  );
+  const socialProof = <SocialProofSection key="social" onCTAClick={handleCTAClick} />;
+  const faq = <FAQSection key="faq" onCTAClick={handleCTAClick} />;
+  const finalCta = <FinalCTASection key="final" annualHours={annualHours} onButtonClick={handleCTAClick} />;
+
+  const confirmationBanner = (
+    <ConfirmationBanner key="banner" email={formData?.email || ''} />
+  );
+  const videoSection =
+    variation === 'video' && reportVideoUrl ? (
+      <VideoSection key="video" videoUrl={reportVideoUrl} />
+    ) : null;
+
+  const controlOrder = [
+    navHeader, heroPain, costCard, overwhelm, howItWorks, ctaSection, socialProof, faq, finalCta,
+  ];
+  const videoOrder = [
+    navHeader, confirmationBanner, videoSection, ctaSection, heroPain, costCard, overwhelm, howItWorks, socialProof, faq, finalCta,
+  ];
+
+  const sections = variation === 'video' ? videoOrder : controlOrder;
+
   return (
     <div className="w-full" style={{ background: '#f1f5f9' }}>
-      {/* 1. Navigation Header - centered logo, no nav */}
-      <div
-        style={{
-          background: '#0f172a',
-          padding: '12px 20px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <a
-          href="https://www.assistantlaunch.com"
-          style={{ textDecoration: 'none', display: 'inline-block' }}
-        >
-          <span style={{ fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif', fontSize: '24px', color: '#f59e0b' }}>Assistant Launch 🚀</span>
-        </a>
-      </div>
-
-      {/* 2. Hero Pain Section */}
-      <HeroPain firstName={formData?.firstName || 'there'} onCTAClick={handleCTAClick} />
-
-      {/* 3. Cost Card (overlaps hero) */}
-      <CostCard
-        taskHours={taskHours}
-        revenueRange={revenueRange}
-        onCTAClick={handleCTAClick}
-      />
-
-      {/* 4. Overwhelm Section (checklist on white + client proof on navy) */}
-      <OverwhelmSection onCTAClick={handleCTAClick} />
-
-      {/* 5. How It Works (pain points white → 3 steps gray → guarantee white) */}
-      <HowItWorksSection onCTAClick={handleCTAClick} />
-
-      {/* 6. CTA Section with Calendar */}
-      <CTASection
-        firstName={formData?.firstName || ''}
-        lastName={formData?.lastName || ''}
-        email={formData?.email || ''}
-        phone={formData?.phone || ''}
-        painPoints={formData?.painPoints || ''}
-        leadId={formData?.leadId || ''}
-        meta_fbc={formData?.meta_fbc || ''}
-        meta_fbp={formData?.meta_fbp || ''}
-        revenue={revenueRange}
-      />
-
-      {/* 7. Social Proof */}
-      <SocialProofSection onCTAClick={handleCTAClick} />
-
-      {/* 8. FAQ Section */}
-      <FAQSection onCTAClick={handleCTAClick} />
-
-      {/* 9. Final CTA */}
-      <FinalCTASection annualHours={annualHours} onButtonClick={handleCTAClick} />
+      {sections}
 
       {/* Email toast notification - auto-dismisses after 5s */}
       {showEmailToast && formData?.email && (
