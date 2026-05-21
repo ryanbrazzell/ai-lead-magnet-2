@@ -13,6 +13,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendSlackAlert } from '@/lib/alerts/critical-alert';
+import { recordLeadVariation } from '@/lib/close/record-variation';
 import {
   runPipeline,
   type GenerateReportRequest,
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro } = body;
+  const { email, firstName, lastName, phone, revenue, painPoints, leadId, apologyIntro, variation } = body;
 
   // Belt and suspenders: apologyIntro is normally set by the cron with a
   // known-safe string. But since it's accepted on the public request body
@@ -52,6 +53,16 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Email is required' },
       { status: 400 }
     );
+  }
+
+  // A/B test: record which /report variation this lead saw. First-write-wins,
+  // non-blocking - a failure here must never block report generation.
+  if (leadId && (variation === 'control' || variation === 'video')) {
+    try {
+      await recordLeadVariation(leadId, variation);
+    } catch (err) {
+      console.error(`[API:generate-report] [${submissionId}] recordLeadVariation failed`, err);
+    }
   }
 
   console.log(`[API:generate-report:INFO] [${submissionId}] Report generation started`, {

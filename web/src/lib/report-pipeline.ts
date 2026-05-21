@@ -87,6 +87,8 @@ export interface GenerateReportRequest {
   // "Your Time Freedom Report is ready..." paragraph in the email body.
   // Used to resend reports for leads whose original run failed.
   apologyIntro?: string;
+  /** A/B test: which /report variation this lead was assigned. */
+  variation?: 'control' | 'video';
 }
 
 export type LeadResolution = 'provided' | 'verified' | 'found' | 'created' | 'failed';
