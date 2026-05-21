@@ -191,7 +191,7 @@ export function ThankYouContent() {
   const finalCta = <FinalCTASection key="final" annualHours={annualHours} onButtonClick={handleCTAClick} />;
 
   const confirmationBanner = (
-    <ConfirmationBanner key="banner" email={formData?.email || ''} />
+    <ConfirmationBanner key="banner" firstName={formData?.firstName || ''} email={formData?.email || ''} />
   );
   const videoSection =
     variation === 'video' && reportVideoUrl ? (

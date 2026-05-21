@@ -1,16 +1,19 @@
 /**
  * ConfirmationBanner Component
- * Green gradient banner at top of page
- * Shows email address instead of "your inbox"
+ * Green gradient banner at the top of the video-led /report variation.
+ * "Congrats, one step left" framing per the A/B test design.
  */
 
 "use client";
 
 interface ConfirmationBannerProps {
+  firstName?: string;
   email?: string;
 }
 
-export function ConfirmationBanner({ email }: ConfirmationBannerProps) {
+export function ConfirmationBanner({ firstName, email }: ConfirmationBannerProps) {
+  const greeting = firstName ? `Congrats ${firstName}, you're one step away.` : "Congrats, you're one step away.";
+
   return (
     <div
       className="text-center text-white"
@@ -34,10 +37,11 @@ export function ConfirmationBanner({ email }: ConfirmationBannerProps) {
             fill="currentColor"
           />
         </svg>
-        <strong>Your personalized Time Freedom Report is heading to {email ? email : 'your inbox'}.</strong>
+        <strong>{greeting}</strong>
       </div>
       <div style={{ fontSize: '14px', opacity: 0.9 }}>
-        While you wait, scroll down to see exactly how much doing $15/hr admin work is really costing you.
+        Watch this 60-second video, then book your call right below.
+        {email ? ` Your full report is on its way to ${email}.` : ''}
       </div>
     </div>
   );
