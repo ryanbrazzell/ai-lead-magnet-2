@@ -176,7 +176,7 @@ export function ThankYouContent() {
         variation === 'video' ? (
           <>
             The <span style={{ color: '#f59e0b' }}>20-Minute Call</span> That Saves Founders{' '}
-            <span style={{ color: '#f59e0b' }}>10+ Hours a Week</span>
+            <span style={{ color: '#f59e0b' }}>15+ Hours a Week</span>
           </>
         ) : undefined
       }
