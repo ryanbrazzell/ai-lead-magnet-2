@@ -15,6 +15,8 @@ interface HeroPainProps {
   hideCTA?: boolean;
   /** Optional slot rendered right after the subtitle - used by the video variant to inline the video inside the hero blue section. */
   belowSubtitle?: ReactNode;
+  /** Optional headline override. When set, replaces the default name-based headline (used by the video variant to test a call-focused angle). */
+  headlineOverride?: ReactNode;
 }
 
 function capitalizeFirst(str: string): string {
@@ -22,7 +24,7 @@ function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-export function HeroPain({ firstName, onCTAClick, hideCTA, belowSubtitle }: HeroPainProps) {
+export function HeroPain({ firstName, onCTAClick, hideCTA, belowSubtitle, headlineOverride }: HeroPainProps) {
   const displayName = capitalizeFirst(firstName.trim());
 
   return (
@@ -68,11 +70,15 @@ export function HeroPain({ firstName, onCTAClick, hideCTA, belowSubtitle }: Hero
             lineHeight: 1.2,
           }}
         >
-          {displayName}, right now <span style={{ color: '#f59e0b' }}>you</span> are the{' '}
-          <span style={{ color: '#f59e0b' }}>
-            highest-paid assistant
-          </span>{' '}
-          at your company
+          {headlineOverride ?? (
+            <>
+              {displayName}, right now <span style={{ color: '#f59e0b' }}>you</span> are the{' '}
+              <span style={{ color: '#f59e0b' }}>
+                highest-paid assistant
+              </span>{' '}
+              at your company
+            </>
+          )}
         </h1>
 
         {/* Consolidated subtitle + trust */}

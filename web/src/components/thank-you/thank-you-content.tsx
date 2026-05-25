@@ -172,6 +172,14 @@ export function ThankYouContent() {
       firstName={formData?.firstName || 'there'}
       onCTAClick={handleCTAClick}
       hideCTA={variation === 'video'}
+      headlineOverride={
+        variation === 'video' ? (
+          <>
+            The <span style={{ color: '#f59e0b' }}>20-Minute Call</span> That Saves Founders{' '}
+            <span style={{ color: '#f59e0b' }}>10+ Hours a Week</span>
+          </>
+        ) : undefined
+      }
       belowSubtitle={
         variation === 'video' && vidalyticsConfig ? (
           <VideoSection
@@ -212,8 +220,10 @@ export function ThankYouContent() {
   const controlOrder = [
     navHeader, heroPain, costCard, overwhelm, howItWorks, ctaSection, socialProof, faq, finalCta,
   ];
+  // Video variant intentionally drops the nav header — no exits from the page,
+  // so the green confirmation banner is the first thing visitors see.
   const videoOrder = [
-    navHeader, confirmationBanner, heroPain, ctaSection, costCard, overwhelm, howItWorks, socialProof,
+    confirmationBanner, heroPain, ctaSection, costCard, overwhelm, howItWorks, socialProof,
   ];
 
   const sections = variation === 'video' ? videoOrder : controlOrder;
