@@ -34,7 +34,7 @@ import { AnalyzingAnimation } from './analyzing-animation';
 import { ConfirmationBanner } from './confirmation-banner';
 import { VideoSection } from './video-section';
 import { calculateROI, getTaskHoursByRevenue, type TaskHours } from '@/lib/roi-calculator';
-import { readVariationParam, getReportVideoUrl } from '@/lib/ab-test/variation';
+import { readVariationParam, getVidalyticsConfig } from '@/lib/ab-test/variation';
 
 interface FormDataFromURL {
   firstName: string;
@@ -121,7 +121,7 @@ export function ThankYouContent() {
   }, []);
 
   const variation = readVariationParam(searchParams);
-  const reportVideoUrl = getReportVideoUrl();
+  const vidalyticsConfig = getVidalyticsConfig();
 
   // Auto-dismiss email toast after page reveals
   React.useEffect(() => {
@@ -166,12 +166,28 @@ export function ThankYouContent() {
     </div>
   );
 
-  const heroPain = <HeroPain key="hero" firstName={formData?.firstName || 'there'} onCTAClick={handleCTAClick} />;
+  const heroPain = (
+    <HeroPain
+      key="hero"
+      firstName={formData?.firstName || 'there'}
+      onCTAClick={handleCTAClick}
+      hideCTA={variation === 'video'}
+      belowSubtitle={
+        variation === 'video' && vidalyticsConfig ? (
+          <VideoSection
+            embedId={vidalyticsConfig.embedId}
+            shard={vidalyticsConfig.shard}
+            inline
+          />
+        ) : null
+      }
+    />
+  );
   const costCard = (
     <CostCard key="cost" taskHours={taskHours} revenueRange={revenueRange} onCTAClick={handleCTAClick} />
   );
-  const overwhelm = <OverwhelmSection key="overwhelm" onCTAClick={handleCTAClick} />;
-  const howItWorks = <HowItWorksSection key="how" onCTAClick={handleCTAClick} />;
+  const overwhelm = <OverwhelmSection key="overwhelm" onCTAClick={handleCTAClick} clientProofOnly={variation === 'video'} />;
+  const howItWorks = <HowItWorksSection key="how" onCTAClick={handleCTAClick} guaranteeOnly={variation === 'video'} />;
   const ctaSection = (
     <CTASection
       key="cta"
@@ -193,16 +209,11 @@ export function ThankYouContent() {
   const confirmationBanner = (
     <ConfirmationBanner key="banner" firstName={formData?.firstName || ''} email={formData?.email || ''} />
   );
-  const videoSection =
-    variation === 'video' && reportVideoUrl ? (
-      <VideoSection key="video" videoUrl={reportVideoUrl} />
-    ) : null;
-
   const controlOrder = [
     navHeader, heroPain, costCard, overwhelm, howItWorks, ctaSection, socialProof, faq, finalCta,
   ];
   const videoOrder = [
-    navHeader, confirmationBanner, videoSection, ctaSection, heroPain, costCard, overwhelm, howItWorks, socialProof, faq, finalCta,
+    navHeader, confirmationBanner, heroPain, ctaSection, costCard, overwhelm, howItWorks, socialProof,
   ];
 
   const sections = variation === 'video' ? videoOrder : controlOrder;

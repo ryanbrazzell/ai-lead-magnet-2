@@ -23,6 +23,16 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(searchParamsValue),
 }));
 
+function clearVidalytics() {
+  vi.stubEnv('NEXT_PUBLIC_VIDALYTICS_VSL_EMBED_ID', '');
+  vi.stubEnv('NEXT_PUBLIC_VIDALYTICS_VSL_SHARD', '');
+}
+
+function setVidalytics() {
+  vi.stubEnv('NEXT_PUBLIC_VIDALYTICS_VSL_EMBED_ID', 'G62Lauei4zG6JSTX');
+  vi.stubEnv('NEXT_PUBLIC_VIDALYTICS_VSL_SHARD', 'ZBEGSIbh');
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   searchParamsValue = '';
@@ -30,7 +40,7 @@ afterEach(() => {
 
 describe('ThankYouContent', () => {
   it('control: renders no video section', () => {
-    vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', '');
+    clearVidalytics();
     searchParamsValue = 'firstName=Sam&email=a@b.com';
     render(<ThankYouContent />);
     expect(screen.queryByTestId('video-section')).toBeNull();
@@ -38,7 +48,7 @@ describe('ThankYouContent', () => {
   });
 
   it('video variation: renders the video section above the calendar', () => {
-    vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', 'https://youtu.be/ABC123');
+    setVidalytics();
     searchParamsValue = 'firstName=Sam&email=a@b.com&v=video';
     render(<ThankYouContent />);
 
@@ -50,7 +60,7 @@ describe('ThankYouContent', () => {
   });
 
   it('video param but test gated off: falls back to control (no video)', () => {
-    vi.stubEnv('NEXT_PUBLIC_REPORT_VIDEO_URL', '');
+    clearVidalytics();
     searchParamsValue = 'firstName=Sam&email=a@b.com&v=video';
     render(<ThankYouContent />);
     expect(screen.queryByTestId('video-section')).toBeNull();

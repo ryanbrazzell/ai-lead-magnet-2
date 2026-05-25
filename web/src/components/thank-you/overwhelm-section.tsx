@@ -70,9 +70,11 @@ function getEfficiencyLabel(checked: number): string {
 
 interface OverwhelmSectionProps {
   onCTAClick?: () => void;
+  /** When true, render only Part 2 (Client Proof) - used by the video variation. */
+  clientProofOnly?: boolean;
 }
 
-export function OverwhelmSection({ onCTAClick }: OverwhelmSectionProps) {
+export function OverwhelmSection({ onCTAClick, clientProofOnly }: OverwhelmSectionProps) {
   const [checkedItems, setCheckedItems] = React.useState<Set<number>>(new Set());
   const [efficiencyRevealed, setEfficiencyRevealed] = React.useState(false);
 
@@ -105,7 +107,8 @@ export function OverwhelmSection({ onCTAClick }: OverwhelmSectionProps) {
 
   return (
     <>
-      {/* ===== Part 1: Checklist + CEO Efficiency (white bg) ===== */}
+      {/* ===== Part 1: Checklist + CEO Efficiency (white bg) - hidden in video variant ===== */}
+      {!clientProofOnly && (
       <section
         style={{
           background: 'white',
@@ -439,6 +442,7 @@ export function OverwhelmSection({ onCTAClick }: OverwhelmSectionProps) {
           )}
         </div>
       </section>
+      )}
 
       {/* ===== Part 2: Client Proof (navy bg - distinct section) ===== */}
       <section

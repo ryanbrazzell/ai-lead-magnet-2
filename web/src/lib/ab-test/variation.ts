@@ -1,59 +1,37 @@
 /**
  * /report A/B test - variation assignment and gating.
  *
- * The test is GATED on NEXT_PUBLIC_REPORT_VIDEO_URL. With no valid video
- * URL configured the test is dark: assignVariation() returns null and
- * everyone sees the control page.
+ * The test is GATED on the Vidalytics VSL config. When either env var is
+ * blank the test is dark: assignVariation() returns null and everyone
+ * sees the control page.
  */
 
 export type Variation = 'control' | 'video';
+
+export interface VidalyticsConfig {
+  /** Raw embed ID (without the "vidalytics_embed_" prefix). */
+  embedId: string;
+  /** Account shard segment of the player URL. */
+  shard: string;
+}
 
 const COOKIE_NAME = 'al_report_variation';
 const COOKIE_MAX_AGE_DAYS = 30;
 
 /**
- * Validate and normalize the configured video URL to an embeddable form.
- * Returns null if unset or not a usable URL (which keeps the test dark).
+ * Read the Vidalytics VSL config from env. Returns null if either var is
+ * unset (which keeps the test dark).
  */
-export function getReportVideoUrl(): string | null {
-  const raw = (process.env.NEXT_PUBLIC_REPORT_VIDEO_URL ?? '').trim();
-  if (!raw) return null;
-
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return null;
-  }
-
-  const host = url.hostname.replace(/^www\./, '');
-
-  // youtu.be/<id>  ->  youtube.com/embed/<id>
-  if (host === 'youtu.be') {
-    const id = url.pathname.slice(1);
-    return id ? `https://www.youtube.com/embed/${id}` : null;
-  }
-
-  // youtube.com/watch?v=<id>  ->  youtube.com/embed/<id>
-  if (host === 'youtube.com') {
-    if (url.pathname === '/watch') {
-      const id = url.searchParams.get('v');
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-    // Already an /embed/ URL - pass through. Any other youtube.com path
-    // (playlist, channel, shorts) is not embeddable - keep the test dark.
-    if (url.pathname.startsWith('/embed/')) return raw;
-    return null;
-  }
-
-  // Loom, Vimeo, or anything else: pass the URL through as-is and let the
-  // iframe load it. Ryan is responsible for supplying an embeddable URL.
-  return raw;
+export function getVidalyticsConfig(): VidalyticsConfig | null {
+  const embedId = (process.env.NEXT_PUBLIC_VIDALYTICS_VSL_EMBED_ID ?? '').trim();
+  const shard = (process.env.NEXT_PUBLIC_VIDALYTICS_VSL_SHARD ?? '').trim();
+  if (!embedId || !shard) return null;
+  return { embedId, shard };
 }
 
-/** True when a valid video URL is configured, i.e. the test should run. */
+/** True when a Vidalytics VSL is configured, i.e. the test should run. */
 export function isReportTestLive(): boolean {
-  return getReportVideoUrl() !== null;
+  return getVidalyticsConfig() !== null;
 }
 
 function readCookie(name: string): string | null {
@@ -93,7 +71,7 @@ export function assignVariation(): Variation | null {
 
 /**
  * Read the variation the /report page should render, from its URL params.
- * Safety fallback: v=video only renders the video layout when a video is
+ * Safety fallback: v=video only renders the video layout when a VSL is
  * actually configured; otherwise it falls back to control.
  */
 export function readVariationParam(params: Pick<URLSearchParams, 'get'>): Variation {

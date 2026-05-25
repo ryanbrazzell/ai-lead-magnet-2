@@ -10,9 +10,11 @@ import * as React from 'react';
 
 interface HowItWorksSectionProps {
   onCTAClick?: () => void;
+  /** When true, render only the guarantee subsection - used by the video variation. */
+  guaranteeOnly?: boolean;
 }
 
-export function HowItWorksSection({ onCTAClick }: HowItWorksSectionProps) {
+export function HowItWorksSection({ onCTAClick, guaranteeOnly }: HowItWorksSectionProps) {
   const painPoints: React.ReactNode[] = [
     <>You&apos;re <strong>frustrated</strong> every single day and starting to think it&apos;s just you</>,
     <>You&apos;ve hired &ldquo;<strong>VAs</strong>&rdquo; before and it never worked out (not EAs)</>,
@@ -40,6 +42,8 @@ export function HowItWorksSection({ onCTAClick }: HowItWorksSectionProps) {
         background: "white",
       }}
     >
+      {!guaranteeOnly && (
+      <>
       {/* Pain Points Section */}
       <div
         style={{
@@ -347,6 +351,8 @@ export function HowItWorksSection({ onCTAClick }: HowItWorksSectionProps) {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* === Guarantee Section (visually distinct) === */}
       <div

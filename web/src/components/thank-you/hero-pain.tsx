@@ -6,9 +6,15 @@
 
 "use client";
 
+import type { ReactNode } from 'react';
+
 interface HeroPainProps {
   firstName: string;
   onCTAClick?: () => void;
+  /** When true, hide the CTA button (used by the video variation - the calendar sits right below the video). */
+  hideCTA?: boolean;
+  /** Optional slot rendered right after the subtitle - used by the video variant to inline the video inside the hero blue section. */
+  belowSubtitle?: ReactNode;
 }
 
 function capitalizeFirst(str: string): string {
@@ -16,7 +22,7 @@ function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-export function HeroPain({ firstName, onCTAClick }: HeroPainProps) {
+export function HeroPain({ firstName, onCTAClick, hideCTA, belowSubtitle }: HeroPainProps) {
   const displayName = capitalizeFirst(firstName.trim());
 
   return (
@@ -83,7 +89,10 @@ export function HeroPain({ firstName, onCTAClick }: HeroPainProps) {
           Join <span style={{ color: 'white', fontWeight: 600 }}>1,300+</span> founders <span style={{ color: 'white' }}>replacing 86+ hours of admin a month</span>
         </p>
 
-        {/* CTA */}
+        {belowSubtitle}
+
+        {/* CTA - hidden in the video variant (the calendar is right below the video) */}
+        {!hideCTA && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <button
             onClick={onCTAClick}
@@ -119,6 +128,7 @@ export function HeroPain({ firstName, onCTAClick }: HeroPainProps) {
             </svg>
           </button>
         </div>
+        )}
       </div>
     </section>
   );
