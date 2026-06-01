@@ -31,9 +31,8 @@ export const CLOSE_FIELDS = {
   utmContent: 'cf_vzRNBtrBGdCwkjZaWDD5Wx1BlcInSydp3CNZEvZnUSv',
   utmTerm: 'cf_sF2NSTraPl94cEGUZ2hixGaQO48PLWm9e4DucnX2JKC',
   // A/B test: which /report variation a lead was assigned (control | video).
-  // Empty until scripts/create-close-variation-field.ts is run at go-live —
-  // paste the printed cf_... ID here then.
-  leadMagnetVariation: '',
+  // Created via scripts/create-close-variation-field.ts at go-live (2026-05-31).
+  leadMagnetVariation: 'cf_0uRjoxlSQnlXmLBlAH9dgpUTRsIM3bOqDNHPv78KEjr',
 } as const;
 
 // ---------------------------------------------------------------------------
