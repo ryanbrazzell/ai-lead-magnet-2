@@ -18,7 +18,7 @@ import { PhoneScreen } from './screens/phone-screen';
 import { BusinessDetailsScreen } from './screens/business-details-screen';
 import { useMetaTracking } from '@/hooks/use-meta-tracking';
 import { useUtmTracking } from '@/hooks/use-utm-tracking';
-import { assignVariation } from '@/lib/ab-test/variation';
+import type { Variation } from '@/lib/ab-test/variation';
 
 export interface FormData {
   firstName: string;
@@ -212,9 +212,9 @@ export function MultiStepForm() {
           onSubmit={async (revenue, painPoints) => {
             setIsLoading(true);
 
-            // A/B test: assign this lead a /report variation (null when the
-            // test is gated off - see lib/ab-test/variation.ts).
-            const variation = assignVariation();
+            // January-rollback cutover: tag every lead so the dashboard can
+            // compare conversion against the pre-rollback variants.
+            const variation: Variation = 'january-rollback';
 
             // Await pending lead creation if leadId isn't set yet (same pattern as Screen 3)
             let currentLeadId = leadId;
@@ -270,7 +270,7 @@ export function MultiStepForm() {
                 utm_campaign: utm.utm_campaign,
                 utm_content: utm.utm_content,
                 utm_term: utm.utm_term,
-                variation: variation ?? undefined,
+                variation,
               }),
               keepalive: true, // Survives page navigation
             }).catch(error => console.error('Error triggering report generation:', error));
@@ -286,8 +286,7 @@ export function MultiStepForm() {
                   (_, p1) => String.fromCharCode(parseInt(p1, 16))
                 )
               );
-              const variationParam = variation ? `&v=${variation}` : '';
-              window.location.href = `/report?data=${encodeURIComponent(encodedData)}${variationParam}`;
+              window.location.href = `/report?data=${encodeURIComponent(encodedData)}`;
             } catch (encodeError) {
               console.error('Error encoding report data:', encodeError);
               // Fallback: pass data as individual URL params
@@ -300,7 +299,6 @@ export function MultiStepForm() {
                 painPoints: painPoints,
                 leadId: currentLeadId,
               });
-              if (variation) params.set('v', variation);
               window.location.href = `/report?${params.toString()}`;
             }
           }}
