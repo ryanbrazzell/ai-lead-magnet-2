@@ -14,6 +14,7 @@ interface CTASectionProps {
   lastName?: string;
   email?: string;
   phone?: string;
+  painPoints?: string;
   leadId?: string;
   meta_fbc?: string;
   meta_fbp?: string;
@@ -24,39 +25,58 @@ export function CTASection({
   lastName = '',
   email = '',
   phone = '',
+  painPoints = '',
   leadId = '',
   meta_fbc = '',
   meta_fbp = '',
 }: CTASectionProps) {
-  // Store scroll position to prevent iClosed widget from auto-scrolling
-  const scrollPositionRef = React.useRef<number>(0);
-  const scrollLockActiveRef = React.useRef<boolean>(false);
-
-  // Save scroll position and prevent auto-scroll from widget
+  // Prevent iClosed widget from auto-scrolling the page.
+  // The widget can use scrollIntoView, window.scrollTo, window.scroll, or element.focus()
+  // to hijack scroll position. We patch all of them during initialization.
+  // User scrolling (wheel, touch, keyboard) is unaffected - those don't call these APIs.
+  // The CTA "Book Your Time Audit" button uses scrollIntoView (not scrollTo), so we
+  // allow scrollIntoView for elements OUTSIDE the widget container.
   React.useEffect(() => {
-    // Save initial scroll position
-    scrollPositionRef.current = window.scrollY;
-    
-    // Also prevent any scroll events from the widget during initial load
-    const preventScroll = (e: Event) => {
-      if (scrollLockActiveRef.current) {
-        e.preventDefault();
-        window.scrollTo(0, scrollPositionRef.current);
+    const origScrollIntoView = Element.prototype.scrollIntoView;
+    const origScrollTo = window.scrollTo;
+    const origScroll = window.scroll;
+    const origFocus = HTMLElement.prototype.focus;
+
+    // Block scrollIntoView only for elements inside the widget
+    Element.prototype.scrollIntoView = function (...args: Parameters<typeof origScrollIntoView>) {
+      const widgetContainer = document.getElementById('calendar-section');
+      if (widgetContainer && widgetContainer.contains(this)) {
+        return; // Block widget auto-scroll
       }
+      return origScrollIntoView.apply(this, args);
     };
-    
-    // Lock scrolling immediately for 3 seconds after mount
-    scrollLockActiveRef.current = true;
-    window.addEventListener('scroll', preventScroll, { passive: false });
-    
+
+    // Block all programmatic window.scrollTo / window.scroll during init
+    window.scrollTo = function () { /* blocked during widget init */ } as typeof window.scrollTo;
+    window.scroll = function () { /* blocked during widget init */ } as typeof window.scroll;
+
+    // Force preventScroll on focus() for elements inside the widget
+    HTMLElement.prototype.focus = function (options?: FocusOptions) {
+      const widgetContainer = document.getElementById('calendar-section');
+      if (widgetContainer && widgetContainer.contains(this)) {
+        return origFocus.call(this, { ...options, preventScroll: true });
+      }
+      return origFocus.call(this, options);
+    };
+
     const timeoutId = setTimeout(() => {
-      scrollLockActiveRef.current = false;
-      window.removeEventListener('scroll', preventScroll);
-    }, 3000);
-    
+      Element.prototype.scrollIntoView = origScrollIntoView;
+      window.scrollTo = origScrollTo;
+      window.scroll = origScroll;
+      HTMLElement.prototype.focus = origFocus;
+    }, 10000);
+
     return () => {
       clearTimeout(timeoutId);
-      window.removeEventListener('scroll', preventScroll);
+      Element.prototype.scrollIntoView = origScrollIntoView;
+      window.scrollTo = origScrollTo;
+      window.scroll = origScroll;
+      HTMLElement.prototype.focus = origFocus;
     };
   }, []);
 
@@ -79,28 +99,9 @@ export function CTASection({
     }
   }, [leadId, email, phone, meta_fbc, meta_fbp]);
 
-  // Restore scroll position after widget script loads (prevents auto-scroll)
+  // No-op callback - scroll prevention is handled by the useEffect above
   const handleScriptLoad = React.useCallback(() => {
-    // Lock scroll restoration for 2 seconds to catch widget initialization
-    scrollLockActiveRef.current = true;
-    const savedPosition = scrollPositionRef.current;
-
-    // Immediately restore position
-    window.scrollTo(0, savedPosition);
-
-    // Set up interval to keep restoring scroll position for 2 seconds
-    // This catches any delayed scroll attempts by the widget
-    const intervalId = setInterval(() => {
-      if (scrollLockActiveRef.current) {
-        window.scrollTo(0, savedPosition);
-      }
-    }, 50);
-
-    // Release scroll lock after 2 seconds
-    setTimeout(() => {
-      scrollLockActiveRef.current = false;
-      clearInterval(intervalId);
-    }, 2000);
+    console.log('[iClosed] Widget script loaded');
   }, []);
 
   // Build iClosed URL with pre-filled data
@@ -131,15 +132,20 @@ export function CTASection({
   // Set time format to 12-hour (AM/PM)
   params.set('timeFormat', '12h');
 
+  // Pass pain points (challenges) to iClosed custom field
+  if (painPoints) params.set('pain', painPoints);
+
   // Pass Meta tracking values for CAPI attribution via iClosed → Zapier → Meta
   // These are passed as custom hidden fields that iClosed sends to webhooks
   if (meta_fbc) params.set('fbc', meta_fbc);
   if (meta_fbp) params.set('fbp', meta_fbp);
 
-  const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  // Build URL and replace + with %20 for spaces (iClosed expects %20, not +)
+  const queryString = params.toString().replace(/\+/g, '%20');
+  const iClosedUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
-  // Debug logging
-  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, meta_fbc, meta_fbp, iClosedUrl });
+  // Debug logging (sanitized - no PII)
+  console.log('[iClosed] Widget configured:', { hasName: !!fullName, hasEmail: !!email, hasPhone: !!phone });
 
   return (
     <section
