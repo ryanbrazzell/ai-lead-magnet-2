@@ -70,4 +70,13 @@ describe('POST /api/generate-report', () => {
 
     expect(mockRunPipeline).toHaveBeenCalled();
   });
+
+  it('records the january-rollback variation', async () => {
+    const res = await POST(
+      makeRequest({ email: 'a@b.com', leadId: 'lead_1', variation: 'january-rollback' })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockRecordLeadVariation).toHaveBeenCalledWith('lead_1', 'january-rollback');
+  });
 });

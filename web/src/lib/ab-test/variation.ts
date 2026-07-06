@@ -6,7 +6,7 @@
  * sees the control page.
  */
 
-export type Variation = 'control' | 'video';
+export type Variation = 'control' | 'video' | 'january-rollback';
 
 export interface VidalyticsConfig {
   /** Raw embed ID (without the "vidalytics_embed_" prefix). */
