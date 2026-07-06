@@ -28,7 +28,7 @@ import { FinalCTASection } from './final-cta-section';
 import { HowItWorksSection } from './how-it-works-section';
 import { OverwhelmSection } from './overwhelm-section';
 import { AnalyzingAnimation } from './analyzing-animation';
-import { calculateROI, getTaskHoursByRevenue, type TaskHours } from '@/lib/roi-calculator';
+import { getTaskHoursByRevenue, type TaskHours } from '@/lib/roi-calculator';
 
 interface FormDataFromURL {
   firstName: string;
@@ -47,8 +47,6 @@ export function ThankYouContent() {
   const searchParams = useSearchParams();
 
   const [showAnalyzing, setShowAnalyzing] = React.useState(true);
-  const [emailSent, setEmailSent] = React.useState(false);
-  const [emailError, setEmailError] = React.useState<string | null>(null);
 
   // Parse form data from URL params (base64 encoded)
   const formData = React.useMemo<FormDataFromURL | null>(() => {
@@ -73,11 +71,22 @@ export function ThankYouContent() {
     }
 
     try {
-      const decoded = atob(encodedData);
-      return JSON.parse(decoded) as FormDataFromURL;
+      // Unicode-safe base64 decoding (reverse of the encodeURIComponent + btoa pattern)
+      const jsonString = decodeURIComponent(
+        Array.from(atob(encodedData), (c) =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join('')
+      );
+      return JSON.parse(jsonString) as FormDataFromURL;
     } catch {
-      console.error('Failed to decode form data from URL');
-      return null;
+      // Fallback: try plain atob for backward compatibility with old-format URLs
+      try {
+        const decoded = atob(encodedData);
+        return JSON.parse(decoded) as FormDataFromURL;
+      } catch {
+        console.error('Failed to decode form data from URL');
+        return null;
+      }
     }
   }, [searchParams]);
 
@@ -86,12 +95,6 @@ export function ThankYouContent() {
 
   // Get task hours based on revenue tier (or use provided taskHours)
   const taskHours: TaskHours = formData?.taskHours ?? getTaskHoursByRevenue(revenueRange);
-
-  // Calculate ROI based on revenue
-  const roi = React.useMemo(
-    () => calculateROI(taskHours, revenueRange),
-    [taskHours, revenueRange]
-  );
 
   // Calculate annual hours for display
   const totalWeeklyHours = Object.values(taskHours).reduce((sum, h) => sum + h, 0);
@@ -104,113 +107,10 @@ export function ThankYouContent() {
     }, 100);
   }, []);
 
-  // Generate PDF and send email when analysis completes
-  const generateAndSendReport = React.useCallback(async () => {
-    if (!formData?.email) return;
-
-    try {
-      // First, generate the tasks via AI
-      const tasksResponse = await fetch('/api/generate-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          revenue: formData.revenue,
-          painPoints: formData.painPoints,
-          leadType: 'main',
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      const tasksResult = await tasksResponse.json();
-
-      if (!tasksResult.success) {
-        console.error('Failed to generate tasks:', tasksResult.error);
-        setEmailError('Failed to generate report');
-        return;
-      }
-
-      // Generate PDF (include all user data for pre-filled booking URL)
-      const pdfResponse = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tasks: tasksResult.data?.tasks || { daily: [], weekly: [], monthly: [] },
-          eaPercentage: tasksResult.data?.ea_task_percent || 0,
-          userData: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
-            stage: 4,
-            stageName: 'Prioritize',
-          },
-          taskHours: taskHours,
-          revenueRange: revenueRange,
-        }),
-      });
-
-      const pdfResult = await pdfResponse.json();
-
-      if (!pdfResult.success || !pdfResult.pdf) {
-        console.error('Failed to generate PDF');
-        setEmailError('Failed to generate PDF');
-        return;
-      }
-
-      // Send email with PDF (include phone for pre-filled booking URL)
-      const emailResponse = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          pdfBuffer: pdfResult.pdf,
-        }),
-      });
-
-      const emailResult = await emailResponse.json();
-
-      if (emailResult.success) {
-        setEmailSent(true);
-      } else {
-        console.error('Failed to send email:', emailResult.error);
-        setEmailError(emailResult.error || 'Failed to send email');
-      }
-
-      // Update Close CRM with report URL (if we have leadId and blobUrl)
-      if (formData.leadId && pdfResult.blobUrl) {
-        try {
-          await fetch('/api/close/update-lead', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              leadId: formData.leadId,
-              reportUrl: pdfResult.blobUrl,
-            }),
-          });
-          console.log('Close CRM updated with report URL:', pdfResult.blobUrl);
-        } catch (err) {
-          console.error('Failed to update Close CRM with report URL:', err);
-          // Non-blocking - don't fail the whole flow
-        }
-      }
-    } catch (err) {
-      console.error('Error generating/sending report:', err);
-      setEmailError('Failed to generate report');
-    }
-  }, [formData, taskHours, roi]);
-
-  // Handle analysis complete
+  // Animation done = page reveals (report generates server-side, fired at form submit)
   const handleAnalysisComplete = React.useCallback(() => {
     setShowAnalyzing(false);
-    generateAndSendReport();
-  }, [generateAndSendReport]);
+  }, []);
 
   // Show analyzing animation first
   if (showAnalyzing) {
@@ -257,6 +157,7 @@ export function ThankYouContent() {
         lastName={formData?.lastName || ''}
         email={formData?.email || ''}
         phone={formData?.phone || ''}
+        painPoints={formData?.painPoints || ''}
         leadId={formData?.leadId || ''}
         meta_fbc={formData?.meta_fbc || ''}
         meta_fbp={formData?.meta_fbp || ''}
