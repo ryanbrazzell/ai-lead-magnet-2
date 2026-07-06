@@ -16,13 +16,10 @@ interface AnalyzingAnimationProps {
 }
 
 const stages = [
-  { icon: Brain, text: "Reading through your responses..." },
-  { icon: ChartBar, text: "Pulling context from your website..." },
-  { icon: Sparkles, text: "Mapping the recurring work in your business..." },
-  { icon: Brain, text: "Identifying delegation opportunities..." },
-  { icon: ChartBar, text: "Calibrating to your revenue stage..." },
-  { icon: Sparkles, text: "Writing your personalized roadmap..." },
-  { icon: CheckCircle, text: "Putting the final report together..." },
+  { icon: Brain, text: "Analyzing your responses...", color: "text-blue-500" },
+  { icon: ChartBar, text: "Calculating time savings...", color: "text-blue-600" },
+  { icon: Sparkles, text: "Generating your ROI analysis...", color: "text-amber-500" },
+  { icon: CheckCircle, text: "Your results are ready!", color: "text-green-500" },
 ];
 
 function capitalizeFirst(str: string): string {
@@ -33,7 +30,7 @@ function capitalizeFirst(str: string): string {
 export function AnalyzingAnimation({
   firstName = "there",
   onComplete,
-  duration = 15000,
+  duration = 3000,
 }: AnalyzingAnimationProps) {
   const displayName = capitalizeFirst(firstName);
   const [currentStage, setCurrentStage] = React.useState(0);
@@ -41,25 +38,25 @@ export function AnalyzingAnimation({
 
   React.useEffect(() => {
     const stageInterval = duration / stages.length;
-    const progressInterval = 50;
-    // Fill to ~95% over the duration, then slow-crawl (never hits 100 until reveal)
-    const fastStep = 95 / (duration / progressInterval);
+    const progressInterval = 50; // Update progress every 50ms
+    const progressStep = 100 / (duration / progressInterval);
 
     const progressTimer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev < 95) return Math.min(prev + fastStep, 95);
-        // Slow crawl after 95% - adds ~0.02% per tick so it feels alive
-        return Math.min(prev + 0.02, 99);
-      });
+      setProgress((prev) => Math.min(prev + progressStep, 100));
     }, progressInterval);
 
     const stageTimer = setInterval(() => {
-      setCurrentStage((prev) => (prev + 1) % stages.length);
+      setCurrentStage((prev) => {
+        if (prev < stages.length - 1) {
+          return prev + 1;
+        }
+        return prev;
+      });
     }, stageInterval);
 
     const completeTimer = setTimeout(() => {
       onComplete();
-    }, duration);
+    }, duration + 500); // Extra 500ms to show final state
 
     return () => {
       clearInterval(progressTimer);

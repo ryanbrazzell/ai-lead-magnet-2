@@ -1,7 +1,8 @@
 /**
  * CostCard Component
- * Napkin-math style cost calculation
- * Shows hourly rate × hours wasted = annual cost
+ * Shows time lost calculation and ROI breakdown
+ * Card overlaps the hero section
+ * Matches lead-magnet-reference.html exactly
  */
 
 "use client";
@@ -12,7 +13,6 @@ import { calculateROI, type TaskHours } from '@/lib/roi-calculator';
 interface CostCardProps {
   taskHours: TaskHours;
   revenueRange: string;
-  onCTAClick?: () => void;
 }
 
 function formatCurrency(value: number): string {
@@ -24,22 +24,112 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-// Easing function for slot machine effect
+// Inline video embed component
+function VideoEmbed({ videoUrl }: { videoUrl: string }) {
+  const [isPlaying, setIsPlaying] = React.useState(false);
+
+  return (
+    <div
+      style={{
+        borderRadius: '12px',
+        overflow: 'hidden',
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+        aspectRatio: '16/9',
+        background: '#0f172a',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+      }}
+    >
+      {isPlaying ? (
+        <iframe
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+          }}
+          src={`${videoUrl}${videoUrl.includes('?') ? '&' : '?'}autoplay=1&rel=0&modestbranding=1&showinfo=0`}
+          title="EA Workshop Video"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (
+        <button
+          onClick={() => setIsPlaying(true)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: 'none',
+          }}
+          aria-label="Play video"
+        >
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="#0f172a"
+              style={{
+                width: '32px',
+                height: '32px',
+                marginLeft: '4px',
+              }}
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Easing function for slot machine effect - slow start, fast middle, slow end
 function easeOutExpo(t: number): number {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
 
-export function CostCard({ taskHours, revenueRange, onCTAClick }: CostCardProps) {
+export function CostCard({ taskHours, revenueRange }: CostCardProps) {
   const roi = calculateROI(taskHours, revenueRange);
   const totalWeeklyHours = Object.values(taskHours).reduce((sum, h) => sum + h, 0);
+  const annualHours = totalWeeklyHours * 52;
+  const workWeeks = Math.round(annualHours / 40);
 
   // Animated net return value
   const [animatedNetReturn, setAnimatedNetReturn] = React.useState(0);
   const [animatedROI, setAnimatedROI] = React.useState(0);
+  const [isAnimating, setIsAnimating] = React.useState(true);
 
   // Slot machine animation over 10 seconds
   React.useEffect(() => {
-    const duration = 10000;
+    const duration = 10000; // 10 seconds
     const startTime = Date.now();
     const targetValue = roi.netReturn;
     const targetROI = roi.roiMultiplier;
@@ -47,38 +137,43 @@ export function CostCard({ taskHours, revenueRange, onCTAClick }: CostCardProps)
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
+
+      // Apply easing for slot machine feel
       const easedProgress = easeOutExpo(progress);
 
-      setAnimatedNetReturn(Math.round(easedProgress * targetValue));
-      setAnimatedROI(easedProgress * targetROI);
+      // Calculate current animated value
+      const currentValue = Math.round(easedProgress * targetValue);
+      const currentROI = easedProgress * targetROI;
+
+      setAnimatedNetReturn(currentValue);
+      setAnimatedROI(currentROI);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        setIsAnimating(false);
       }
     };
 
     requestAnimationFrame(animate);
   }, [roi.netReturn, roi.roiMultiplier]);
 
-  const font = {
-    sans: 'var(--font-dm-sans), "DM Sans", sans-serif',
-    serif: 'var(--font-dm-serif), "DM Serif Display", serif',
-  };
-
   return (
     <div
       className="cost-card-wrapper"
       style={{
-        background: '#f1f5f9',
-        padding: '0 20px 40px',
+        maxWidth: '800px',
+        margin: '0 auto',
+        padding: '0 20px',
       }}
     >
       <div
+        className="cost-card-inner"
         style={{
           background: 'white',
           borderRadius: '16px',
           padding: 'clamp(24px, 5vw, 40px)',
-          margin: '24px auto 40px',
+          margin: '-40px auto 40px',
           maxWidth: '600px',
           position: 'relative',
           zIndex: 10,
@@ -86,10 +181,15 @@ export function CostCard({ taskHours, revenueRange, onCTAClick }: CostCardProps)
         }}
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '32px',
+          }}
+        >
           <h2
             style={{
-              fontFamily: font.sans,
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
               fontSize: '14px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
@@ -101,229 +201,199 @@ export function CostCard({ taskHours, revenueRange, onCTAClick }: CostCardProps)
           </h2>
           <div
             style={{
-              fontFamily: font.serif,
-              fontSize: 'clamp(24px, 6vw, 32px)',
+              fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+              fontSize: '32px',
               color: '#f59e0b',
             }}
           >
-            You <span style={{ textDecoration: 'underline' }}>still</span> owning admin is costing you:
+            Here&apos;s what this is costing <span style={{ textDecoration: 'underline' }}>you</span>
           </div>
         </div>
 
-        {/* Napkin Math Equation */}
+        {/* Time Lost Box */}
         <div
           style={{
-            background: '#fafafa',
-            border: '2px solid #e2e8f0',
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
             borderRadius: '12px',
-            padding: 'clamp(20px, 4vw, 32px)',
+            padding: '32px',
+            textAlign: 'center',
+            marginBottom: '24px',
+            border: '2px solid #f59e0b',
+          }}
+        >
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '14px',
+              color: '#0f172a',
+              opacity: 0.7,
+              marginBottom: '8px',
+            }}
+          >
+            Hours you&apos;re losing every week to low-value tasks
+          </p>
+          <div
+            className="hours-number"
+            style={{
+              fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+              fontSize: 'clamp(40px, 10vw, 64px)',
+              color: '#0f172a',
+              lineHeight: 1,
+            }}
+          >
+            {totalWeeklyHours}+
+          </div>
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '20px',
+              color: '#0f172a',
+              opacity: 0.8,
+            }}
+          >
+            hours/week
+          </p>
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '14px',
+              color: '#475569',
+              marginTop: '12px',
+            }}
+          >
+            What would you do with an extra <strong>{annualHours}+ hours</strong> ({workWeeks} full work weeks) this year?
+          </p>
+        </div>
+
+        {/* Net Return Calculation - Integrated in Grey Section */}
+        <div
+          style={{
             marginBottom: '24px',
           }}
         >
-          {/* Line 1: Hourly rate */}
+          {/* Calculation breakdown with Net Return integrated */}
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: '12px',
+              flexDirection: 'column',
+              gap: '12px',
+              padding: '24px',
+              background: '#f1f5f9',
+              borderRadius: '12px',
             }}
           >
-            <span style={{ fontFamily: font.sans, fontSize: '15px', color: '#475569' }}>
-              Your effective hourly rate
-            </span>
-            <span
+            <div
               style={{
-                fontFamily: font.serif,
-                fontSize: 'clamp(20px, 5vw, 28px)',
-                color: '#0f172a',
-                fontVariantNumeric: 'tabular-nums',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}
             >
-              {formatCurrency(roi.ceoHourlyRate)}/hr
-            </span>
-          </div>
-
-          {/* Line 2: × hours wasted */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: '12px',
-            }}
-          >
-            <span style={{ fontFamily: font.sans, fontSize: '15px', color: '#475569' }}>
-              <span style={{ color: '#94a3b8', marginRight: '6px' }}>&times;</span>
-              Hours wasted per week
-            </span>
-            <span
+              <span
+                style={{
+                  fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#475569',
+                  fontWeight: 600,
+                }}
+              >
+                What those hours cost you
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+                  fontSize: '20px',
+                  color: '#ef4444',
+                }}
+              >
+                {formatCurrency(roi.annualRevenueUnlocked)}
+              </span>
+            </div>
+            <div
               style={{
-                fontFamily: font.serif,
-                fontSize: 'clamp(20px, 5vw, 28px)',
-                color: '#ef4444',
-                fontWeight: 700,
-                fontVariantNumeric: 'tabular-nums',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}
             >
-              {totalWeeklyHours}+ hrs
-            </span>
-          </div>
-
-          {/* Line 3: × 52 weeks */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: '16px',
-            }}
-          >
-            <span style={{ fontFamily: font.sans, fontSize: '15px', color: '#475569' }}>
-              <span style={{ color: '#94a3b8', marginRight: '6px' }}>&times;</span>
-              Weeks per year
-            </span>
-            <span
+              <span
+                style={{
+                  fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#475569',
+                  fontWeight: 600,
+                }}
+              >
+                What an EA costs
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+                  fontSize: '20px',
+                  color: '#0f172a',
+                }}
+              >
+                &lt;3k/month
+              </span>
+            </div>
+            <div
               style={{
-                fontFamily: font.serif,
-                fontSize: 'clamp(20px, 5vw, 28px)',
-                color: '#0f172a',
-                fontVariantNumeric: 'tabular-nums',
+                height: '1px',
+                background: '#cbd5e1',
+                margin: '4px 0',
+              }}
+            />
+            {/* Net Return - Integrated but Standout */}
+            <div
+              style={{
+                padding: '16px',
+                background: '#0f172a',
+                borderRadius: '8px',
+                marginTop: '4px',
+                textAlign: 'center',
               }}
             >
-              52
-            </span>
-          </div>
-
-          {/* Divider line (like napkin underline) */}
-          <div
-            style={{
-              height: '2px',
-              background: '#0f172a',
-              marginBottom: '16px',
-            }}
-          />
-
-          {/* Result: Annual cost */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: font.sans,
-                fontSize: '15px',
-                color: '#0f172a',
-                fontWeight: 700,
-              }}
-            >
-              You&apos;re losing per year
-            </span>
-            <span
-              style={{
-                fontFamily: font.serif,
-                fontSize: 'clamp(28px, 7vw, 40px)',
-                color: '#ef4444',
-                fontWeight: 700,
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: 1,
-              }}
-            >
-              {formatCurrency(roi.annualRevenueUnlocked)}
-            </span>
+              <p
+                style={{
+                  fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                  fontSize: '12px',
+                  color: '#ffffff',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                }}
+              >
+                Your Net Return on an Assistant
+              </p>
+              <div
+                className="net-return-value"
+                style={{
+                  fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
+                  fontSize: 'clamp(28px, 8vw, 36px)',
+                  color: '#10b981',
+                  lineHeight: 1,
+                  marginBottom: '8px',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                +{formatCurrency(animatedNetReturn)} <span style={{ fontSize: 'clamp(14px, 4vw, 18px)', color: '#94a3b8' }}>this year</span>
+              </div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+                  fontSize: '14px',
+                  color: 'white',
+                  fontWeight: 600,
+                  margin: 0,
+                }}
+              >
+                That&apos;s a {animatedROI.toFixed(1)}x ROI
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Net Return - dark box */}
-        <div
-          style={{
-            padding: '20px',
-            background: '#0f172a',
-            borderRadius: '12px',
-            textAlign: 'center',
-          }}
-        >
-          <p
-            style={{
-              fontFamily: font.sans,
-              fontSize: '12px',
-              color: '#ffffff',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            Your Net Return if You Had an Assistant
-          </p>
-          <div
-            style={{
-              fontFamily: font.serif,
-              fontSize: 'clamp(28px, 8vw, 36px)',
-              color: '#10b981',
-              lineHeight: 1,
-              marginBottom: '8px',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            +{formatCurrency(animatedNetReturn)}{' '}
-            <span style={{ fontSize: 'clamp(14px, 4vw, 18px)', color: '#94a3b8' }}>this year</span>
-          </div>
-          <p
-            style={{
-              fontFamily: font.sans,
-              fontSize: '14px',
-              color: 'white',
-              fontWeight: 600,
-              margin: 0,
-            }}
-          >
-            That&apos;s a {animatedROI.toFixed(1)}x ROI
-          </p>
-        </div>
       </div>
-
-      {/* CTA Button */}
-      {onCTAClick && (
-        <div
-          style={{
-            maxWidth: '600px',
-            margin: '0 auto',
-            textAlign: 'center',
-            marginTop: '24px',
-            paddingBottom: '40px',
-          }}
-        >
-          <button
-            onClick={onCTAClick}
-            style={{
-              fontFamily: font.sans,
-              fontSize: '16px',
-              fontWeight: 700,
-              color: '#0f172a',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              border: 'none',
-              borderRadius: '50px',
-              padding: '16px 32px',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              boxShadow: '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 32px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)';
-            }}
-          >
-            Book Your EA Delegation Roadmap Call
-          </button>
-        </div>
-      )}
     </div>
   );
 }

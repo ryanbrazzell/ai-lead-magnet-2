@@ -14,11 +14,9 @@ interface CTASectionProps {
   lastName?: string;
   email?: string;
   phone?: string;
-  painPoints?: string;
   leadId?: string;
   meta_fbc?: string;
   meta_fbp?: string;
-  revenue?: string;
 }
 
 export function CTASection({
@@ -26,59 +24,39 @@ export function CTASection({
   lastName = '',
   email = '',
   phone = '',
-  painPoints = '',
   leadId = '',
   meta_fbc = '',
   meta_fbp = '',
-  revenue = '',
 }: CTASectionProps) {
-  // Prevent iClosed widget from auto-scrolling the page.
-  // The widget can use scrollIntoView, window.scrollTo, window.scroll, or element.focus()
-  // to hijack scroll position. We patch all of them during initialization.
-  // User scrolling (wheel, touch, keyboard) is unaffected - those don't call these APIs.
-  // The CTA "Book Your Time Audit" button uses scrollIntoView (not scrollTo), so we
-  // allow scrollIntoView for elements OUTSIDE the widget container.
+  // Store scroll position to prevent iClosed widget from auto-scrolling
+  const scrollPositionRef = React.useRef<number>(0);
+  const scrollLockActiveRef = React.useRef<boolean>(false);
+
+  // Save scroll position and prevent auto-scroll from widget
   React.useEffect(() => {
-    const origScrollIntoView = Element.prototype.scrollIntoView;
-    const origScrollTo = window.scrollTo;
-    const origScroll = window.scroll;
-    const origFocus = HTMLElement.prototype.focus;
-
-    // Block scrollIntoView only for elements inside the widget
-    Element.prototype.scrollIntoView = function (...args: Parameters<typeof origScrollIntoView>) {
-      const widgetContainer = document.getElementById('calendar-section');
-      if (widgetContainer && widgetContainer.contains(this)) {
-        return; // Block widget auto-scroll
+    // Save initial scroll position
+    scrollPositionRef.current = window.scrollY;
+    
+    // Also prevent any scroll events from the widget during initial load
+    const preventScroll = (e: Event) => {
+      if (scrollLockActiveRef.current) {
+        e.preventDefault();
+        window.scrollTo(0, scrollPositionRef.current);
       }
-      return origScrollIntoView.apply(this, args);
     };
-
-    // Block all programmatic window.scrollTo / window.scroll during init
-    window.scrollTo = function () { /* blocked during widget init */ } as typeof window.scrollTo;
-    window.scroll = function () { /* blocked during widget init */ } as typeof window.scroll;
-
-    // Force preventScroll on focus() for elements inside the widget
-    HTMLElement.prototype.focus = function (options?: FocusOptions) {
-      const widgetContainer = document.getElementById('calendar-section');
-      if (widgetContainer && widgetContainer.contains(this)) {
-        return origFocus.call(this, { ...options, preventScroll: true });
-      }
-      return origFocus.call(this, options);
-    };
-
+    
+    // Lock scrolling immediately for 3 seconds after mount
+    scrollLockActiveRef.current = true;
+    window.addEventListener('scroll', preventScroll, { passive: false });
+    
     const timeoutId = setTimeout(() => {
-      Element.prototype.scrollIntoView = origScrollIntoView;
-      window.scrollTo = origScrollTo;
-      window.scroll = origScroll;
-      HTMLElement.prototype.focus = origFocus;
-    }, 10000);
-
+      scrollLockActiveRef.current = false;
+      window.removeEventListener('scroll', preventScroll);
+    }, 3000);
+    
     return () => {
       clearTimeout(timeoutId);
-      Element.prototype.scrollIntoView = origScrollIntoView;
-      window.scrollTo = origScrollTo;
-      window.scroll = origScroll;
-      HTMLElement.prototype.focus = origFocus;
+      window.removeEventListener('scroll', preventScroll);
     };
   }, []);
 
@@ -101,17 +79,32 @@ export function CTASection({
     }
   }, [leadId, email, phone, meta_fbc, meta_fbp]);
 
-  // No-op callback - scroll prevention is handled by the useEffect above
+  // Restore scroll position after widget script loads (prevents auto-scroll)
   const handleScriptLoad = React.useCallback(() => {
-    console.log('[iClosed] Widget script loaded');
+    // Lock scroll restoration for 2 seconds to catch widget initialization
+    scrollLockActiveRef.current = true;
+    const savedPosition = scrollPositionRef.current;
+
+    // Immediately restore position
+    window.scrollTo(0, savedPosition);
+
+    // Set up interval to keep restoring scroll position for 2 seconds
+    // This catches any delayed scroll attempts by the widget
+    const intervalId = setInterval(() => {
+      if (scrollLockActiveRef.current) {
+        window.scrollTo(0, savedPosition);
+      }
+    }, 50);
+
+    // Release scroll lock after 2 seconds
+    setTimeout(() => {
+      scrollLockActiveRef.current = false;
+      clearInterval(intervalId);
+    }, 2000);
   }, []);
 
   // Build iClosed URL with pre-filled data
-  // Use triage calendar for <$500k revenue, discovery calendar for everyone else
-  const isTriageCall = revenue === 'Under $500k';
-  const baseUrl = isTriageCall
-    ? 'https://app.iclosed.io/e/assistantlaunch/intro-call'
-    : 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
   const params = new URLSearchParams();
 
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
@@ -138,19 +131,15 @@ export function CTASection({
   // Set time format to 12-hour (AM/PM)
   params.set('timeFormat', '12h');
 
-  // Pass pain points (challenges) to iClosed custom field
-  if (painPoints) params.set('pain', painPoints);
-
-  // Pass Meta tracking values as custom hidden fields for CRM attribution
+  // Pass Meta tracking values for CAPI attribution via iClosed → Zapier → Meta
+  // These are passed as custom hidden fields that iClosed sends to webhooks
   if (meta_fbc) params.set('fbc', meta_fbc);
   if (meta_fbp) params.set('fbp', meta_fbp);
 
-  // Build URL and replace + with %20 for spaces (iClosed expects %20, not +)
-  const queryString = params.toString().replace(/\+/g, '%20');
-  const iClosedUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  const iClosedUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
 
-  // Debug logging (sanitized - no PII)
-  console.log('[iClosed] Widget configured:', { isTriageCall, hasName: !!fullName, hasEmail: !!email, hasPhone: !!phone });
+  // Debug logging
+  console.log('[iClosed] Prefill data:', { firstName, lastName, email, phone, meta_fbc, meta_fbp, iClosedUrl });
 
   return (
     <section
@@ -177,9 +166,7 @@ export function CTASection({
             color: '#0f172a',
           }}
         >
-          Ready to focus <span style={{ textDecoration: 'underline' }}>only</span>
-          <br />
-          your zone of <span style={{ textDecoration: 'underline' }}>genius</span>?
+          Ready to focus <span style={{ textDecoration: 'underline' }}>only</span> on your zone of genius?
         </h2>
         <p
           style={{
@@ -191,7 +178,7 @@ export function CTASection({
             marginRight: 'auto',
           }}
         >
-          In under 30 minutes, we&apos;re going to show you how the top-performing founders and executives are operating differently.
+          In 30 minutes, we&apos;ll show you exactly which tasks to hand off first — and how to do it without the training headache.
         </p>
 
         {/* What We'll Cover */}
@@ -200,7 +187,7 @@ export function CTASection({
             background: '#f8fafc',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
-            padding: '10px 24px',
+            padding: '20px 24px',
             marginBottom: '24px',
             textAlign: 'left',
             maxWidth: '400px',
@@ -215,7 +202,6 @@ export function CTASection({
               fontWeight: 600,
               color: '#0f172a',
               marginBottom: '12px',
-              textAlign: 'center',
             }}
           >
             On this call, we&apos;ll cover:
@@ -226,103 +212,32 @@ export function CTASection({
               fontSize: '14px',
               color: '#475569',
               margin: 0,
-              padding: 0,
-              listStyle: 'none',
+              paddingLeft: '20px',
               lineHeight: 1.8,
             }}
           >
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '4px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  marginTop: '3px',
-                }}
-              >
-                &#10003;
-              </span>
-              <span>Your top 5 tasks to delegate immediately</span>
-            </li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '4px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  marginTop: '3px',
-                }}
-              >
-                &#10003;
-              </span>
-              <span>Which EA profile matches your business</span>
-            </li>
-            <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  marginTop: '3px',
-                }}
-              >
-                &#10003;
-              </span>
-              <span>Your 30-day delegation map to get you performing at the highest level</span>
-            </li>
+            <li>Your top 5 tasks to delegate immediately</li>
+            <li>Which EA profile matches your business</li>
+            <li>Your 30-day delegation roadmap</li>
           </ul>
         </div>
 
-        {/* CTA text above calendar */}
-        <h3
+        {/* Speed Badge */}
+        <div
           style={{
-            fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
-            fontSize: 'clamp(20px, 5vw, 24px)',
-            color: '#0f172a',
-            marginBottom: '8px',
+            display: 'inline-block',
+            background: '#0f172a',
+            color: '#f59e0b',
+            padding: '8px 16px',
+            borderRadius: '50px',
+            fontSize: '14px',
+            fontWeight: 600,
+            marginBottom: '24px',
+            fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
           }}
         >
-          Schedule Your EA Delegation Roadmap Call
-        </h3>
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          style={{ color: '#f59e0b', margin: '0 auto 8px', display: 'block' }}
-        >
-          <path
-            d="M12 4v16m0 0l-6-6m6 6l6-6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          3-7 days to EA Kickoff
+        </div>
 
         {/* iClosed Calendar - Using inline widget (same as services page) */}
         <div
@@ -348,7 +263,7 @@ export function CTASection({
           />
           <Script
             src="https://app.iclosed.io/assets/widget.js"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             onLoad={handleScriptLoad}
           />
         </div>
@@ -357,3 +272,4 @@ export function CTASection({
     </section>
   );
 }
+
