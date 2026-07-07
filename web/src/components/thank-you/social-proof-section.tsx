@@ -16,7 +16,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "I haven't touched my inbox in 3 weeks. Anne handles it all - I just get the highlights that actually matter.",
+    text: "I haven't touched my inbox in 3 weeks. Anne handles it all — I just get the highlights that actually matter.",
     name: "Keri Ford",
     title: "Founder, The 1% Woman Coach",
     initials: "KF",
@@ -29,7 +29,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "Went from 7 days a week grinding to focused work hours. Aileen runs my entire schedule - I just show up where I'm needed.",
+    text: "Went from 7 days a week grinding to focused work hours. Aileen runs my entire schedule — I just show up where I'm needed.",
     name: "David Horner",
     title: "CFO, Auckland Flying School",
     initials: "DH",
@@ -42,7 +42,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "Took a 2-week vacation without touching my laptop. Maria kept everything running - clients didn't even notice I was gone.",
+    text: "Took a 2-week vacation without touching my laptop. Maria kept everything running — clients didn't even notice I was gone.",
     name: "Jake Kauffman",
     title: "Founder, JKC",
     initials: "JK",
@@ -55,7 +55,7 @@ const testimonials = [
   },
   {
     type: 'text',
-    text: "She proactively built SOPs we didn't even ask for. Now my team runs itself - I'm finally working ON the business, not IN it.",
+    text: "She proactively built SOPs we didn't even ask for. Now my team runs itself — I'm finally working ON the business, not IN it.",
     name: "Mitch Swersky",
     title: "Co-founder, NSBA Group",
     initials: "MS",
@@ -92,11 +92,7 @@ const testimonials = [
   },
 ];
 
-interface SocialProofSectionProps {
-  onCTAClick?: () => void;
-}
-
-export function SocialProofSection({ onCTAClick }: SocialProofSectionProps) {
+export function SocialProofSection() {
   return (
     <section
       style={{
@@ -123,11 +119,20 @@ export function SocialProofSection({ onCTAClick }: SocialProofSectionProps) {
               fontFamily: 'var(--font-dm-serif), "DM Serif Display", serif',
               fontSize: 'clamp(24px, 6vw, 32px)',
               color: 'white',
-              marginBottom: '0',
+              marginBottom: '12px',
             }}
           >
-            What working with Assistant Launch actually looks like
+            1,300+ executive assistants placed for founders doing $500K to $250M in revenue
           </h2>
+          <p
+            style={{
+              fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
+              fontSize: '16px',
+              color: '#94a3b8',
+            }}
+          >
+            They got their time back. You can too.
+          </p>
         </div>
 
         {/* Testimonials Grid - Mixed Text and Video */}
@@ -161,7 +166,6 @@ export function SocialProofSection({ onCTAClick }: SocialProofSectionProps) {
                 >
                   <iframe
                     src={`https://www.youtube.com/embed/${testimonial.id}?modestbranding=1&rel=0&showinfo=0`}
-                    loading="eager"
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -244,38 +248,6 @@ export function SocialProofSection({ onCTAClick }: SocialProofSectionProps) {
             </div>
           ))}
         </div>
-
-        {/* CTA Button */}
-        {onCTAClick && (
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <button
-              onClick={onCTAClick}
-              style={{
-                fontFamily: 'var(--font-dm-sans), "DM Sans", sans-serif',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: '#0f172a',
-                fontWeight: 700,
-                fontSize: '16px',
-                borderRadius: '50px',
-                padding: '16px 32px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                boxShadow: '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 32px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)';
-              }}
-            >
-              Book Your EA Delegation Roadmap Call
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Mobile responsive styles */}

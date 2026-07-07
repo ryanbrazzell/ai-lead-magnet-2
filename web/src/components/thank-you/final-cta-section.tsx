@@ -65,29 +65,27 @@ export function FinalCTASection({ annualHours, onButtonClick }: FinalCTASectionP
             display: 'inline-flex',
             alignItems: 'center',
             gap: '12px',
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            background: 'white',
             color: '#0f172a',
-            padding: '16px 32px',
-            borderRadius: '50px',
-            fontSize: '16px',
-            fontWeight: 700,
+            padding: 'clamp(14px, 4vw, 18px) clamp(24px, 6vw, 36px)',
+            borderRadius: '8px',
+            fontSize: 'clamp(16px, 4vw, 18px)',
+            fontWeight: 600,
             border: 'none',
             cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            boxShadow: '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 4px 20px rgba(245, 158, 11, 0.4)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 32px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.2)';
+            e.currentTarget.style.background = '#f1f5f9';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 24px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.2)';
+            e.currentTarget.style.background = 'white';
           }}
         >
-          Book Your EA Delegation Roadmap Call
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7" />
+          Book Your EA Strategy Call
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 0L8.59 1.41 14.17 7H0v2h14.17l-5.58 5.59L10 16l8-8-8-8z" fill="currentColor" />
           </svg>
         </button>
 
@@ -133,3 +131,4 @@ export function FinalCTASection({ annualHours, onButtonClick }: FinalCTASectionP
     </section>
   );
 }
+

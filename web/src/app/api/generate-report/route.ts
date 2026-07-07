@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   // A/B test: record which /report variation this lead saw. First-write-wins,
   // non-blocking - a failure here must never block report generation.
-  if (leadId && (variation === 'control' || variation === 'video')) {
+  if (leadId && (variation === 'control' || variation === 'video' || variation === 'january-rollback')) {
     try {
       await recordLeadVariation(leadId, variation);
     } catch (err) {
