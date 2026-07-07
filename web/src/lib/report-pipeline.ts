@@ -224,8 +224,12 @@ export async function runPipeline(
       `<p>Email: ${email} | Lead resolution: ${status.leadResolution}</p>` +
       `<p>Started at: ${new Date().toISOString()}</p>`;
 
-    await addDurableNote(leadId, startedNoteHtml);
-    log.info(submissionId, 'Pipeline started note written to CRM', { leadId });
+    const startedNoteWritten = await addDurableNote(leadId, startedNoteHtml);
+    if (startedNoteWritten) {
+      log.info(submissionId, 'Pipeline started note written to CRM', { leadId });
+    } else {
+      log.error(submissionId, 'Pipeline started note FAILED to write to CRM', { leadId });
+    }
   }
 
   // Step 1: Generate tasks via AI
@@ -544,8 +548,12 @@ export async function runPipeline(
         `<p>Tasks: ${status.tasksGenerated ? 'OK' : 'Failed'} | PDF: ${status.pdfGenerated ? 'OK' : 'Failed'} | Email: ${status.emailSent ? 'OK' : 'Failed'}</p>` +
         `<p>Lead resolution: ${status.leadResolution}</p>`;
 
-    await addDurableNote(status.leadId, noteHtml);
-    log.info(submissionId, 'Audit note written to CRM', { leadId: status.leadId });
+    const auditNoteWritten = await addDurableNote(status.leadId, noteHtml);
+    if (auditNoteWritten) {
+      log.info(submissionId, 'Audit note written to CRM', { leadId: status.leadId });
+    } else {
+      log.error(submissionId, 'Audit note FAILED to write to CRM', { leadId: status.leadId });
+    }
   }
 
   return status;

@@ -177,6 +177,13 @@ export async function addLeadNote(leadId: string, noteHtml: string): Promise<boo
     return false;
   }
 
+  // Close requires note_html to be a single <body>...</body> document;
+  // bare paragraph HTML gets a 400 ("HTML rich text fields in Close are
+  // expected to start with a <body> tag and end with </body>").
+  const wrappedHtml = noteHtml.trimStart().startsWith('<body')
+    ? noteHtml
+    : `<body>${noteHtml}</body>`;
+
   try {
     const response = await withRetry('addLeadNote', () =>
       closeFetch(`${CLOSE_API_BASE}/activity/note/`, {
@@ -187,13 +194,14 @@ export async function addLeadNote(leadId: string, noteHtml: string): Promise<boo
         },
         body: JSON.stringify({
           lead_id: leadId,
-          note_html: noteHtml,
+          note_html: wrappedHtml,
         }),
       })
     );
 
     if (!response.ok) {
-      console.error('[Close:addLeadNote] Non-ok response', response.status);
+      const errorBody = await response.text().catch(() => '(no body)');
+      console.error('[Close:addLeadNote] Non-ok response', response.status, errorBody.slice(0, 300));
       return false;
     }
 
