@@ -20,7 +20,7 @@ import { generateEmailHtml } from '@/lib/email/template';
 import { sendSlackAlert } from '@/lib/alerts/critical-alert';
 
 export async function POST(request: NextRequest) {
-  let body: { leadId: string; email?: string };
+  let body: { leadId: string; email?: string; apologyIntro?: string };
 
   try {
     body = await request.json();
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { leadId, email: overrideEmail } = body;
+  const { leadId, email: overrideEmail, apologyIntro } = body;
 
   if (!leadId) {
     return NextResponse.json({ success: false, error: 'leadId is required' }, { status: 400 });
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const userData = { firstName, lastName: '', email: leadEmail, phone: '' };
-  const htmlContent = generateEmailHtml(firstName, userData, blobUrl);
+  const htmlContent = generateEmailHtml(firstName, userData, blobUrl, apologyIntro);
 
   try {
     const { data, error } = await resend.emails.send({
