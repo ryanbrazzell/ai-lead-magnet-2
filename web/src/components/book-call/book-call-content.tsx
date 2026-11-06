@@ -9,6 +9,7 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
+import { ICLOSED_BOOKING_URL } from '@/lib/iclosed';
 
 export function BookCallContent() {
   const searchParams = useSearchParams();
@@ -17,7 +18,6 @@ export function BookCallContent() {
   const lastName = searchParams.get('lastName') || searchParams.get('last_name') || '';
   const email = searchParams.get('email') || '';
   const phone = searchParams.get('phone') || '';
-  const revenue = searchParams.get('revenue') || '';
   const leadId = searchParams.get('leadId') || '';
 
   // Store leadId, phone, and email in localStorage for retrieval after iClosed redirect
@@ -48,10 +48,7 @@ export function BookCallContent() {
   }, []);
 
   // Build iClosed URL with pre-filled data (same logic as cta-section.tsx)
-  const isTriageCall = revenue === 'Under $500k';
-  const baseUrl = isTriageCall
-    ? 'https://app.iclosed.io/e/assistantlaunch/intro-call'
-    : 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  const baseUrl = ICLOSED_BOOKING_URL;
   const params = new URLSearchParams();
 
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
