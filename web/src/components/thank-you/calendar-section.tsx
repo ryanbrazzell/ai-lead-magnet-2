@@ -7,6 +7,7 @@
 "use client";
 
 import * as React from 'react';
+import { ICLOSED_BOOKING_URL } from '@/lib/iclosed';
 
 interface CalendarSectionProps {
   firstName: string;
@@ -23,7 +24,7 @@ export function CalendarSection({
 }: CalendarSectionProps) {
   // Build iClosed URL with pre-filled data using iClosed's parameter format
   // Docs: https://intercom.help/iclosed/en/articles/9830929-pre-populate-form-questions-with-invitee-information
-  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  const baseUrl = ICLOSED_BOOKING_URL;
   const params = new URLSearchParams();
 
   // iClosed uses iclosedName for full name (not separate first/last)

@@ -8,6 +8,7 @@
 
 import * as React from 'react';
 import Script from 'next/script';
+import { ICLOSED_BOOKING_URL } from '@/lib/iclosed';
 
 interface CTASectionProps {
   firstName?: string;
@@ -105,7 +106,7 @@ export function CTASection({
   }, []);
 
   // Build iClosed URL with pre-filled data
-  const baseUrl = 'https://app.iclosed.io/e/assistantlaunch/simple-form-for-lead-magnet';
+  const baseUrl = ICLOSED_BOOKING_URL;
   const params = new URLSearchParams();
 
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
